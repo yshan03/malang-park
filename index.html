@@ -63,7 +63,7 @@
 
   <!-- 산책로 (장식용, 세부 길 아님) -->
   <path d="M530 95 C 560 200, 520 300, 610 370" fill="none" stroke="#efe3c8" stroke-width="10" stroke-linecap="round"/>
-  <path d="M180 470 C 300 440, 420 480, 520 455" fill="none" stroke="#efe3c8" stroke-width="10" stroke-linecap="round"/>
+  <path d="M180 470 C 280 445, 360 482, 432 470" fill="none" stroke="#efe3c8" stroke-width="10" stroke-linecap="round"/>
 
   <!-- ============ 장식 (누를 수 없음) ============ -->
   <!-- 방향을 잡아 줄 랜드마크(KSPO DOME·세계평화의 문·남1문 등)는 나중에 정하기로 하고 지금은 뺌 (2026-11-15) -->
@@ -110,26 +110,27 @@
     <text class="zone-label small" x="440" y="358" text-anchor="middle">야생화학습장</text>
   </g>
 
-  <!-- 들꽃마루 (8경): 남동, 장미광장 옆 -->
+  <!-- 들꽃마루 (8경): 남쪽 끝, 장미광장 바로 서쪽의 길쭉한 꽃밭 -->
   <g class="zone" id="zone-wildflower" data-zone="wildflower" data-name="들꽃마루" data-active="false" tabindex="0" role="button" aria-label="들꽃마루">
-    <circle class="zone-hit" cx="690" cy="345" r="54" fill="#fff" opacity="0.001"/>
-    <ellipse cx="690" cy="350" rx="48" ry="28" fill="#f4d9a8"/>
+    <ellipse class="zone-hit" cx="515" cy="438" rx="72" ry="32" fill="#fff" opacity="0.001"/>
+    <ellipse cx="515" cy="440" rx="66" ry="22" fill="#f4d9a8"/>
     <g filter="url(#soft)">
-      <g transform="translate(670 342)"><circle r="8" fill="#f2a541"/><circle r="3" fill="#7a4b1d"/></g>
-      <g transform="translate(696 332)"><circle r="9" fill="#f28ab2"/><circle r="3.5" fill="#fff3c4"/></g>
-      <g transform="translate(716 350)"><circle r="7" fill="#f2a541"/><circle r="3" fill="#7a4b1d"/></g>
-      <g transform="translate(688 360)"><circle r="7" fill="#e5566f"/><circle r="3" fill="#2b2b2b"/></g>
+      <g transform="translate(474 438)"><circle r="7" fill="#f2a541"/><circle r="3" fill="#7a4b1d"/></g>
+      <g transform="translate(500 430)"><circle r="8" fill="#f28ab2"/><circle r="3" fill="#fff3c4"/></g>
+      <g transform="translate(527 442)"><circle r="7" fill="#e5566f"/><circle r="3" fill="#2b2b2b"/></g>
+      <g transform="translate(555 432)"><circle r="7" fill="#f2a541"/><circle r="3" fill="#7a4b1d"/></g>
+      <g transform="translate(512 450)"><circle r="5" fill="#f28ab2"/><circle r="2" fill="#fff3c4"/></g>
     </g>
-    <text class="zone-label" x="690" y="398" text-anchor="middle">들꽃마루</text>
+    <text class="zone-label" x="515" y="482" text-anchor="middle">들꽃마루</text>
   </g>
 
-  <!-- 장미광장 (9경): 남동쪽 — 실제 API 연결 구역 -->
+  <!-- 장미광장 (9경): 남동쪽 끝의 둥근 정원 (남1문 옆) — 실제 API 연결 구역 -->
   <g class="zone" id="zone-rose" data-zone="rose" data-name="장미광장" data-active="true" tabindex="0" role="button" aria-label="장미광장">
-    <circle class="zone-hit" cx="580" cy="432" r="62" fill="#fde2e4" opacity="0.001"/>
-    <circle class="zone-glow" cx="580" cy="425" r="50" fill="#fbd3d9"/>
+    <circle class="zone-hit" cx="645" cy="415" r="62" fill="#fde2e4" opacity="0.001"/>
+    <circle class="zone-glow" cx="645" cy="408" r="50" fill="#fbd3d9"/>
     <g filter="url(#soft)">
       <!-- 방사형 화단 느낌의 장미 -->
-      <g transform="translate(580 423)">
+      <g transform="translate(645 406)">
         <circle r="30" fill="#e5566f"/>
         <path d="M0 -22 C 14 -22, 20 -6, 10 2 C 2 8, -12 4, -12 -6 C -12 -16, -4 -20, 2 -16" fill="none" stroke="#b8324d" stroke-width="3.5" stroke-linecap="round"/>
         <path d="M-20 4 C -18 18, 0 26, 16 18" fill="none" stroke="#b8324d" stroke-width="3.5" stroke-linecap="round"/>
@@ -137,11 +138,12 @@
         <ellipse cx="30" cy="22" rx="11" ry="6" fill="#6fae5a" transform="rotate(30 30 22)"/>
       </g>
     </g>
-    <text class="zone-label" x="580" y="492" text-anchor="middle">장미광장</text>
+    <text class="zone-label" x="645" y="475" text-anchor="middle">장미광장</text>
     <g class="zone-badge">
-      <rect x="608" y="374" width="46" height="20" rx="10" fill="#e5566f"/>
-      <text x="631" y="388" text-anchor="middle" font-size="11" fill="#fff" font-weight="700">만지기</text>
+      <rect x="673" y="357" width="46" height="20" rx="10" fill="#e5566f"/>
+      <text x="696" y="371" text-anchor="middle" font-size="11" fill="#fff" font-weight="700">만지기</text>
     </g>
+  </g>
   </g>
 
   <style>
