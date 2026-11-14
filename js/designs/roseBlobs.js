@@ -17,9 +17,9 @@
       petals: 9, rings: 4, open: 0.75, spread: 0.95, flare: 0.9, pointy: 0.7, height: 0.1, ruffle: 0.1, spiral: 1.1,
       colors: { center: '#F2A57E', outer: '#FCF0E6' }
     },
-    // 꽃잎이 적고 납작하게 활짝 열린 꽃, 가운데 노란 수술 — 진분홍에 흰 흐림
+    // 꽃잎 3겹으로 활짝 열린 꽃, 가운데 노란 수술 — 진분홍에 흰 흐림
     '린': {
-      petals: 6, rings: 2, open: 1.0, spread: 1.0, flare: 0.35, pointy: 0.15, height: 0, ruffle: 0.25, spiral: 0.3,
+      petals: 8, rings: 3, open: 0.85, spread: 0.85, flare: 0.35, pointy: 0.15, height: 0, ruffle: 0.25, spiral: 0.6,
       colors: { center: '#FBE3EA', outer: '#EE6F95', stamen: '#F2C230' }
     },
     // 가운데가 높이 솟은 반쯤 핀 모양, 끝이 뾰족 — 노랑 바탕에 꽃잎 끝만 빨강
