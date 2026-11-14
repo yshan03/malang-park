@@ -35,9 +35,12 @@
   // 구의 색: 프로토타입용 임시 도형이라 꽃색과 상관없이 모두 같은 색. (나중에 꽃별 디자인으로 교체 예정)
   const BLOB_COLOR = '#E9E4DA';
 
-  // 상세 모드 화면 나누기: 위쪽 58%는 꽃, 아래는 정보. (interaction.html의 CSS와 같은 값)
+  // 상세 모드 꽃 자리 두 가지 (interaction.html의 CSS와 같은 값)
+  //   시트 닫힘: 머리글 아래 ~ TMI 버튼 위, 화면 가운데에 크게
+  //   시트 열림: 위쪽 58%만 꽃 자리 (아래는 설명 시트)
   const DETAIL_SPLIT = 0.58;
   const HEADER_PX = 64;
+  const BUTTON_ZONE_PX = 110; // 아래 TMI 버튼이 차지하는 높이
   const CAMERA_Z = 12;
 
   window.createSquishyScene = function (container, items, { onOpen } = {}) {
@@ -71,9 +74,12 @@
 
     let mode = 'list';     // 'list' | 'detail'
     let selected = -1;     // 상세 모드에서 보여주는 도형 번호
+    let sheetOpen = false; // 상세 모드: 설명 시트가 열려 있나
     const view = { w: 1, h: 1, W: 1, H: 1, wpp: 1 };            // 화면 크기(px)와 3D 크기, 1px당 3D 길이
     const walls = { left: -1, right: 1, bottom: -1 };          // 더미를 가두는 벽
-    const detail = { pos: new THREE.Vector3(), scale: 1 };     // 상세 모드 위치·크기
+    const detailFull = { pos: new THREE.Vector3(), scale: 1 }; // 상세: 시트 닫힘 (가운데, 크게)
+    const detailSplit = { pos: new THREE.Vector3(), scale: 1 };// 상세: 시트 열림 (위쪽)
+    const detailNow = () => (sheetOpen ? detailSplit : detailFull);
 
     // ---------- 도형 하나 만들기 ----------
     function makeBlob(item, i) {
@@ -158,12 +164,15 @@
         b.p.x = THREE.MathUtils.clamp(b.p.x, walls.left + b.r, walls.right - b.r);
       });
 
-      // 상세 모드: 화면 위쪽 영역 가운데에 크게
-      const areaTop = HEADER_PX, areaBottom = h * DETAIL_SPLIT;
-      const centerPx = (areaTop + areaBottom) / 2;
-      const radiusPx = Math.max(40, Math.min((areaBottom - areaTop) * 0.4, w * 0.3));
-      detail.pos.set(0, (h / 2 - centerPx) * view.wpp, 0);
-      detail.scale = radiusPx * view.wpp;
+      // 상세 모드: 정해진 영역(위~아래 px)의 가운데에, 영역에 맞는 크기로
+      function fitArea(target, areaTop, areaBottom, maxFrac) {
+        const centerPx = (areaTop + areaBottom) / 2;
+        const radiusPx = Math.max(40, Math.min((areaBottom - areaTop) * 0.4, w * maxFrac));
+        target.pos.set(0, (h / 2 - centerPx) * view.wpp, 0);
+        target.scale = radiusPx * view.wpp;
+      }
+      fitArea(detailFull, HEADER_PX, h - BUTTON_ZONE_PX, 0.36);
+      fitArea(detailSplit, HEADER_PX, h * DETAIL_SPLIT, 0.3);
 
       applyTargets(false);
     }
@@ -177,14 +186,15 @@
           if (b.curScale < 0.01) b.cur.set(b.p.x, b.p.y, 0); // 숨어 있던 공은 제자리에서 자라남
           b.tgtScale = b.r;
         } else if (i === selected) {
+          const d = detailNow();
           if (fromNav && dir) { // 이전/다음: 옆에서 미끄러져 들어옴
-            b.cur.copy(detail.pos); b.cur.x += dir * view.W * 0.55; b.curScale = detail.scale * 0.4;
+            b.cur.copy(d.pos); b.cur.x += dir * view.W * 0.55; b.curScale = d.scale * 0.4;
           }
-          b.tgt.copy(detail.pos); b.tgtScale = detail.scale;
+          b.tgt.copy(d.pos); b.tgtScale = d.scale;
         } else {
           b.tgt.copy(b.cur);
           if (fromNav && dir && b.curScale > 0.01) { // 이전 꽃은 반대쪽으로 빠져나감
-            b.tgt.copy(detail.pos); b.tgt.x -= dir * view.W * 0.55;
+            b.tgt.copy(detailNow().pos); b.tgt.x -= dir * view.W * 0.55;
           }
           b.tgtScale = 0;
         }
@@ -477,6 +487,13 @@
         mode = 'detail'; selected = index;
         blobs.forEach(b => { b.held = false; });
         applyTargets(true, dir);
+      },
+      // 설명 시트가 열리면 꽃이 위로 비켜 올라가고, 닫히면 다시 가운데로
+      setSheet(open) {
+        sheetOpen = !!open;
+        if (mode !== 'detail') return;
+        const b = blobs[selected], d = detailNow();
+        b.tgt.copy(d.pos); b.tgtScale = d.scale;
       }
     };
   };

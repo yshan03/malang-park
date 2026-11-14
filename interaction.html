@@ -7,10 +7,13 @@
 <style>
   :root {
     --bg: #f6f1e7; --ink: #3f3a33; --muted: #8a857c; --card: #fffaf2; --line: #e6dcc8; --accent: #e5566f;
-    /* 상세 모드 화면 나누기: 위 58%는 꽃, 아래는 정보 (js/squishy.js의 DETAIL_SPLIT과 같은 값) */
+    /* 상세 모드 꽃 자리 (js/squishy.js의 DETAIL_SPLIT·HEADER_PX·BUTTON_ZONE_PX와 같은 값)
+       시트 닫힘: 머리글(64px) 아래 ~ TMI 버튼 자리(110px) 위의 가운데
+       시트 열림: 위 58%의 가운데 */
     --split: 58vh;
-    --flower-y: calc((64px + var(--split)) / 2); /* 꽃 영역의 세로 가운데 */
+    --flower-y: calc((64px + 100vh - 110px) / 2);
   }
+  body.sheet-open { --flower-y: calc((64px + var(--split)) / 2); }
   * { box-sizing: border-box; }
   html, body { margin: 0; height: 100%; }
   body {
@@ -30,16 +33,45 @@
     padding: 0 12px; border-radius: 999px; background: var(--card); border: 1px solid var(--line);
     color: var(--ink); text-decoration: none; font-size: 15px; cursor: pointer;
   }
-  .back .text { display: none; font-size: 14px; font-weight: 700; }
-  body.detail .back .text { display: inline; }        /* 상세 모드: "← 목록으로" */
   h1 { margin: 0; font-size: 20px; font-weight: 800; color: #3d5a35; }
   .hint { margin: 2px 0 0; font-size: 12px; color: var(--muted); }
-  body.detail .titles { display: none; }               /* 상세 모드에선 제목 대신 아래 정보에 이름 */
-  .source {
-    margin-left: auto; font-size: 11px; padding: 4px 10px; border-radius: 999px;
-    background: var(--card); border: 1px solid var(--line); color: var(--muted); white-space: nowrap;
+  body.detail .titles { display: none; }               /* 상세 모드에선 구역 제목 대신 꽃 이름 */
+
+  /* ----- 상세 모드: 위 가운데 꽃 이름 ----- */
+  #flower-name {
+    position: fixed; z-index: 5; top: 16px; left: 64px; right: 64px; margin: 0; text-align: center;
+    font-size: 22px; font-weight: 800; letter-spacing: -0.02em; line-height: 32px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    opacity: 0; transform: translateY(-8px); transition: opacity .3s, transform .3s; pointer-events: none;
   }
-  .source.api { color: #2f7a3e; border-color: #b7d79c; }
+  body.detail #flower-name { opacity: 1; transform: none; }
+
+  /* ----- 상세 모드: 만지는 법 안내 (처음 만지면 사라짐) ----- */
+  #touch-hint {
+    position: fixed; z-index: 3; left: 0; right: 0; bottom: 96px; text-align: center;
+    font-size: 13px; color: var(--muted); pointer-events: none; opacity: 0; transition: opacity .4s;
+  }
+  body.detail:not(.sheet-open):not(.touched) #touch-hint { opacity: 1; }
+
+  /* ----- 상세 모드: TMI 🤓 버튼 (아래 가운데, 시트가 열리면 시트 위 가장자리로 같이 올라감) ----- */
+  #tmi {
+    position: fixed; z-index: 7; left: 50%; bottom: 28px; transform: translateX(-50%);
+    width: 64px; height: 64px; padding: 0; border: 0; cursor: pointer;
+    display: grid; place-items: center; background: none; /* 테두리·배경 없이 이모지만 */
+    opacity: 0; pointer-events: none;
+    transition: bottom .45s cubic-bezier(.2, .9, .3, 1), opacity .3s, background .2s;
+  }
+  #tmi .emoji { display: inline-block; font-size: 46px; line-height: 1; filter: drop-shadow(0 4px 6px rgba(40, 30, 20, .22)); }
+  body.detail #tmi { opacity: 1; pointer-events: auto; }
+  body.detail:not(.sheet-open) #tmi .emoji { animation: nerd-hop 3.2s ease-in-out infinite; }
+  body.sheet-open #tmi { bottom: calc(100vh - var(--split) - 32px); }
+  @keyframes nerd-hop { /* 가끔 통통 튀며 눌러 보라고 손짓 */
+    0%, 70%, 100% { transform: translateY(0) rotate(0); }
+    76% { transform: translateY(-7px) rotate(-10deg); }
+    82% { transform: translateY(0) rotate(0); }
+    88% { transform: translateY(-4px) rotate(8deg); }
+    94% { transform: translateY(0) rotate(0); }
+  }
 
   /* ----- 3D 무대 ----- */
   #stage { position: fixed; inset: 0; }
@@ -72,7 +104,8 @@
     padding: 22px 20px 32px; box-shadow: 0 -8px 30px rgba(60, 50, 30, .08);
     transform: translateY(100%); transition: transform .45s cubic-bezier(.2, .9, .3, 1);
   }
-  body.detail #info { transform: translateY(0); }
+  body.detail.sheet-open #info { transform: translateY(0); }   /* TMI 🤓 를 눌러야 올라옴 */
+  #info { padding-top: 40px; }                                /* 위 가장자리에 걸친 TMI 버튼 자리 */
   #info .inner { max-width: 640px; margin: 0 auto; }
   #info h2 { margin: 0; font-size: 24px; }
   #info .photo { width: 100%; max-width: 420px; aspect-ratio: 3/2; object-fit: cover; display: block; border-radius: 14px; margin-top: 16px; background: var(--line); }
@@ -83,19 +116,23 @@
   #info p.desc { margin: 0; font-size: 15px; line-height: 1.7; }
   #info a.more { display: inline-block; margin-top: 12px; color: var(--accent); font-size: 13px; }
   #info .count { margin-top: 16px; font-size: 12px; color: var(--muted); }
+  #info .credit { margin-top: 6px; font-size: 11px; color: #b0aaa0; }
 </style>
 </head>
 <body>
 <header>
-  <a class="back" id="back" href="index.html" aria-label="지도로 돌아가기">←<span class="text">목록으로</span></a>
+  <a class="back" id="back" href="index.html" aria-label="지도로 돌아가기">←</a>
   <div class="titles">
     <h1 id="title">불러오는 중…</h1>
     <p class="hint">꽃을 눌러 자세히 보고, 끌어서 굴려보세요</p>
   </div>
-  <span class="source" id="source"></span>
 </header>
+<h2 id="flower-name" aria-live="polite"></h2>
 
 <div id="stage"></div>
+
+<p id="touch-hint">꾹 눌러보고, 끌어서 돌려보세요</p>
+<button id="tmi" aria-expanded="false" aria-controls="info" aria-label="설명 보기"><span class="emoji">🤓</span></button>
 
 <button class="nav prev" id="prev" aria-label="이전 꽃">‹</button>
 <button class="nav next" id="next" aria-label="다음 꽃">›</button>
@@ -126,10 +163,9 @@
   const zoneName = zone ? zone.name : '알 수 없는 구역';
   document.getElementById('title').textContent = zoneName;
 
-  const { items, from, fetched } = await getItems(zoneId);
-  const badge = document.getElementById('source');
-  badge.textContent = { api: 'API 데이터' + (fetched ? ' · ' + fetched : ''), sample: '샘플 데이터', none: '' }[from];
-  badge.className = 'source ' + from;
+  const { items, from } = await getItems(zoneId);
+  // 출처: 화면 위 표시 대신 TMI 시트 맨 아래에 작게 (사진 출처 표시용)
+  const CREDIT = from === 'api' ? '정보·사진: 한국체육산업개발(주) 올림픽공원 장미정보' : '샘플 데이터';
 
   if (!items.length) {
     document.body.insertAdjacentHTML('beforeend', '<div class="empty">이 구역은 데이터 준비 중이에요</div>');
@@ -152,7 +188,9 @@
   // how: 'push' = 새 기록 남김(목록→상세), 'replace' = 기록 덮어씀(이전/다음), 'none' = 주소 그대로
   function openDetail(index, dir, how) {
     current = index;
+    setSheet(false);                      // 새 꽃은 이름만 보이게 (설명은 닫고 시작)
     renderInfo(items[index], index);
+    document.getElementById('flower-name').textContent = items[index].name;
     document.body.classList.add('detail');
     document.title = items[index].name + ' · ' + zoneName;
     scene.showDetail(index, dir);
@@ -163,6 +201,7 @@
   // ----- 목록 모드로 -----
   function openList(how) {
     current = -1;
+    setSheet(false);
     document.body.classList.remove('detail');
     document.title = zoneName + ' · 말랑 지도';
     scene.showList();
@@ -215,10 +254,27 @@
       a.textContent = '자세히 보기 →'; box.appendChild(a);
     }
     const count = document.createElement('p'); count.className = 'count';
-    count.textContent = `${index + 1} / ${items.length} · 꾹 눌러보고, 끌어서 돌려보세요`;
+    count.textContent = `${index + 1} / ${items.length}`;
     box.appendChild(count);
+    const credit = document.createElement('p'); credit.className = 'credit';
+    credit.textContent = CREDIT;
+    box.appendChild(credit);
     document.getElementById('info').scrollTop = 0;
   }
+
+  // ----- TMI 🤓 시트: 버튼을 눌러야 열리고, 다시 눌러야 닫힘 -----
+  const tmi = document.getElementById('tmi');
+  function setSheet(open) {
+    document.body.classList.toggle('sheet-open', open);
+    tmi.setAttribute('aria-expanded', String(open));
+    if (scene) scene.setSheet(open);
+  }
+  tmi.addEventListener('click', () => setSheet(!document.body.classList.contains('sheet-open')));
+
+  // 꽃을 처음 만지면 "꾹 눌러보고…" 안내를 숨김
+  document.getElementById('stage').addEventListener('pointerdown', () => {
+    if (current >= 0) document.body.classList.add('touched');
+  });
 
   // ----- 버튼·키보드 -----
   document.getElementById('back').addEventListener('click', e => {
