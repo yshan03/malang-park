@@ -34,7 +34,7 @@
   // ----- 더미 물리 -----
   const GRAVITY = 18;      // 떨어지는 힘
   const BOUNCE = 0.35;     // 부딪힐 때 튕기는 정도 (0~1)
-  const PILE_FILL = 0.55;  // 공들이 화면 넓이의 몇 %를 차지할지 (공 크기 결정)
+  const PILE_FILL = 0.64;  // 꽃들이 화면 넓이의 몇 %를 차지할지 (꽃 크기 결정). 겹치지 않고 쌓여도 화면 안에 다 들어가는 값
   const MAX_RADIUS = 1.15; // 공이 적을 때 너무 커지지 않게
   // ----- 조작 -----
   const DRAG_THRESHOLD = 6;// 이만큼(px) 움직이면 '누르기'가 아니라 '끌기'
@@ -51,6 +51,7 @@
   //   시트 열림: 위쪽 58%만 꽃 자리 (아래는 설명 시트)
   const DETAIL_SPLIT = 0.58;
   const HEADER_PX = 64;
+  const LIST_TOP_PX = 84;      // 목록: 유리 돔 꼭대기 높이 (손잡이가 제목 아래 안내 문구와 겹치지 않게)
   const BUTTON_ZONE_PX = 110; // 아래 TMI 버튼이 차지하는 높이
   const CAMERA_Z = 12;
 
@@ -88,7 +89,9 @@
     let selected = -1;     // 상세 모드에서 보여주는 도형 번호
     let sheetOpen = false; // 상세 모드: 설명 시트가 열려 있나
     const view = { w: 1, h: 1, W: 1, H: 1, wpp: 1 };            // 화면 크기(px)와 3D 크기, 1px당 3D 길이
-    const walls = { left: -1, right: 1, bottom: -1, top: 1 };  // 더미를 가두는 벽 (위는 머리글 바로 아래 천장)
+    const walls = { left: -1, right: 1, bottom: -1, top: 1 };  // 더미를 가두는 벽 (top = 유리 돔 꼭대기)
+    // 유리 돔: 옆벽은 곧게, 윗부분은 둥근 천장(타원). cx·cy = 타원 중심, ax·ay = 가로·세로 반지름
+    const dome = { cx: 0, cy: 0, ax: 1, ay: 1 };
     const detailFull = { pos: new THREE.Vector3(), scale: 1 }; // 상세: 시트 닫힘 (가운데, 크게)
     const detailSplit = { pos: new THREE.Vector3(), scale: 1 };// 상세: 시트 열림 (위쪽)
     const detailNow = () => (sheetOpen ? detailSplit : detailFull);
@@ -138,6 +141,35 @@
       };
     }
 
+    // ---------- 유리 돔 그림 (목록 모드에서만 보임, 꽃밭 위에 겹쳐 그리지만 터치는 통과) ----------
+    const SVGNS = 'http://www.w3.org/2000/svg';
+    const glass = document.createElementNS(SVGNS, 'svg');
+    glass.setAttribute('class', 'glass-dome');
+    glass.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;pointer-events:none;transition:opacity .4s';
+    container.appendChild(glass);
+    function drawDome() {
+      const w = view.w, h = view.h, k = 1 / view.wpp;              // 3D 길이 → px
+      const X = x => (x + view.W / 2) * k, Y = y => (view.H / 2 - y) * k;
+      const L = X(walls.left), R = X(walls.right), B = Y(walls.bottom), C = Y(dome.cy), T = Y(walls.top);
+      const ax = dome.ax * k, ay = dome.ay * k, mid = X(dome.cx);
+      // 안쪽 반사광: 돔 왼쪽 위 곡면을 따라 짧게
+      const arcPt = (ang, inset) => [mid + (ax - inset) * Math.cos(ang), C - (ay - inset) * Math.sin(ang)];
+      const [h1x, h1y] = arcPt(Math.PI * 0.86, 9), [h2x, h2y] = arcPt(Math.PI * 0.62, 9);
+      glass.setAttribute('viewBox', `0 0 ${w} ${h}`);
+      glass.innerHTML = `
+        <path d="M${L} ${B} L${L} ${C} A${ax} ${ay} 0 0 1 ${R} ${C} L${R} ${B}"
+              fill="rgba(205,228,240,0.10)" stroke="rgba(120,165,200,0.55)" stroke-width="2.5" stroke-linejoin="round"/>
+        <path d="M${h1x} ${h1y} A${ax - 9} ${ay - 9} 0 0 1 ${h2x} ${h2y}"
+              fill="none" stroke="rgba(255,255,255,0.75)" stroke-width="4" stroke-linecap="round"/>
+        <line x1="${L + 9}" y1="${C + 12}" x2="${L + 9}" y2="${C + (B - C) * 0.45}"
+              stroke="rgba(255,255,255,0.6)" stroke-width="4" stroke-linecap="round"/>
+        <line x1="${R - 8}" y1="${C + 24}" x2="${R - 8}" y2="${C + (B - C) * 0.22}"
+              stroke="rgba(255,255,255,0.45)" stroke-width="2.5" stroke-linecap="round"/>
+        <circle cx="${mid}" cy="${T - 7}" r="7" fill="rgba(205,228,240,0.7)" stroke="rgba(120,165,200,0.6)" stroke-width="2"/>
+        <rect x="${L - 10}" y="${B + 1}" width="${R - L + 20}" height="11" rx="5.5"
+              fill="#DCCBAE" stroke="rgba(150,120,80,0.35)" stroke-width="1"/>`;
+    }
+
     // ---------- 상세에 들어갈 때만: 촘촘한 꽃송이 + 줄기 ----------
     function ensureFull(b) {
       if (b.full) return;
@@ -175,13 +207,19 @@
       view.wpp = view.H / h;
 
       // 더미: 벽은 화면 양옆과 바닥. 공 크기는 공 개수에 맞춰 화면을 적당히 채우도록
-      const usableH = view.H - HEADER_PX * view.wpp;
+      const usableH = view.H - LIST_TOP_PX * view.wpp;
       const sumJ2 = blobs.reduce((s, b) => s + b.sizeJitter * b.sizeJitter, 0);
       const base = Math.min(MAX_RADIUS, Math.sqrt(PILE_FILL * view.W * usableH / (Math.PI * sumJ2)), view.W / 5);
       // 원근 때문에 가장자리 공이 조금 커 보여서, 벽을 화면 끝보다 살짝 안쪽에 둔다
       const margin = 14 * view.wpp + base * 0.18;
       walls.left = -view.W / 2 + margin; walls.right = view.W / 2 - margin; walls.bottom = -view.H / 2 + margin;
-      walls.top = view.H / 2 - HEADER_PX * view.wpp; // 천장: 머리글(제목) 바로 아래
+      walls.top = view.H / 2 - LIST_TOP_PX * view.wpp; // 돔 꼭대기: 제목·안내 문구 아래
+      // 돔 모양: 세로 화면이면 반원, 가로로 넓은 화면이면 낮고 넓은 타원 (화면 밖으로 넘치지 않게)
+      dome.ax = (walls.right - walls.left) / 2;
+      dome.cx = (walls.right + walls.left) / 2;
+      dome.ay = Math.min(dome.ax, (walls.top - walls.bottom) * 0.35);
+      dome.cy = walls.top - dome.ay;
+      drawDome();
       blobs.forEach(b => {
         b.r = base * b.sizeJitter;
         b.p.x = THREE.MathUtils.clamp(b.p.x, walls.left + b.r, walls.right - b.r);
@@ -226,18 +264,34 @@
         }
       });
       labels.forEach(el => el.classList.toggle('hidden', mode !== 'list'));
+      glass.style.opacity = mode === 'list' ? 1 : 0;   // 유리 돔은 목록에서만
     }
 
     layout();
-    // 첫 등장: 화면 위에서 하나씩 떨어져 쌓임
-    const perRow = Math.max(1, Math.floor((walls.right - walls.left) / (blobs[0] ? blobs[0].r * 2.2 : 1)));
-    blobs.forEach((b, i) => {
-      b.p.set(
-        THREE.MathUtils.lerp(walls.left + b.r, walls.right - b.r, Math.random()),
-        view.H / 2 + b.r + Math.floor(i / perRow) * b.r * 2.4 + Math.random() * b.r
-      );
-      b.cur.set(b.p.x, b.p.y, 0); b.curScale = b.r; b.follow = true;
-    });
+    // 첫 등장: 꽃들을 화면 위쪽부터 촘촘히 줄 세워 두고(서로 살짝 떨어지게) 한꺼번에 떨어뜨림
+    //   → 위에서 '우수수' 쏟아져 쌓이는 연출. 처음부터 모두 화면 안이라 밖에 걸리는 꽃이 없음
+    (function spawn() {
+      const maxR = blobs.reduce((m, b) => Math.max(m, b.r), 0) || 1;
+      const gap = maxR * 2.06;                                    // 한 칸 (지름보다 조금 넓게)
+      const perRow = Math.max(1, Math.floor((walls.right - walls.left) / gap));
+      const rows = Math.ceil(blobs.length / perRow);
+      const spawnTop = dome.cy;                                   // 돔 둥근 부분 아래부터 줄 세움
+      const rowGap = Math.min(gap, (spawnTop - walls.bottom - 2 * maxR) / Math.max(1, rows - 1));
+      const order = blobs.map((b, i) => i).sort(() => Math.random() - 0.5); // 대표 꽃이 한쪽에 몰리지 않게 섞음
+      order.forEach((bi, k) => {
+        const b = blobs[bi];
+        const row = Math.floor(k / perRow), col = k % perRow;
+        const inRow = Math.min(perRow, blobs.length - row * perRow);
+        const x = (col - (inRow - 1) / 2) * gap + (row % 2 ? gap * 0.25 : -gap * 0.25);
+        b.p.set(
+          THREE.MathUtils.clamp(x, walls.left + b.r, walls.right - b.r),
+          spawnTop - maxR - row * rowGap
+        );
+        b.vel.set((Math.random() - 0.5) * 0.4, -Math.random() * 0.5);
+        b.entered = true;
+        b.cur.set(b.p.x, b.p.y, 0); b.curScale = b.r; b.follow = true;
+      });
+    })();
     window.addEventListener('resize', layout);
 
     // ---------- 포인터 (마우스·터치 공통) ----------
@@ -380,83 +434,115 @@
 
     // ---------- 더미 물리 한 걸음 ----------
     const nTmp = new THREE.Vector2();
+    // 안정적으로 쌓이게 하는 방식 (위치 기반):
+    //   ① 속도대로 옮겨 보고 → ② 겹친 것·벽을 '위치'로 여러 번 바로잡고 → ③ 실제로 움직인 거리로 속도를 다시 정함
+    //   이렇게 하면 밀어낸 만큼 속도도 같이 줄어서, 많이 쌓여도 아래쪽이 계속 들썩이지 않는다.
+    //   한 프레임을 작은 걸음(1/120초) 여러 번으로 나눠 계산 → 휴대폰처럼 프레임이 느려도 덜 겹침.
+    const SUB_DT = 1 / 120, ITER = 8;
+    const CONTACT_DAMP = 4;      // 다른 꽃에 닿아 있으면 이만큼 빨리 느려짐 (자리 잡기)
+    const SLEEP_SPEED = 0.12;    // 닿아 있고 이보다 느리면 멈춘 것으로 보고 거의 정지
+    const prevP = new THREE.Vector2();
     function physics(dt) {
+      const steps = Math.max(1, Math.ceil(dt / SUB_DT)), h = dt / steps;
+      for (let s = 0; s < steps; s++) physicsStep(h);
+      // 굴러가는 만큼 돌기 — 실제로 굴러갈 때만 (작은 떨림으로 빙글빙글 돌지 않게)
       blobs.forEach(b => {
+        if (Math.abs(b.vel.x) > 0.25 && !b.faceSettle) {
+          qTmp.setFromAxisAngle(axisZ, -b.vel.x / b.r * dt);
+          b.mesh.quaternion.premultiply(qTmp);
+        }
+      });
+    }
+    function physicsStep(h) {
+      // ① 속도대로 옮겨 보기
+      blobs.forEach(b => {
+        b.prev = b.prev || new THREE.Vector2();
+        b.prev.copy(b.p);
+        b.contacts = 0; b.supported = false; b.wallHitX = 0; b.wallHitY = 0; b.domeHit = false;
         if (b.held) {
           // 잡힌 공: 손 위치로 용수철처럼 끌려감 → 놓을 때 이 속도가 남아 '던지기'가 됨
           b.vel.copy(b.holdTarget).sub(b.p).multiplyScalar(18);
         } else {
-          b.vel.y -= GRAVITY * dt;
-          b.vel.multiplyScalar(Math.pow(0.7, dt)); // 공기 저항 조금
+          b.vel.y -= GRAVITY * h;
+          b.vel.multiplyScalar(Math.pow(0.7, h)); // 공기 저항 조금
         }
-        b.p.addScaledVector(b.vel, dt);
+        b.p.addScaledVector(b.vel, h);
       });
-      // 가까운 것끼리만 비교하려고 화면을 칸으로 나눔 (153개 × 153개를 다 비교하지 않음)
+      // ② 겹친 것·벽을 위치로 바로잡기 (가까운 것끼리만 비교하려고 화면을 칸으로 나눔)
       let maxR = 0; blobs.forEach(b => { if (b.r > maxR) maxR = b.r; });
       const cell = maxR * 2 || 1;
-      for (let iter = 0; iter < 4; iter++) {
+      for (let iter = 0; iter < ITER; iter++) {
         const grid = new Map();
         blobs.forEach((b, i) => {
           const key = Math.floor(b.p.x / cell) + ',' + Math.floor(b.p.y / cell);
           (grid.get(key) || grid.set(key, []).get(key)).push(i);
         });
-        // 공끼리 겹치면 밀어내기
         for (let i = 0; i < blobs.length; i++) {
           const gx = Math.floor(blobs[i].p.x / cell), gy = Math.floor(blobs[i].p.y / cell);
           for (let ox = -1; ox <= 1; ox++) for (let oy = -1; oy <= 1; oy++) {
             const list = grid.get((gx + ox) + ',' + (gy + oy));
             if (!list) continue;
             for (const j of list) {
-            if (j <= i) continue;
-            const a = blobs[i], c = blobs[j];
-            nTmp.copy(c.p).sub(a.p);
-            const dist = nTmp.length(), minD = a.r + c.r;
-            if (dist >= minD || dist === 0) continue;
-            nTmp.divideScalar(dist);
-            const overlap = minD - dist;
-            // 잡은 공이 다른 공을 밀 때: 찌그러짐 없이 부드럽게 밀어냄
-            //   잡은 공도 살짝 밀려서(25%) 버티는 느낌을 주고, 밀린 공은 잡은 공의 속도를 이어받아
-            //   겹쳤다가 '팍' 튕기는 순간이동이 생기지 않게 함
-            if (a.held || c.held) {
-              const h = a.held ? a : c, o = a.held ? c : a;
-              const dir = a.held ? 1 : -1;                    // '잡은 공 → 밀린 공' 방향
-              const nx = nTmp.x * dir, ny = nTmp.y * dir;
-              h.p.x -= nx * overlap * 0.25; h.p.y -= ny * overlap * 0.25;
-              o.p.x += nx * overlap * 0.75; o.p.y += ny * overlap * 0.75;
-              const vh = h.vel.x * nx + h.vel.y * ny, vo = o.vel.x * nx + o.vel.y * ny;
-              if (vo < vh) { o.vel.x += nx * (vh - vo); o.vel.y += ny * (vh - vo); }
-              continue;
-            }
-            const wa = 0.5;                            // 던진 공끼리는 단단하게 반반씩 밀어냄
-            a.p.addScaledVector(nTmp, -overlap * wa);
-            c.p.addScaledVector(nTmp, overlap * (1 - wa));
-            const vn = (c.vel.x - a.vel.x) * nTmp.x + (c.vel.y - a.vel.y) * nTmp.y;
-            if (vn < 0) {
-              const imp = -(1 + BOUNCE) * vn / 2;
-              a.vel.addScaledVector(nTmp, -imp);
-              c.vel.addScaledVector(nTmp, imp);
-            }
+              if (j <= i) continue;
+              const a = blobs[i], c = blobs[j];
+              nTmp.copy(c.p).sub(a.p);
+              const dist = nTmp.length(), minD = a.r + c.r;
+              if (dist >= minD || dist === 0) continue;
+              nTmp.divideScalar(dist);
+              const overlap = minD - dist;
+              if (iter === 0) {
+                a.contacts++; c.contacts++;
+                // 아래에서 받쳐 주는 꽃이 있나 (떠 있는 꽃끼리 닿은 건 받침이 아님)
+                if (nTmp.y > 0.4) c.supported = true;   // c가 a 위에 얹힘
+                if (nTmp.y < -0.4) a.supported = true;  // a가 c 위에 얹힘
+              }
+              // 잡은 공이 밀 때: 잡은 공은 25%만 밀리고(버티는 느낌) 나머지는 밀린 공이 비켜남
+              //   (속도는 ③에서 움직인 거리로 정해져서, 밀린 공이 자연스럽게 따라 밀려남)
+              const wa = a.held ? 0.25 : c.held ? 0.75 : 0.5;
+              a.p.addScaledVector(nTmp, -overlap * wa);
+              c.p.addScaledVector(nTmp, overlap * (1 - wa));
             }
           }
         }
-        // 벽과 바닥
+        // 벽·바닥·천장
         blobs.forEach(b => {
-          if (b.p.x - b.r < walls.left) { b.p.x = walls.left + b.r; if (b.vel.x < 0) b.vel.x *= -BOUNCE; }
-          if (b.p.x + b.r > walls.right) { b.p.x = walls.right - b.r; if (b.vel.x > 0) b.vel.x *= -BOUNCE; }
-          // 천장: 화면 안으로 들어온 공은 위로 던져도 머리글 아래에서 튕겨 돌아옴
+          if (b.p.x - b.r < walls.left) { b.p.x = walls.left + b.r; b.wallHitX = 1; }
+          if (b.p.x + b.r > walls.right) { b.p.x = walls.right - b.r; b.wallHitX = -1; }
+          // 유리 돔 둥근 천장: 타원 안쪽(꽃 반지름만큼 줄인 타원)을 벗어나면 곡면 위로 되돌림
           if (!b.entered && b.p.y + b.r <= walls.top) b.entered = true;
-          if (b.entered && b.p.y + b.r > walls.top) { b.p.y = walls.top - b.r; if (b.vel.y > 0) b.vel.y *= -BOUNCE; }
-          if (b.p.y - b.r < walls.bottom) {
-            b.p.y = walls.bottom + b.r;
-            if (b.vel.y < 0) b.vel.y *= -BOUNCE;
-            b.vel.x *= 0.985; // 바닥 마찰
+          if (b.entered && b.p.y > dome.cy) {
+            const A = dome.ax - b.r, B = dome.ay - b.r, dx = b.p.x - dome.cx, dy = b.p.y - dome.cy;
+            const e = (dx * dx) / (A * A) + (dy * dy) / (B * B);
+            if (e > 1) {
+              const k = 1 / Math.sqrt(e);
+              b.p.x = dome.cx + dx * k; b.p.y = dome.cy + dy * k;
+              const nx = dx / (A * A), ny = dy / (B * B), L = Math.hypot(nx, ny) || 1;
+              b.domeN = b.domeN || new THREE.Vector2();
+              b.domeN.set(nx / L, ny / L);                 // 돔 곡면의 바깥 방향
+              b.domeHit = true;
+            }
           }
+          if (b.p.y - b.r < walls.bottom) { b.p.y = walls.bottom + b.r; b.wallHitY = 1; b.contacts++; b.supported = true; }
         });
       }
-      // 굴러가는 만큼 실제로 돌기 (오른쪽으로 굴러가면 시계 방향)
+      // ③ 실제로 움직인 거리로 속도 다시 정하기 + 자리 잡기
       blobs.forEach(b => {
-        qTmp.setFromAxisAngle(axisZ, -b.vel.x / b.r * dt);
-        b.mesh.quaternion.premultiply(qTmp);
+        if (b.held) return;
+        const vx0 = b.vel.x, vy0 = b.vel.y;                 // 바로잡기 전 속도 (벽에 튕길 때 씀)
+        prevP.copy(b.prev);
+        b.vel.copy(b.p).sub(prevP).divideScalar(h);
+        // 벽·천장·바닥에 세게 부딪혔으면 살짝 튕겨 나옴 (던지기 손맛)
+        if (b.wallHitX && Math.abs(vx0) > 1.5) b.vel.x = -vx0 * BOUNCE;
+        if (b.wallHitY && Math.abs(vy0) > 2.5) b.vel.y = -vy0 * BOUNCE;
+        if (b.domeHit) {                                    // 돔 곡면에 세게 부딪히면 곡면 방향으로 튕김
+          const vn = vx0 * b.domeN.x + vy0 * b.domeN.y;
+          if (vn > 2) { b.vel.set(vx0 - (1 + BOUNCE) * vn * b.domeN.x, vy0 - (1 + BOUNCE) * vn * b.domeN.y); }
+        }
+        if (b.wallHitY > 0) b.vel.x *= Math.pow(0.2, h);    // 바닥 마찰
+        if (b.supported) {                                  // 바닥이나 다른 꽃 위에 얹혀 있을 때만 (떨어지는 중엔 X)
+          b.vel.multiplyScalar(Math.exp(-h * CONTACT_DAMP)); // 받쳐져 있으면 점점 느려짐
+          if (b.vel.lengthSq() < SLEEP_SPEED * SLEEP_SPEED) b.vel.multiplyScalar(0.5); // 거의 멈춘 꽃은 재우기
+        }
       });
     }
     // (목록에서는 부딪혀도 찌그러지지 않음 — 2026-11-15 사용자 요청으로 부딪힘 출렁임 제거)
