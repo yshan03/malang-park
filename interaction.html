@@ -4,6 +4,10 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>말랑 장미 만지기</title>
+<!-- 꽃 이름용 둥근 글꼴 (Jua) -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Jua&display=swap" rel="stylesheet">
 <style>
   :root {
     --bg: #f6f1e7; --ink: #3f3a33; --muted: #8a857c; --card: #fffaf2; --line: #e6dcc8; --accent: #e5566f;
@@ -68,18 +72,26 @@
   #find-none { display: none; margin: 0; padding: 18px; text-align: center; font-size: 14px; color: var(--muted); }
 
   /* ----- 상세 모드: 위 가운데 꽃 이름 ----- */
+  /* 꽃 이름: 둥근 스티커 글씨 — 흰 글자 + 꽃 색 테두리 + 아래로 두꺼운 그림자 (색은 꽃마다 JS가 넣음) */
   #flower-name {
-    position: fixed; z-index: 5; top: 16px; left: 64px; right: 64px; margin: 0; text-align: center;
-    font-size: 22px; font-weight: 800; letter-spacing: -0.02em; line-height: 32px;
+    --c: #E86B86; --c-deep: #B8456A;
+    position: fixed; z-index: 5; top: 8px; left: 60px; right: 60px; margin: 0; padding: 4px 6px 8px; text-align: center;
+    font-family: 'Jua', 'Apple SD Gothic Neo', sans-serif; font-weight: 400; font-size: 30px; line-height: 38px;
+    color: #fff; letter-spacing: 0.01em;
+    text-shadow: 2px 0 0 var(--c), -2px 0 0 var(--c), 0 2px 0 var(--c), 0 -2px 0 var(--c),
+                 2px 2px 0 var(--c), -2px 2px 0 var(--c), 2px -2px 0 var(--c), -2px -2px 0 var(--c),
+                 0 5px 0 var(--c-deep), 2px 5px 0 var(--c-deep), -2px 5px 0 var(--c-deep);
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     opacity: 0; transform: translateY(-8px); transition: opacity .3s, transform .3s; pointer-events: none;
   }
   body.detail #flower-name { opacity: 1; transform: none; }
+  #flower-name.pop { animation: name-pop .5s cubic-bezier(.3, 1.6, .5, 1); } /* 꽃이 바뀔 때 통! */
+  @keyframes name-pop { 0% { transform: scale(.6); } 60% { transform: scale(1.12); } 100% { transform: scale(1); } }
 
   /* ----- 상세 모드: 만지는 법 안내 (처음 만지면 사라짐) ----- */
   #touch-hint { /* 꽃 이름 바로 아래 (줄기가 생겨 꽃송이가 위쪽에 있으므로, 아래 🤓 버튼과 떨어뜨림) */
-    position: fixed; z-index: 3; left: 0; right: 0; top: 50px; text-align: center;
-    font-size: 13px; color: var(--muted); pointer-events: none; opacity: 0; transition: opacity .4s;
+    position: fixed; z-index: 3; left: 0; right: 0; top: 58px; text-align: center;
+    font-size: 13px; color: var(--hint-c, var(--muted)); font-weight: 600; pointer-events: none; opacity: 0; transition: opacity .4s;
   }
   body.detail:not(.sheet-open):not(.touched) #touch-hint { opacity: 1; }
 
@@ -216,7 +228,7 @@
   if (!items.length) {
     // 데이터 없는 구역: 가운데 문구 하나만 (제목·안내는 숨기고, 돌아갈 ← 버튼만 남김)
     document.body.classList.add('is-empty');
-    document.body.insertAdjacentHTML('beforeend', '<div class="empty">아직 블롭이 덜 말랑해요 🫧 조금만 기다려 주세요</div>');
+    document.body.insertAdjacentHTML('beforeend', '<div class="empty">아직 말랑이가 덜 말랑해요 🫧 조금만 기다려 주세요</div>');
     return;
   }
 
@@ -238,7 +250,14 @@
     current = index;
     setSheet(false);                      // 새 꽃은 이름만 보이게 (설명은 닫고 시작)
     renderInfo(items[index], index);
-    document.getElementById('flower-name').textContent = items[index].name;
+    // 꽃 이름: 꽃 디자인 색으로 스티커 테두리 + 통 튀는 등장 / 안내 문구도 같은 색 (꽃에 대한 안내임을 보여줌)
+    const nameEl = document.getElementById('flower-name');
+    nameEl.textContent = items[index].name;
+    const tone = stickerTone(items[index]);
+    nameEl.style.setProperty('--c', tone.c);
+    nameEl.style.setProperty('--c-deep', tone.deep);
+    document.body.style.setProperty('--hint-c', tone.deep);
+    nameEl.classList.remove('pop'); void nameEl.offsetWidth; nameEl.classList.add('pop');
     document.body.classList.add('detail');
     document.title = items[index].name + ' · ' + zoneName;
     scene.showDetail(index, dir);
@@ -259,6 +278,17 @@
   function step(dir) { // dir: -1 이전, +1 다음 (끝에 가면 처음으로 돌아감)
     const n = items.length;
     openDetail((current + dir + n) % n, dir, 'replace');
+  }
+
+  // 꽃 디자인 색(item.blob.colors)으로 스티커 테두리 색 만들기. 밝은 꽃(흰·크림)은 배경과 구분되게 진하게
+  function stickerTone(item) {
+    const col = (item.blob && item.blob.colors) || {};
+    const base = col.center || col.outer || '#E86B86';
+    const rgb = [1, 3, 5].map(i => parseInt(base.slice(i, i + 2), 16));
+    const lum = (0.299 * rgb[0] + 0.587 * rgb[1] + 0.114 * rgb[2]) / 255;
+    const shade = (k) => '#' + rgb.map(v => Math.round(v * k).toString(16).padStart(2, '0')).join('');
+    const k = lum > 0.75 ? 0.62 : lum > 0.6 ? 0.8 : 1;           // 밝은 색은 테두리를 진하게
+    return { c: shade(k), deep: shade(k * 0.72) };
   }
 
   // ----- 정보 영역 채우기 (공통 형태의 필드만 사용) -----

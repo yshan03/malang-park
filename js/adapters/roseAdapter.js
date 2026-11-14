@@ -4,7 +4,8 @@
 //   API 원본 { title, alternativeTitle, subDescription:"꽃색:…||육성국:…", ... }
 //        │  roseAdapter()
 //        ▼
-//   공통 형태 { id, name, nameEn, color, colorHex, colorHex2, imageUrls, description, detailUrl, zone, tags }
+//   공통 형태 { id, name, nameEn, color, colorHex, colorHex2, imageUrls, description, detailUrl, zone, tags, scent }
+//   (scent: 향기 세기 0~1 — 꾹 눌렀을 때 퍼지는 향기 입자의 양. 설명 문장에서 읽음)
 //   (colorHex는 이름 옆 색 동그라미에만 쓴다. 3D 도형 색에는 쓰지 않는다.)
 
 (function () {
@@ -51,6 +52,19 @@
 
   const LINEAGE = { HT: '하이브리드 티', FL: '플로리분다', CL: '덩굴장미', MIN: '미니어처', S: '관목장미' };
 
+  // 향기 세기: API 설명 문장의 표현으로 정함 (공공데이터를 인터랙션에 직접 쓰는 부분)
+  //   강함 1.0  "향기가 뛰어나다/강하다/진하다", "향기 또한 뛰어나다", "방향상(향기 상)"
+  //   보통 0.7  그 밖에 향·향기 이야기가 있음 ("과일향이 난다" 등)
+  //   약함 0.35 "약하지만 향기도", "은은한 향"
+  //   없음 0.15 향기 언급 없음 (누를 때 허전하지 않게 아주 살짝)
+  function scentOf(desc) {
+    const d = String(desc || '');
+    if (/약하지만|은은한 향|약한 향|가벼운 향|향기가 약/.test(d)) return 0.35;
+    if (/향기가 (강|뛰어|진하|매우|풍부|아주)|향기 또한 뛰어|뛰어난 향기|강한 향기|진한 향기|강향|방향상/.test(d)) return 1;
+    if (/향/.test(d)) return 0.7;
+    return 0.15;
+  }
+
   window.roseAdapter = function (apiItem, index) {
     const sub = parseSubDescription(apiItem.subDescription);
     const colorText = sub['꽃색'] || '';
@@ -69,6 +83,7 @@
       // 사진 후보를 순서대로: 앞 주소가 깨지면 화면이 다음 주소를 시도한다.
       imageUrls: [apiItem.referenceIdentifier, apiItem.url].filter(Boolean),
       description: apiItem.description || '',
+      scent: scentOf(apiItem.description),
       detailUrl: '',
       zone: 'rose',
       // 카드에 보여줄 부가 정보(이름표 형태). 인터랙션 코드는 내용을 몰라도 그냥 나열만 한다.

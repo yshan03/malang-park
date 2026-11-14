@@ -75,6 +75,61 @@
     scene.add(rim);
 
     const shadowTex = makeShadowTexture();
+
+    // ---------- 향기 입자: 꽃송이를 꾹 누르면 작은 꽃잎이 퍼져 위로 흩날림 ----------
+    //   item.scent(0~1, 데이터에서 읽은 향기 세기)만큼 개수·높이가 달라짐. 색은 그 꽃의 디자인 색.
+    const SCENT_BURST = 26;                    // 향기 1.0일 때 한 번에 나오는 꽃잎 수
+    const petalGeo = new THREE.SphereGeometry(1, 8, 6);
+    petalGeo.scale(1, 0.32, 0.62);             // 납작한 꽃잎 모양
+    const particles = [];                      // 미리 만들어 두고 돌려 씀 (매번 새로 만들지 않음)
+    for (let k = 0; k < 90; k++) {
+      const m = new THREE.Mesh(petalGeo, new THREE.MeshLambertMaterial({ transparent: true, depthWrite: false }));
+      m.visible = false;
+      scene.add(m);
+      particles.push({ mesh: m, life: 0, max: 1, vel: new THREE.Vector3(), spin: new THREE.Vector3(), size: 1 });
+    }
+    let nextParticle = 0;
+    function spawnScent(b, worldPoint, amount) {
+      const scent = typeof b.item.scent === 'number' ? b.item.scent : 0.5;
+      const n = Math.round(SCENT_BURST * scent * amount);
+      if (n <= 0) return;
+      const cols = (b.item.blob && b.item.blob.colors) || {};
+      const palette = [cols.center, cols.edge, cols.center, cols.outer].filter(Boolean); // 진한 색 위주 (배경에 묻히지 않게)
+      const out = worldPoint.clone().sub(b.mesh.position).normalize();       // 누른 곳의 바깥 방향
+      const s = b.curScale;
+      for (let k = 0; k < n; k++) {
+        const pt = particles[nextParticle++ % particles.length];
+        pt.mesh.material.color.set(palette[k % palette.length] || '#F7A9B8').convertSRGBToLinear();
+        pt.mesh.position.copy(worldPoint).addScaledVector(out, s * 0.12);   // 꽃 표면보다 살짝 앞에서 출발
+        pt.mesh.position.z += s * 0.25;
+        pt.size = s * (0.13 + Math.random() * 0.09);
+        const spread = 0.9 + 1.6 * scent;                                     // 향기가 셀수록 멀리
+        pt.vel.set(
+          out.x * spread + (Math.random() - 0.5) * 1.6,
+          out.y * spread + 0.8 + Math.random() * 1.2 * (0.5 + scent),
+          out.z * spread + 0.6 + Math.random() * 0.8
+        ).multiplyScalar(s);
+        pt.spin.set(Math.random() * 6 - 3, Math.random() * 6 - 3, Math.random() * 6 - 3);
+        pt.mesh.rotation.set(Math.random() * 6, Math.random() * 6, Math.random() * 6);
+        pt.max = pt.life = 1.1 + Math.random() * 0.9 + scent * 0.8;          // 향기가 셀수록 오래
+        pt.mesh.visible = true;
+      }
+    }
+    function updateParticles(dt, t) {
+      particles.forEach(pt => {
+        if (pt.life <= 0) return;
+        pt.life -= dt;
+        if (pt.life <= 0) { pt.mesh.visible = false; return; }
+        pt.vel.multiplyScalar(Math.pow(0.35, dt));                             // 공기 저항
+        pt.vel.y += 0.35 * dt;                                                 // 향기처럼 살짝 떠오름
+        pt.mesh.position.addScaledVector(pt.vel, dt);
+        pt.mesh.position.x += Math.sin(t * 3 + pt.max * 10) * 0.004;           // 하늘하늘
+        pt.mesh.rotation.x += pt.spin.x * dt; pt.mesh.rotation.y += pt.spin.y * dt; pt.mesh.rotation.z += pt.spin.z * dt;
+        const a = pt.life / pt.max;
+        pt.mesh.material.opacity = Math.min(1, a * 2.2);                       // 끝에 갈수록 사라짐
+        pt.mesh.scale.setScalar(pt.size * (0.6 + 0.4 * Math.min(1, (1 - a) * 6)));
+      });
+    }
     const blobs = items.map((item, i) => makeBlob(item, i));
     const labels = blobs.map(b => {
       const el = document.createElement('div');
@@ -345,10 +400,11 @@
         active = { ...base, blob: hit.blob, part: hit.part };
         hit.blob.spin.set(0, 0);
         hit.blob.settle = false;
-        if (hit.part === 'head') {                 // 꽃송이: 쏙 들어감
+        if (hit.part === 'head') {                 // 꽃송이: 쏙 들어감 + 향기 꽃잎이 퐁
           setPressPoint(hit.blob, hit.point);
           hit.blob.pressTarget = 1;
           hit.blob.awake = true;
+          spawnScent(hit.blob, hit.point, 1);
         } else {                                   // 줄기·잎: 누른 쪽 반대로 휘청
           const side = Math.sign(pWorld.x - hit.blob.cur.x) || 1;
           hit.blob.swayV.x += -side * 5.5;
@@ -407,6 +463,10 @@
       } else if (active.mode === 'tap') {
         b.pressTarget = 0;
         b.wobbleV += 2.2 * b.press; // 놓는 순간 몸 전체가 '통' 하고 튐
+        if (active.part === 'head' && b.press > 0.3) {                     // 꾹 누를수록 놓을 때 향기가 한 번 더
+          tmp.copy(b.pressPoint).applyMatrix4(b.head.matrixWorld);
+          spawnScent(b, tmp, 0.5 * b.press);
+        }
       }
       active = null;
       canvas.style.cursor = 'default';
@@ -620,6 +680,7 @@
         if (b.awake && b.full) updateSurface(b, dt);
         if (SHOW_LIST_LABELS) updateLabel(b, labels[i]);
       });
+      updateParticles(dt, t);
       renderer.render(scene, camera);
       requestAnimationFrame(frame);
     }
