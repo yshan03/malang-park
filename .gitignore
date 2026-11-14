@@ -1,0 +1,8 @@
+# 인증키 파일은 절대 저장소에 올리지 않는다
+js/config.local.js
+# 공모전 기획 메모와 Claude 설정은 공개하지 않는다
+CLAUDE.md
+.claude/
+.DS_Store
+# 지도 시안 원본 (index.html 안에 같은 그림이 있음, 로컬 백업용)
+park-map.svg
