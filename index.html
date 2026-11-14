@@ -29,9 +29,9 @@
 <div class="wrap" id="wrap">
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 560" font-family="'Apple SD Gothic Neo','Noto Sans KR','Noto Sans CJK KR',sans-serif">
   <!--
-    올림픽공원 일러스트 지도 시안 v0.1
+    올림픽공원 일러스트 지도 시안 v0.2 (실제 방향 반영, 2026-11-15)
     - 실제 지도를 따라 그린 것이 아니라, 구역의 대략적인 상대 위치만 참고한 일러스트입니다.
-    - 누를 수 있는 구역은 <g class="zone" data-zone="..."> 입니다.
+    - 누를 수 있는 구역은 <g class="zone" data-zone="..."> 입니다. 회색 <g class="landmark">는 방향 표시용 장식(누를 수 없음).
     - data-active="true" 인 구역만 실제 데이터(API)와 연결됩니다. 나머지는 "준비 중".
   -->
   <defs>
@@ -52,29 +52,89 @@
         fill="url(#grass)" stroke="#9cc283" stroke-width="3"/>
 
   <!-- 산책로 (장식용, 세부 길 아님) -->
-  <path d="M120 140 C 220 160, 300 120, 420 150 S 620 170, 690 150" fill="none" stroke="#efe3c8" stroke-width="10" stroke-linecap="round"/>
-  <path d="M150 430 C 260 400, 360 440, 470 420 S 640 410, 700 380" fill="none" stroke="#efe3c8" stroke-width="10" stroke-linecap="round"/>
+  <path d="M530 95 C 560 200, 520 300, 610 370" fill="none" stroke="#efe3c8" stroke-width="10" stroke-linecap="round"/>
+  <path d="M180 470 C 300 440, 420 480, 520 455" fill="none" stroke="#efe3c8" stroke-width="10" stroke-linecap="round"/>
 
-  <!-- ============ 구역들 ============ -->
+  <!-- ============ 장식 (누를 수 없음): 방향을 잡게 해 주는 회색 랜드마크 ============ -->
 
-  <!-- 평화의 문 (1경) -->
-  <g class="zone" id="zone-gate" data-zone="gate" data-name="세계평화의 문" data-active="false" tabindex="0" role="button" aria-label="세계평화의 문">
-    <circle class="zone-hit" cx="125" cy="140" r="52" fill="#fff8ec" opacity="0.001"/>
-    <g filter="url(#soft)">
-      <rect x="92" y="112" width="12" height="44" rx="3" fill="#c9b79c"/>
-      <rect x="146" y="112" width="12" height="44" rx="3" fill="#c9b79c"/>
-      <path d="M82 116 C 100 92, 150 92, 168 116" fill="none" stroke="#e07a5f" stroke-width="9" stroke-linecap="round"/>
-    </g>
-    <text class="zone-label" x="125" y="182" text-anchor="middle">세계평화의 문</text>
+  <!-- 몽촌해자 (3경): 토성을 서·남쪽으로 감싸는 물길 -->
+  <g class="landmark" id="deco-moat" aria-hidden="true">
+    <path d="M215 120 C 150 175, 140 320, 205 390 C 255 440, 370 445, 440 420" fill="none" stroke="#9fd3e6" stroke-width="13" stroke-linecap="round"/>
+    <path d="M168 250 q 8 -6 16 0" fill="none" stroke="#e8f6fb" stroke-width="2.5" stroke-linecap="round"/>
+    <text class="landmark-label" x="122" y="300" text-anchor="middle">몽촌해자</text>
   </g>
 
-  <!-- 장미광장 (9경) — 실제 API 연결 구역 -->
+  <!-- 세계평화의 문 (1경): 남서쪽 끝 -->
+  <g class="landmark" id="deco-gate" aria-hidden="true">
+    <rect x="100" y="410" width="11" height="40" rx="3"/>
+    <rect x="149" y="410" width="11" height="40" rx="3"/>
+    <path d="M91 414 C 108 392, 152 392, 169 414" fill="none" stroke-width="8" stroke-linecap="round"/>
+    <text class="landmark-label" x="130" y="472" text-anchor="middle">세계평화의 문</text>
+  </g>
+
+  <!-- KSPO DOME (체조경기장): 동쪽 -->
+  <g class="landmark" id="deco-dome" aria-hidden="true">
+    <ellipse cx="640" cy="200" rx="56" ry="15"/>
+    <path d="M586 198 C 592 150, 688 150, 694 198 Z"/>
+    <path d="M612 194 C 614 168, 626 160, 640 158 M668 194 C 666 168, 654 160, 640 158 M640 158 L 640 196" fill="none" stroke="#f6f1e7" stroke-width="2"/>
+    <text class="landmark-label" x="640" y="236" text-anchor="middle">KSPO DOME</text>
+  </g>
+
+  <!-- ============ 구역들 (누를 수 있음) ============ -->
+
+  <!-- 몽촌토성 산책로 (5경): 가운데~서쪽의 큰 언덕 -->
+  <g class="zone" id="zone-tosung" data-zone="tosung" data-name="몽촌토성 산책로" data-active="false" tabindex="0" role="button" aria-label="몽촌토성 산책로">
+    <path class="zone-hit" d="M195 235 C 192 155, 300 108, 400 116 C 492 124, 522 190, 506 262 C 490 338, 430 392, 330 394 C 236 396, 197 318, 195 235 Z"
+          fill="#a9cf8c" stroke="#8dbb6e" stroke-width="3" filter="url(#soft)"/>
+    <!-- 언덕 위 산책로 -->
+    <path d="M222 300 C 250 220, 330 270, 365 205 S 450 175, 488 230" fill="none" stroke="#efe3c8" stroke-width="6" stroke-linecap="round" stroke-dasharray="2 10"/>
+    <text class="zone-label" x="330" y="378" text-anchor="middle">몽촌토성 산책로</text>
+  </g>
+
+  <!-- 나홀로나무 (6경): 토성 위 서쪽 -->
+  <g class="zone" id="zone-lonetree" data-zone="lonetree" data-name="나홀로나무" data-active="false" tabindex="0" role="button" aria-label="나홀로나무">
+    <circle class="zone-hit" cx="275" cy="225" r="34" fill="#fff" opacity="0.001"/>
+    <g filter="url(#soft)">
+      <rect x="271" y="225" width="8" height="22" rx="2" fill="#8a5a3b"/>
+      <circle cx="275" cy="213" r="22" fill="#4f8f45"/>
+      <circle cx="263" cy="207" r="10" fill="#5fa152"/>
+    </g>
+    <text class="zone-label small" x="275" y="266" text-anchor="middle">나홀로나무</text>
+  </g>
+
+  <!-- 야생화학습장: 토성 남동쪽 자락 -->
+  <g class="zone" id="zone-wildlab" data-zone="wildlab" data-name="야생화학습장" data-active="false" tabindex="0" role="button" aria-label="야생화학습장">
+    <circle class="zone-hit" cx="440" cy="318" r="44" fill="#fff" opacity="0.001"/>
+    <ellipse cx="440" cy="320" rx="44" ry="22" fill="#e6dcf0"/>
+    <g filter="url(#soft)">
+      <g transform="translate(422 314)"><circle r="7" fill="#9b7fc9"/><circle r="2.5" fill="#fff3c4"/></g>
+      <g transform="translate(444 306)"><circle r="6" fill="#ffffff"/><circle r="2.5" fill="#f2c230"/></g>
+      <g transform="translate(462 322)"><circle r="7" fill="#b9a3da"/><circle r="2.5" fill="#fff3c4"/></g>
+      <g transform="translate(436 328)"><circle r="5" fill="#ffffff"/><circle r="2" fill="#f2c230"/></g>
+    </g>
+    <text class="zone-label small" x="440" y="358" text-anchor="middle">야생화학습장</text>
+  </g>
+
+  <!-- 들꽃마루 (8경): 남동, 장미광장 옆 -->
+  <g class="zone" id="zone-wildflower" data-zone="wildflower" data-name="들꽃마루" data-active="false" tabindex="0" role="button" aria-label="들꽃마루">
+    <circle class="zone-hit" cx="690" cy="345" r="54" fill="#fff" opacity="0.001"/>
+    <ellipse cx="690" cy="350" rx="48" ry="28" fill="#f4d9a8"/>
+    <g filter="url(#soft)">
+      <g transform="translate(670 342)"><circle r="8" fill="#f2a541"/><circle r="3" fill="#7a4b1d"/></g>
+      <g transform="translate(696 332)"><circle r="9" fill="#f28ab2"/><circle r="3.5" fill="#fff3c4"/></g>
+      <g transform="translate(716 350)"><circle r="7" fill="#f2a541"/><circle r="3" fill="#7a4b1d"/></g>
+      <g transform="translate(688 360)"><circle r="7" fill="#e5566f"/><circle r="3" fill="#2b2b2b"/></g>
+    </g>
+    <text class="zone-label" x="690" y="398" text-anchor="middle">들꽃마루</text>
+  </g>
+
+  <!-- 장미광장 (9경): 남동쪽 — 실제 API 연결 구역 -->
   <g class="zone" id="zone-rose" data-zone="rose" data-name="장미광장" data-active="true" tabindex="0" role="button" aria-label="장미광장">
-    <circle class="zone-hit" cx="470" cy="135" r="62" fill="#fde2e4" opacity="0.001"/>
-    <circle class="zone-glow" cx="470" cy="128" r="50" fill="#fbd3d9"/>
+    <circle class="zone-hit" cx="580" cy="432" r="62" fill="#fde2e4" opacity="0.001"/>
+    <circle class="zone-glow" cx="580" cy="425" r="50" fill="#fbd3d9"/>
     <g filter="url(#soft)">
       <!-- 방사형 화단 느낌의 장미 -->
-      <g transform="translate(470 126)">
+      <g transform="translate(580 423)">
         <circle r="30" fill="#e5566f"/>
         <path d="M0 -22 C 14 -22, 20 -6, 10 2 C 2 8, -12 4, -12 -6 C -12 -16, -4 -20, 2 -16" fill="none" stroke="#b8324d" stroke-width="3.5" stroke-linecap="round"/>
         <path d="M-20 4 C -18 18, 0 26, 16 18" fill="none" stroke="#b8324d" stroke-width="3.5" stroke-linecap="round"/>
@@ -82,83 +142,29 @@
         <ellipse cx="30" cy="22" rx="11" ry="6" fill="#6fae5a" transform="rotate(30 30 22)"/>
       </g>
     </g>
-    <text class="zone-label" x="470" y="198" text-anchor="middle">장미광장</text>
+    <text class="zone-label" x="580" y="492" text-anchor="middle">장미광장</text>
     <g class="zone-badge">
-      <rect x="500" y="80" width="46" height="20" rx="10" fill="#e5566f"/>
-      <text x="523" y="94" text-anchor="middle" font-size="11" fill="#fff" font-weight="700">만지기</text>
+      <rect x="608" y="374" width="46" height="20" rx="10" fill="#e5566f"/>
+      <text x="631" y="388" text-anchor="middle" font-size="11" fill="#fff" font-weight="700">만지기</text>
     </g>
   </g>
 
-  <!-- 들꽃마루 (8경) -->
-  <g class="zone" id="zone-wildflower" data-zone="wildflower" data-name="들꽃마루" data-active="false" tabindex="0" role="button" aria-label="들꽃마루">
-    <circle class="zone-hit" cx="655" cy="175" r="62" fill="#fff" opacity="0.001"/>
-    <ellipse cx="655" cy="180" rx="66" ry="36" fill="#f4d9a8"/>
-    <g filter="url(#soft)">
-      <g transform="translate(630 168)"><circle r="9" fill="#f2a541"/><circle r="3.5" fill="#7a4b1d"/></g>
-      <g transform="translate(662 158)"><circle r="10" fill="#f28ab2"/><circle r="4" fill="#fff3c4"/></g>
-      <g transform="translate(688 178)"><circle r="8" fill="#f2a541"/><circle r="3" fill="#7a4b1d"/></g>
-      <g transform="translate(650 190)"><circle r="8" fill="#e5566f"/><circle r="3" fill="#2b2b2b"/></g>
-    </g>
-    <text class="zone-label" x="655" y="236" text-anchor="middle">들꽃마루</text>
-  </g>
-
-  <!-- 88호수 (7경) -->
-  <g class="zone" id="zone-lake" data-zone="lake" data-name="88호수" data-active="false" tabindex="0" role="button" aria-label="88호수">
-    <path class="zone-hit" d="M120 260 C 150 220, 250 225, 260 270 C 270 320, 190 340, 150 320 C 110 300, 100 285, 120 260 Z" fill="#9fd3e6" stroke="#7bbcd6" stroke-width="3" filter="url(#soft)"/>
-    <path d="M150 270 q 12 -8 24 0 t 24 0" fill="none" stroke="#e8f6fb" stroke-width="3" stroke-linecap="round"/>
-    <path d="M170 295 q 12 -8 24 0 t 24 0" fill="none" stroke="#e8f6fb" stroke-width="3" stroke-linecap="round"/>
-    <text class="zone-label" x="190" y="358" text-anchor="middle">88호수</text>
-  </g>
-
-  <!-- 몽촌토성 산책로 + 몽촌해자 (3경, 5경) -->
-  <g class="zone" id="zone-tosung" data-zone="tosung" data-name="몽촌토성 산책로" data-active="false" tabindex="0" role="button" aria-label="몽촌토성 산책로">
-    <!-- 해자(물길) -->
-    <path d="M320 300 C 330 230, 480 215, 560 250 C 640 285, 630 380, 560 405 C 480 430, 330 410, 315 360 Z"
-          fill="none" stroke="#9fd3e6" stroke-width="12" stroke-linejoin="round"/>
-    <!-- 토성(언덕) -->
-    <path class="zone-hit" d="M340 310 C 350 255, 470 245, 545 270 C 610 295, 605 370, 550 388 C 480 408, 350 395, 338 355 Z"
-          fill="#a9cf8c" stroke="#8dbb6e" stroke-width="3" filter="url(#soft)"/>
-    <!-- 산책로 -->
-    <path d="M360 340 C 400 300, 460 350, 500 310 S 570 330, 580 340" fill="none" stroke="#efe3c8" stroke-width="6" stroke-linecap="round" stroke-dasharray="2 10"/>
-    <text class="zone-label" x="455" y="430" text-anchor="middle">몽촌토성 산책로</text>
-  </g>
-
-  <!-- 나홀로나무 (6경) — 토성 위에 올려 둠 -->
-  <g class="zone" id="zone-lonetree" data-zone="lonetree" data-name="나홀로나무" data-active="false" tabindex="0" role="button" aria-label="나홀로나무">
-    <circle class="zone-hit" cx="430" cy="318" r="34" fill="#fff" opacity="0.001"/>
-    <g filter="url(#soft)">
-      <rect x="426" y="318" width="8" height="22" rx="2" fill="#8a5a3b"/>
-      <circle cx="430" cy="306" r="22" fill="#4f8f45"/>
-      <circle cx="418" cy="300" r="10" fill="#5fa152"/>
-    </g>
-    <text class="zone-label small" x="430" y="360" text-anchor="middle">나홀로나무</text>
-  </g>
-
-  <!-- 조각공원 (2경 엄지손가락, 4경 대화) -->
-  <g class="zone" id="zone-sculpture" data-zone="sculpture" data-name="조각공원" data-active="false" tabindex="0" role="button" aria-label="조각공원">
-    <circle class="zone-hit" cx="245" cy="155" r="50" fill="#fff" opacity="0.001"/>
-    <g filter="url(#soft)">
-      <rect x="226" y="166" width="38" height="10" rx="3" fill="#bfb6a8"/>
-      <!-- 추상 조형물 -->
-      <path d="M236 166 L 236 132 C 236 118, 254 118, 254 132 L 254 166 Z" fill="#9a8f80"/>
-      <circle cx="245" cy="126" r="8" fill="#b3a898"/>
-    </g>
-    <text class="zone-label" x="245" y="200" text-anchor="middle">조각공원</text>
-  </g>
-
-  <!-- 범례 -->
-  <g transform="translate(560 470)">
-    <rect width="200" height="56" rx="12" fill="#fffaf2" stroke="#e6dcc8"/>
-    <circle cx="20" cy="20" r="7" fill="#e5566f"/>
-    <text x="34" y="24" font-size="12" fill="#4a4a4a">눌러서 만져볼 수 있어요</text>
-    <circle cx="20" cy="40" r="7" fill="#c8c2b6"/>
-    <text x="34" y="44" font-size="12" fill="#8a857c">데이터 준비 중</text>
+  <!-- 범례 (왼쪽 위 빈 곳) -->
+  <g transform="translate(14 14)">
+    <rect width="176" height="56" rx="12" fill="#fffaf2" stroke="#e6dcc8"/>
+    <circle cx="18" cy="20" r="7" fill="#e5566f"/>
+    <text x="32" y="24" font-size="12" fill="#4a4a4a">눌러서 만져볼 수 있어요</text>
+    <circle cx="18" cy="40" r="7" fill="#c8c2b6"/>
+    <text x="32" y="44" font-size="12" fill="#8a857c">데이터 준비 중</text>
   </g>
 
   <style>
     .zone { cursor: pointer; outline: none; }
     .zone-label { font-size: 14px; font-weight: 700; fill: #3f3a33; paint-order: stroke; stroke: #f6f1e7; stroke-width: 4px; }
     .zone-label.small { font-size: 12px; }
+    /* 회색 랜드마크 장식: 누를 수 없음, 방향 잡기용 */
+    .landmark { pointer-events: none; fill: #cfc9bf; stroke: #cfc9bf; }
+    .landmark-label { font-size: 12px; font-weight: 600; fill: #9a958c; stroke: #f6f1e7; stroke-width: 3px; paint-order: stroke; }
     /* 마우스 올림·누름 때의 출렁임은 아래 script의 '젤리' 코드가 담당 */
     .zone[data-active="false"] { opacity: .78; transition: opacity .25s; }
     .zone[data-active="false"]:hover { opacity: 1; }

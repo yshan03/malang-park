@@ -1,14 +1,13 @@
 // 구역 연결표 — 지도 페이지와 인터랙션 페이지가 함께 쓰는 "단 하나의 표".
 // 새 구역에 데이터를 연결하려면: source에 데이터 소스 이름을 적고, SOURCES에 한 줄 추가.
 // id는 지도 SVG의 data-zone 값과 같아야 한다.
+// (누를 수 없는 회색 장식 — 세계평화의 문, KSPO DOME, 몽촌해자 — 은 여기 없고 지도 그림에만 있다.)
 window.ZONES = [
-  { id: 'rose',       name: '장미광장',        source: 'roseApi' },
-  { id: 'wildflower', name: '들꽃마루',        source: null },
-  { id: 'lake',       name: '88호수',          source: null },
-  { id: 'tosung',     name: '몽촌토성 산책로', source: null },
-  { id: 'lonetree',   name: '나홀로나무',      source: null },
-  { id: 'sculpture',  name: '조각공원',        source: null },
-  { id: 'gate',       name: '세계평화의 문',   source: null }
+  { id: 'rose',       name: '장미광장',        source: 'roseApi' }, // 남동
+  { id: 'wildflower', name: '들꽃마루',        source: null },      // 남동, 장미광장 옆
+  { id: 'wildlab',    name: '야생화학습장',    source: null },      // 토성 남동쪽 자락
+  { id: 'tosung',     name: '몽촌토성 산책로', source: null },      // 가운데~서쪽 큰 언덕
+  { id: 'lonetree',   name: '나홀로나무',      source: null }       // 토성 위 서쪽
 ];
 
 // 데이터 소스 목록
