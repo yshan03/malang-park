@@ -16,7 +16,8 @@
 // 흔들림을 줄이는 힘(C)을 준다. C를 일부러 약하게 해서 목표를 지나쳤다 돌아오며 출렁인다.
 //
 // 더미의 원리 = 아주 단순한 2D 물리: 매 프레임 ① 중력으로 떨어뜨리고 ② 겹친 공끼리 밀어내고
-// ③ 벽·바닥에서 튕긴다. 세게 부딪히면 그 공이 '통' 하고 출렁인다.
+// ③ 벽·바닥·천장에서 튕긴다. 공은 화면 밖으로 나가지 않는다.
+// 던진 공끼리는 단단하게 부딪히고, 손으로 잡은 공에 눌린 공만 닿은 곳이 쏙 들어갔다 '퐁' 돌아온다.
 
 (function () {
   // ----- 말랑함 -----
@@ -29,6 +30,8 @@
   const BOUNCE = 0.35;     // 부딪힐 때 튕기는 정도 (0~1)
   const PILE_FILL = 0.42;  // 공들이 화면 넓이의 몇 %를 차지할지 (공 크기 결정)
   const MAX_RADIUS = 1.15; // 공이 적을 때 너무 커지지 않게
+  const CONTACT_DENT = 0.35;// 잡은 공에 눌릴 때 최대로 들어가는 깊이 (반지름 대비)
+  const SOFT_PUSH = 30;     // 찌그러진 채로 밀려나는 힘 (클수록 빨리 밀려남)
   // ----- 조작 -----
   const DRAG_THRESHOLD = 6;// 이만큼(px) 움직이면 '누르기'가 아니라 '끌기'
   const MOVE_SPEED = 7;    // 모드 전환 때 움직이는 빠르기
@@ -76,7 +79,7 @@
     let selected = -1;     // 상세 모드에서 보여주는 도형 번호
     let sheetOpen = false; // 상세 모드: 설명 시트가 열려 있나
     const view = { w: 1, h: 1, W: 1, H: 1, wpp: 1 };            // 화면 크기(px)와 3D 크기, 1px당 3D 길이
-    const walls = { left: -1, right: 1, bottom: -1 };          // 더미를 가두는 벽
+    const walls = { left: -1, right: 1, bottom: -1, top: 1 };  // 더미를 가두는 벽 (위는 머리글 바로 아래 천장)
     const detailFull = { pos: new THREE.Vector3(), scale: 1 }; // 상세: 시트 닫힘 (가운데, 크게)
     const detailSplit = { pos: new THREE.Vector3(), scale: 1 };// 상세: 시트 열림 (위쪽)
     const detailNow = () => (sheetOpen ? detailSplit : detailFull);
@@ -132,6 +135,9 @@
         sizeJitter: 0.88 + Math.random() * 0.24,          // 공마다 크기를 조금씩 다르게
         r: 1,                                             // 반지름 (layout에서 계산)
         held: false, holdTarget: new THREE.Vector2(),
+        contact: 0,                                       // 잡은 공에 눌린 깊이 (반지름 대비, 0이면 안 눌림)
+        contactDir: new THREE.Vector2(),                  // 눌린 방향 (이 공 중심 → 잡은 공)
+        entered: false,                                   // 처음 위에서 떨어져 화면 안으로 들어왔나 (들어온 뒤부터 천장 적용)
         follow: true,                                     // true = 화면 위치가 물리 위치를 바로 따라감
         // 화면에 그려지는 위치·크기 (모드 전환 때 부드럽게 이동)
         cur: new THREE.Vector3(), curScale: 0,
@@ -159,6 +165,7 @@
       // 원근 때문에 가장자리 공이 조금 커 보여서, 벽을 화면 끝보다 살짝 안쪽에 둔다
       const margin = 14 * view.wpp + base * 0.18;
       walls.left = -view.W / 2 + margin; walls.right = view.W / 2 - margin; walls.bottom = -view.H / 2 + margin;
+      walls.top = view.H / 2 - HEADER_PX * view.wpp; // 천장: 머리글(제목) 바로 아래
       blobs.forEach(b => {
         b.r = base * b.sizeJitter;
         b.p.x = THREE.MathUtils.clamp(b.p.x, walls.left + b.r, walls.right - b.r);
@@ -343,6 +350,7 @@
     // ---------- 더미 물리 한 걸음 ----------
     const nTmp = new THREE.Vector2();
     function physics(dt) {
+      blobs.forEach(b => { b.contact = 0; });
       blobs.forEach(b => {
         if (b.held) {
           // 잡힌 공: 손 위치로 용수철처럼 끌려감 → 놓을 때 이 속도가 남아 '던지기'가 됨
@@ -363,15 +371,31 @@
             if (dist >= minD || dist === 0) continue;
             nTmp.divideScalar(dist);
             const overlap = minD - dist;
-            const wa = a.held ? 0 : c.held ? 1 : 0.5;  // 잡힌 공은 밀리지 않음
+            // 잡은 공이 다른 공을 누를 때: 잡은 공은 멀쩡, 눌린 공은 닿은 곳이 쏙 들어감
+            //   겹친 만큼을 먼저 '찌그러짐'이 받아 주고, 그보다 더 밀면 그때부터 밀려남
+            if (a.held || c.held) {
+              const h = a.held ? a : c, o = a.held ? c : a;
+              const dir = a.held ? 1 : -1;                    // nTmp를 '잡은 공 → 눌린 공' 방향으로
+              const nx = nTmp.x * dir, ny = nTmp.y * dir;
+              const maxAbsorb = CONTACT_DENT * o.r;
+              if (overlap > maxAbsorb) {                      // 찌그러짐으로 못 받는 만큼만 밀어냄
+                o.p.x += nx * (overlap - maxAbsorb); o.p.y += ny * (overlap - maxAbsorb);
+              }
+              if (iter === 0) {                               // 찌그러진 채로 천천히 밀려나는 힘
+                o.vel.x += nx * overlap * SOFT_PUSH * dt * 10; o.vel.y += ny * overlap * SOFT_PUSH * dt * 10;
+              }
+              const depth = Math.min(overlap, maxAbsorb) / o.r;
+              if (depth > o.contact) { o.contact = depth; o.contactDir.set(-nx, -ny); }
+              continue;
+            }
+            const wa = 0.5;                            // 던진 공끼리는 단단하게 반반씩 밀어냄
             a.p.addScaledVector(nTmp, -overlap * wa);
             c.p.addScaledVector(nTmp, overlap * (1 - wa));
             const vn = (c.vel.x - a.vel.x) * nTmp.x + (c.vel.y - a.vel.y) * nTmp.y;
             if (vn < 0) {
               const imp = -(1 + BOUNCE) * vn / 2;
-              if (!a.held) a.vel.addScaledVector(nTmp, -imp);
-              if (!c.held) c.vel.addScaledVector(nTmp, imp);
-              if (-vn > 2) { kick(a, -vn); kick(c, -vn); } // 세게 부딪히면 출렁
+              a.vel.addScaledVector(nTmp, -imp);
+              c.vel.addScaledVector(nTmp, imp);
             }
           }
         }
@@ -379,9 +403,12 @@
         blobs.forEach(b => {
           if (b.p.x - b.r < walls.left) { b.p.x = walls.left + b.r; if (b.vel.x < 0) b.vel.x *= -BOUNCE; }
           if (b.p.x + b.r > walls.right) { b.p.x = walls.right - b.r; if (b.vel.x > 0) b.vel.x *= -BOUNCE; }
+          // 천장: 화면 안으로 들어온 공은 위로 던져도 머리글 아래에서 튕겨 돌아옴
+          if (!b.entered && b.p.y + b.r <= walls.top) b.entered = true;
+          if (b.entered && b.p.y + b.r > walls.top) { b.p.y = walls.top - b.r; if (b.vel.y > 0) b.vel.y *= -BOUNCE; }
           if (b.p.y - b.r < walls.bottom) {
             b.p.y = walls.bottom + b.r;
-            if (b.vel.y < 0) { if (-b.vel.y > 3) kick(b, -b.vel.y); b.vel.y *= -BOUNCE; }
+            if (b.vel.y < 0) b.vel.y *= -BOUNCE;
             b.vel.x *= 0.985; // 바닥 마찰
           }
         });
@@ -392,7 +419,7 @@
         b.mesh.quaternion.premultiply(qTmp);
       });
     }
-    function kick(b, speed) { b.wobbleV += Math.min(speed, 12) * 0.12; }
+    // (목록에서는 부딪혀도 찌그러지지 않음 — 2026-11-15 사용자 요청으로 부딪힘 출렁임 제거)
 
     // ---------- 매 프레임 ----------
     const tmp = new THREE.Vector3();
@@ -422,7 +449,18 @@
         labels[i].style.opacity = '';
 
         // 상세 모드: 누르는 세기·관성 회전·느린 자전
-        b.press += (b.pressTarget - b.press) * (b.pressTarget > b.press ? 1 - Math.exp(-dt * 6) : 1);
+        if (mode === 'list') {
+          // 목록: 잡은 공에 눌린 깊이를 바로 반영, 떨어지면 0 → 용수철처럼 '퐁' 복원
+          if (b.contact > 0) {
+            tmp.set(b.cur.x + b.contactDir.x * b.r, b.cur.y + b.contactDir.y * b.r, 0);
+            setPressPoint(b, tmp);
+            b.awake = true;
+          }
+          b.pressTarget = Math.min(1, b.contact / DENT_DEPTH);
+          b.press = b.pressTarget;
+        } else {
+          b.press += (b.pressTarget - b.press) * (b.pressTarget > b.press ? 1 - Math.exp(-dt * 6) : 1);
+        }
         if (mode === 'detail' && (!active || active.blob !== b)) {
           rotateBy(b, b.spin.x + dt * 0.15, b.spin.y);
           b.spin.multiplyScalar(Math.pow(0.04, dt));
