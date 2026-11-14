@@ -29,11 +29,9 @@ window.SOURCES = {
     saved: () => window.ROSE_API,
     fetched: () => window.ROSE_API_FETCHED,
     dedupe: raw => window.roseDedupe(raw), // 같은 이름은 하나만 (규칙은 roseAdapter.js)
-    // 지금은 182건 중 5개만. 같은 이름이 여러 건 있어서 이름이 아니라 API url 속 list_no 번호로 고른다.
-    //   에버골드 1111(샘플과 같은 '코르테스' 문장) · 엘르 1124(샘플과 같은 긴 설명)
-    pick: raw => [1111, 1116, 1118, 1119, 1124]
-      .map(no => raw.find(it => (it.url || '').includes('list_no=' + no + '&')))
-      .filter(Boolean),
+    // pick 없음 → 중복을 합친 153개 전부 보여줌 (2026-11-15 확장).
+    //   대표 5개(에버골드·폴리카르드·린·데저트 피스·엘르)는 디자인 파일에서 이름으로 알아보고 고유 모양을 씀.
+    //   (참고: 예전에 5개만 고를 때는 list_no 1111·1116·1118·1119·1124였고, 중복 합치기 규칙이 같은 것을 고른다)
     sample: () => window.ROSE_SAMPLE,
     adapter: (item, i) => window.roseAdapter(item, i),
     design: (item, i) => window.roseBlobDesign(item, i) // 블롭 모양·색 (js/designs/roseBlobs.js)

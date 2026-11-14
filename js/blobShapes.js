@@ -1,9 +1,11 @@
 // 꽃 블롭 만드는 틀 — "장미"를 모른다. 조절 값만 받아서 꽃송이 + 줄기 + 잎 블롭을 만든다.
 //
-//   makeFlowerBlob(설정) ─▶ { root, head, stemPivot, base, dirs, count }
+//   FlowerBlob.head(설정, 'lite' | 'full') ─▶ { geo, base, dirs, count }   꽃송이 모양 데이터
+//   FlowerBlob.stem(설정)                  ─▶ stemPivot (줄기 + 잎 2장, 휘청거리는 중심)
+//   FlowerBlob.material                    모든 꽃송이가 함께 쓰는 재질
 //
-//   root ─┬─ head       꽃송이 (꽃잎들을 한 덩어리로 합친 것 → 꾹 누르면 쏙 들어감)
-//         └─ stemPivot  줄기 + 잎 2장 (꽃송이 바로 아래에 매달려 있음 → 누르면 휘청)
+//   'lite' = 목록용 가벼운 버전 (점이 적음). 같은 설정이면 모양 데이터를 함께 씀(캐시) → 153개도 가벼움
+//   'full' = 상세용 촘촘한 버전. 꾹 누르면 모양이 바뀌므로 블롭마다 따로 만듦
 //
 // 꽃송이 모양의 원리 (진짜 장미처럼 꽃잎을 한 장씩 만들어 겹겹이 두름):
 //
@@ -31,12 +33,17 @@
   };
   const STEM_LENGTH = 4.0;   // 꽃송이 지름(2)의 2배 → 꽃:줄기 = 1:2
   const STEM_TOP = -0.5;     // 줄기가 꽃송이(반지름 1로 맞춘 뒤) 아래에 붙는 높이
-  const U = 11, V = 10;      // 꽃잎 한 장의 촘촘함 (가로 U × 세로 V 점)
+  // 촘촘함: full = 상세(누르기용), lite = 목록(가볍게)
+  const QUALITY = {
+    full: { U: 11, V: 10, steps: 8, ballW: 18, ballH: 12 },
+    lite: { U: 4, V: 4, steps: 4, ballW: 8, ballH: 5 }
+  };
 
   const smooth = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
   const lin = hex => new THREE.Color(hex).convertSRGBToLinear();
 
-  window.makeFlowerBlob = function (settings = {}) {
+  function buildHead(settings, quality) {
+    const { U, V, steps } = QUALITY[quality];
     const P = Object.assign({}, DEFAULTS, settings);
     P.colors = Object.assign({}, DEFAULTS.colors, settings.colors || {});
     const cCenter = lin(P.colors.center), cOuter = lin(P.colors.outer);
@@ -71,7 +78,6 @@
             const ve = v * (1 - (0.16 + 0.55 * P.pointy) * w2);
             // 꽃잎 길이 방향 곡선: 아래에서 시작해 기울기 + 끝 젖힘만큼 휘며 뻗음
             let rad = r0, y = y0;
-            const steps = 8;
             for (let s = 1; s <= steps; s++) {
               const vv = ve * s / steps, th = tilt0 + curl * vv * vv;
               rad += Math.sin(th) * L * ve / steps;
@@ -98,7 +104,7 @@
     }
 
     // ---------- 가운데 심(봉오리 또는 수술)과 아래 꽃받침 ----------
-    function ball(cx, cy, cz, rx, ry, colorFn, ws = 18, hs = 12) {
+    function ball(cx, cy, cz, rx, ry, colorFn, ws = QUALITY[quality].ballW, hs = QUALITY[quality].ballH) {
       const start = positions.length / 3;
       for (let i = 0; i <= hs; i++) {
         const th = Math.PI * i / hs;
@@ -136,12 +142,12 @@
       dirs[v * 3] = base[v * 3] / L; dirs[v * 3 + 1] = base[v * 3 + 1] / L; dirs[v * 3 + 2] = base[v * 3 + 2] / L;
     }
 
-    const head = new THREE.Mesh(geo, new THREE.MeshPhysicalMaterial({
-      vertexColors: true, roughness: 0.45, metalness: 0, clearcoat: 0.4, clearcoatRoughness: 0.35,
-      side: THREE.DoubleSide                                          // 꽃잎은 얇은 면이라 양쪽 다 그림
-    }));
+    return { geo, base, dirs, count: n };
+  }
 
-    // ---------- 줄기 + 잎 2장 ----------
+  // 줄기 + 잎 2장 (상세에 들어갈 때만 만듦)
+  function buildStem(settings) {
+    const P = Object.assign({}, DEFAULTS, settings);
     const stemPivot = new THREE.Group();     // 꽃송이 아래 붙는 점 = 휘청거리는 중심
     stemPivot.position.set(0, STEM_TOP, 0);
     const curve = new THREE.CatmullRomCurve3([
@@ -164,11 +170,23 @@
       leaf.rotation.set(0.25 * side, side > 0 ? 0 : Math.PI, 0.45);  // 위쪽으로 살짝 들린 잎
       stemPivot.add(leaf);
     });
+    return stemPivot;
+  }
 
-    const root = new THREE.Group();
-    root.add(head);
-    root.add(stemPivot);
-    return { root, head, stemPivot, base, dirs, count: n };
+  const liteCache = new Map();               // 같은 설정의 가벼운 꽃송이는 한 번만 만들어 함께 씀
+  window.FlowerBlob = {
+    head(settings = {}, quality = 'full') {
+      if (quality !== 'lite') return buildHead(settings, 'full');
+      const key = JSON.stringify(settings);
+      if (!liteCache.has(key)) liteCache.set(key, buildHead(settings, 'lite'));
+      return liteCache.get(key);
+    },
+    stem: buildStem,
+    // 모든 꽃송이가 함께 쓰는 재질 (꽃잎은 얇은 면이라 양쪽 다 그림)
+    material: new THREE.MeshPhysicalMaterial({
+      vertexColors: true, roughness: 0.45, metalness: 0, clearcoat: 0.4, clearcoatRoughness: 0.35,
+      side: THREE.DoubleSide
+    })
   };
 
   // 줄기까지 포함한 블롭의 세로 길이 (꽃송이 반지름 1 기준) — 상세 화면 배치에 씀
