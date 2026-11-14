@@ -247,6 +247,9 @@
     }
 
     const canvas = renderer.domElement;
+    // 길게 누를 때 브라우저 기본 동작(글자 선택, 메뉴) 막기
+    canvas.addEventListener('contextmenu', e => e.preventDefault());
+    canvas.addEventListener('selectstart', e => e.preventDefault());
     canvas.addEventListener('pointerdown', e => {
       try { canvas.setPointerCapture(e.pointerId); } catch (_) { /* 일부 환경에서 실패해도 진행 */ }
       const base = { startX: e.clientX, startY: e.clientY, lastX: e.clientX, lastY: e.clientY, mode: 'tap', lastT: performance.now() };
