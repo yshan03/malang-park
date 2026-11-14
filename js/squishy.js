@@ -17,7 +17,7 @@
 //
 // 더미의 원리 = 아주 단순한 2D 물리: 매 프레임 ① 중력으로 떨어뜨리고 ② 겹친 공끼리 밀어내고
 // ③ 벽·바닥·천장에서 튕긴다. 공은 화면 밖으로 나가지 않는다.
-// 던진 공끼리는 단단하게 부딪히고, 손으로 잡은 공에 눌린 공만 닿은 곳이 쏙 들어갔다 '퐁' 돌아온다.
+// 블롭끼리는 찌그러지지 않고 단단하게 부딪힌다 (누르기는 상세 모드의 몫).
 
 (function () {
   // ----- 말랑함 -----
@@ -30,13 +30,13 @@
   const BOUNCE = 0.35;     // 부딪힐 때 튕기는 정도 (0~1)
   const PILE_FILL = 0.42;  // 공들이 화면 넓이의 몇 %를 차지할지 (공 크기 결정)
   const MAX_RADIUS = 1.15; // 공이 적을 때 너무 커지지 않게
-  const CONTACT_DENT = 0.35;// 잡은 공에 눌릴 때 최대로 들어가는 깊이 (반지름 대비)
-  const SOFT_PUSH = 30;     // 찌그러진 채로 밀려나는 힘 (클수록 빨리 밀려남)
   // ----- 조작 -----
   const DRAG_THRESHOLD = 6;// 이만큼(px) 움직이면 '누르기'가 아니라 '끌기'
   const MOVE_SPEED = 7;    // 모드 전환 때 움직이는 빠르기
   // 구의 색: 프로토타입용 임시 도형이라 꽃색과 상관없이 모두 같은 색. (나중에 꽃별 디자인으로 교체 예정)
-  const BLOB_COLOR = '#E9E4DA';
+  //   목록에서 이름을 숨겨서, 구분용 임시 색을 블롭 순서대로 돌려 씀 (꽃 데이터 색 아님)
+  const BLOB_COLORS = ['#F7B7C5', '#FFD98A', '#B9E3C6', '#B8C8F5', '#D9C2F0']; // 분홍·버터·민트·하늘·라벤더
+  const SHOW_LIST_LABELS = false; // 목록에서 이름표 보이기 (지금은 숨김)
 
   // 상세 모드 꽃 자리 두 가지 (interaction.html의 CSS와 같은 값)
   //   시트 닫힘: 머리글 아래 ~ TMI 버튼 위, 화면 가운데에 크게
@@ -70,6 +70,7 @@
     const labels = blobs.map(b => {
       const el = document.createElement('div');
       el.className = 'blob-label';
+      if (!SHOW_LIST_LABELS) el.style.display = 'none';
       el.textContent = b.item.name;
       container.appendChild(el);
       return el;
@@ -92,7 +93,7 @@
       const n = pos.count;
 
       // 색: 위→아래로 살짝 어두워지는 그라데이션 + 소용돌이 무늬 (돌릴 때 회전이 눈에 보이도록)
-      const top = new THREE.Color(BLOB_COLOR).convertSRGBToLinear();
+      const top = new THREE.Color(BLOB_COLORS[i % BLOB_COLORS.length]).convertSRGBToLinear();
       const bottom = top.clone().multiplyScalar(0.72);
       const colors = new Float32Array(n * 3);
       const c = new THREE.Color();
@@ -135,8 +136,6 @@
         sizeJitter: 0.88 + Math.random() * 0.24,          // 공마다 크기를 조금씩 다르게
         r: 1,                                             // 반지름 (layout에서 계산)
         held: false, holdTarget: new THREE.Vector2(),
-        contact: 0,                                       // 잡은 공에 눌린 깊이 (반지름 대비, 0이면 안 눌림)
-        contactDir: new THREE.Vector2(),                  // 눌린 방향 (이 공 중심 → 잡은 공)
         entered: false,                                   // 처음 위에서 떨어져 화면 안으로 들어왔나 (들어온 뒤부터 천장 적용)
         follow: true,                                     // true = 화면 위치가 물리 위치를 바로 따라감
         // 화면에 그려지는 위치·크기 (모드 전환 때 부드럽게 이동)
@@ -350,7 +349,6 @@
     // ---------- 더미 물리 한 걸음 ----------
     const nTmp = new THREE.Vector2();
     function physics(dt) {
-      blobs.forEach(b => { b.contact = 0; });
       blobs.forEach(b => {
         if (b.held) {
           // 잡힌 공: 손 위치로 용수철처럼 끌려감 → 놓을 때 이 속도가 남아 '던지기'가 됨
@@ -371,21 +369,17 @@
             if (dist >= minD || dist === 0) continue;
             nTmp.divideScalar(dist);
             const overlap = minD - dist;
-            // 잡은 공이 다른 공을 누를 때: 잡은 공은 멀쩡, 눌린 공은 닿은 곳이 쏙 들어감
-            //   겹친 만큼을 먼저 '찌그러짐'이 받아 주고, 그보다 더 밀면 그때부터 밀려남
+            // 잡은 공이 다른 공을 밀 때: 찌그러짐 없이 부드럽게 밀어냄
+            //   잡은 공도 살짝 밀려서(25%) 버티는 느낌을 주고, 밀린 공은 잡은 공의 속도를 이어받아
+            //   겹쳤다가 '팍' 튕기는 순간이동이 생기지 않게 함
             if (a.held || c.held) {
               const h = a.held ? a : c, o = a.held ? c : a;
-              const dir = a.held ? 1 : -1;                    // nTmp를 '잡은 공 → 눌린 공' 방향으로
+              const dir = a.held ? 1 : -1;                    // '잡은 공 → 밀린 공' 방향
               const nx = nTmp.x * dir, ny = nTmp.y * dir;
-              const maxAbsorb = CONTACT_DENT * o.r;
-              if (overlap > maxAbsorb) {                      // 찌그러짐으로 못 받는 만큼만 밀어냄
-                o.p.x += nx * (overlap - maxAbsorb); o.p.y += ny * (overlap - maxAbsorb);
-              }
-              if (iter === 0) {                               // 찌그러진 채로 천천히 밀려나는 힘
-                o.vel.x += nx * overlap * SOFT_PUSH * dt * 10; o.vel.y += ny * overlap * SOFT_PUSH * dt * 10;
-              }
-              const depth = Math.min(overlap, maxAbsorb) / o.r;
-              if (depth > o.contact) { o.contact = depth; o.contactDir.set(-nx, -ny); }
+              h.p.x -= nx * overlap * 0.25; h.p.y -= ny * overlap * 0.25;
+              o.p.x += nx * overlap * 0.75; o.p.y += ny * overlap * 0.75;
+              const vh = h.vel.x * nx + h.vel.y * ny, vo = o.vel.x * nx + o.vel.y * ny;
+              if (vo < vh) { o.vel.x += nx * (vh - vo); o.vel.y += ny * (vh - vo); }
               continue;
             }
             const wa = 0.5;                            // 던진 공끼리는 단단하게 반반씩 밀어냄
@@ -449,18 +443,8 @@
         labels[i].style.opacity = '';
 
         // 상세 모드: 누르는 세기·관성 회전·느린 자전
-        if (mode === 'list') {
-          // 목록: 잡은 공에 눌린 깊이를 바로 반영, 떨어지면 0 → 용수철처럼 '퐁' 복원
-          if (b.contact > 0) {
-            tmp.set(b.cur.x + b.contactDir.x * b.r, b.cur.y + b.contactDir.y * b.r, 0);
-            setPressPoint(b, tmp);
-            b.awake = true;
-          }
-          b.pressTarget = Math.min(1, b.contact / DENT_DEPTH);
-          b.press = b.pressTarget;
-        } else {
-          b.press += (b.pressTarget - b.press) * (b.pressTarget > b.press ? 1 - Math.exp(-dt * 6) : 1);
-        }
+        // 누르기(찌그러짐)는 상세 모드에서만. 목록에서는 블롭끼리 눌리지 않음
+        b.press += (b.pressTarget - b.press) * (b.pressTarget > b.press ? 1 - Math.exp(-dt * 6) : 1);
         if (mode === 'detail' && (!active || active.blob !== b)) {
           rotateBy(b, b.spin.x + dt * 0.15, b.spin.y);
           b.spin.multiplyScalar(Math.pow(0.04, dt));

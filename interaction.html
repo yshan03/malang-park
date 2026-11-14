@@ -37,6 +37,36 @@
   .hint { margin: 2px 0 0; font-size: 12px; color: var(--muted); }
   body.detail .titles { display: none; }               /* 상세 모드에선 구역 제목 대신 꽃 이름 */
 
+  /* ----- 목록 모드: 오른쪽 위 🔍 버튼 + 꽃 찾기 창 ----- */
+  #find-btn {
+    margin-left: auto; width: 40px; height: 40px; border-radius: 50%; border: 1px solid var(--line);
+    background: var(--card); font-size: 18px; cursor: pointer; display: grid; place-items: center;
+  }
+  body.detail #find-btn, body.is-empty #find-btn { display: none; }
+  #finder {
+    position: fixed; z-index: 8; top: 60px; right: 12px; width: min(320px, calc(100vw - 24px));
+    max-height: min(70vh, 520px); display: flex; flex-direction: column;
+    background: var(--card); border: 1px solid var(--line); border-radius: 18px;
+    box-shadow: 0 14px 40px rgba(60, 50, 30, .18); overflow: hidden;
+    opacity: 0; transform: translateY(-8px) scale(.98); transform-origin: top right;
+    pointer-events: none; transition: opacity .2s, transform .2s;
+  }
+  body.finder-open #finder { opacity: 1; transform: none; pointer-events: auto; }
+  .finder-top { padding: 12px; border-bottom: 1px solid var(--line); }
+  #find-input {
+    width: 100%; height: 40px; padding: 0 14px; border-radius: 999px; border: 1px solid var(--line);
+    background: #fff; font: inherit; font-size: 16px; color: var(--ink); outline: none; /* 16px: 아이폰 자동 확대 방지 */
+  }
+  #find-input:focus { border-color: var(--accent); }
+  #find-list { list-style: none; margin: 0; padding: 6px; overflow-y: auto; }
+  #find-list button {
+    width: 100%; text-align: left; padding: 10px 12px; border: 0; border-radius: 10px;
+    background: none; font-size: 15px; cursor: pointer;
+  }
+  #find-list button:hover, #find-list button:focus-visible { background: #f1e8d8; outline: none; }
+  #find-list mark { background: none; color: var(--accent); font-weight: 800; }
+  #find-none { display: none; margin: 0; padding: 18px; text-align: center; font-size: 14px; color: var(--muted); }
+
   /* ----- 상세 모드: 위 가운데 꽃 이름 ----- */
   #flower-name {
     position: fixed; z-index: 5; top: 16px; left: 64px; right: 64px; margin: 0; text-align: center;
@@ -128,7 +158,17 @@
     <h1 id="title">불러오는 중…</h1>
     <p class="hint">꽃을 눌러 자세히 보고, 끌어서 굴려보세요</p>
   </div>
+  <button id="find-btn" aria-label="꽃 이름으로 찾기" aria-expanded="false" aria-controls="finder">🔍</button>
 </header>
+
+<!-- 꽃 찾기 창: 위 검색창 + 아래 이름 목록 (칠수록 목록이 줄어듦) -->
+<div id="finder" role="dialog" aria-label="꽃 찾기">
+  <div class="finder-top">
+    <input id="find-input" type="search" placeholder="꽃 이름으로 찾기" autocomplete="off" enterkeyhint="go">
+  </div>
+  <ul id="find-list"></ul>
+  <p id="find-none">그런 이름의 장미는 아직 없어요 🥲</p>
+</div>
 <h2 id="flower-name" aria-live="polite"></h2>
 
 <div id="stage"></div>
@@ -274,6 +314,60 @@
     if (scene) scene.setSheet(open);
   }
   tmi.addEventListener('click', () => setSheet(!document.body.classList.contains('sheet-open')));
+
+  // ----- 🔍 꽃 찾기: 위 검색창 + 아래 이름 목록 (가나다순, 칠수록 줄어듦) -----
+  //   일부만 쳐도 찾고, 띄어쓰기·대소문자는 무시 (예: "데저트피스", "피스" → 데저트 피스)
+  const findBtn = document.getElementById('find-btn');
+  const findInput = document.getElementById('find-input');
+  const findList = document.getElementById('find-list');
+  const findNone = document.getElementById('find-none');
+  const norm = s => String(s).replace(/\s+/g, '').toLowerCase();
+  const sorted = items.map((it, i) => ({ name: it.name, i })).sort((a, b) => a.name.localeCompare(b.name, 'ko'));
+
+  function renderFind() {
+    const q = norm(findInput.value);
+    const hits = sorted.filter(x => norm(x.name).includes(q));
+    findList.innerHTML = '';
+    hits.forEach(x => {
+      const li = document.createElement('li');
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      // 친 글자 부분을 강조 (띄어쓰기 없이 쳐도 원래 이름에서 맞는 글자를 찾아 표시)
+      const chars = [...x.name];
+      let start = -1, end = -1;
+      if (q) {
+        const flat = chars.map((ch, idx) => ({ ch: ch.toLowerCase(), idx })).filter(o => !/\s/.test(o.ch));
+        const at = flat.map(o => o.ch).join('').indexOf(q);
+        if (at >= 0) { start = flat[at].idx; end = flat[at + q.length - 1].idx; }
+      }
+      chars.forEach((ch, idx) => {
+        if (idx === start) { const m = document.createElement('mark'); btn.appendChild(m); }
+        const target = (idx >= start && idx <= end && start >= 0) ? btn.lastChild : btn;
+        target.append(ch);
+      });
+      btn.addEventListener('click', () => { setFinder(false); openDetail(x.i, 0, 'push'); });
+      li.appendChild(btn);
+      findList.appendChild(li);
+    });
+    findNone.style.display = hits.length ? 'none' : 'block';
+    return hits;
+  }
+  function setFinder(open) {
+    document.body.classList.toggle('finder-open', open);
+    findBtn.setAttribute('aria-expanded', String(open));
+    if (open) { findInput.value = ''; renderFind(); setTimeout(() => findInput.focus(), 50); }
+    else findInput.blur();
+  }
+  findBtn.addEventListener('click', () => setFinder(!document.body.classList.contains('finder-open')));
+  findInput.addEventListener('input', renderFind);
+  findInput.addEventListener('keydown', e => {
+    if (e.key === 'Enter') { const hits = renderFind(); if (hits.length) { setFinder(false); openDetail(hits[0].i, 0, 'push'); } }
+    if (e.key === 'Escape') setFinder(false);
+  });
+  // 창 밖을 누르면 닫힘
+  document.addEventListener('pointerdown', e => {
+    if (document.body.classList.contains('finder-open') && !e.target.closest('#finder, #find-btn')) setFinder(false);
+  });
 
   // 꽃을 처음 만지면 "꾹 눌러보고…" 안내를 숨김
   document.getElementById('stage').addEventListener('pointerdown', () => {
