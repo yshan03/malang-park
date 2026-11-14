@@ -35,7 +35,8 @@ window.SOURCES = {
       .map(no => raw.find(it => (it.url || '').includes('list_no=' + no + '&')))
       .filter(Boolean),
     sample: () => window.ROSE_SAMPLE,
-    adapter: (item, i) => window.roseAdapter(item, i)
+    adapter: (item, i) => window.roseAdapter(item, i),
+    design: (item, i) => window.roseBlobDesign(item, i) // 블롭 모양·색 (js/designs/roseBlobs.js)
   }
 };
 

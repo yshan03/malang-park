@@ -77,9 +77,8 @@
   body.detail #flower-name { opacity: 1; transform: none; }
 
   /* ----- 상세 모드: 만지는 법 안내 (처음 만지면 사라짐) ----- */
-  #touch-hint { /* 꽃 바로 아래: 꽃 중심(--flower-y) + 꽃 반지름(js/squishy.js의 fitArea와 같은 식) + 여백 */
-    position: fixed; z-index: 3; left: 0; right: 0;
-    top: calc(var(--flower-y) + min((100vh - 174px) * 0.4, 36vw) + 26px); text-align: center;
+  #touch-hint { /* 꽃 이름 바로 아래 (줄기가 생겨 꽃송이가 위쪽에 있으므로, 아래 🤓 버튼과 떨어뜨림) */
+    position: fixed; z-index: 3; left: 0; right: 0; top: 50px; text-align: center;
     font-size: 13px; color: var(--muted); pointer-events: none; opacity: 0; transition: opacity .4s;
   }
   body.detail:not(.sheet-open):not(.touched) #touch-hint { opacity: 1; }
@@ -188,6 +187,8 @@
 <!-- 미리 받아 둔 API 데이터 (tools/fetch-roses.py 로 생성). 인증키는 들어 있지 않다. -->
 <script src="data/rose-api.js"></script>
 <script src="js/adapters/roseAdapter.js"></script>
+<script src="js/blobShapes.js"></script>        <!-- 꽃 블롭 만드는 틀 (장미를 모름) -->
+<script src="js/designs/roseBlobs.js"></script> <!-- 장미별 블롭 디자인 설정 -->
 <script src="js/zones.js"></script>
 <script src="js/dataStore.js"></script>
 <script src="js/squishy.js"></script>

@@ -9,6 +9,14 @@
 //  - 그래서 내 컴퓨터에서 tools/fetch-roses.py 로 미리 받아 저장하고, 사이트는 저장본만 읽는다.
 
 (function () {
+  // 공통 형태로 바꾼 뒤, 블롭 디자인 설정(item.blob)을 붙임 — 디자인이 없는 소스면 기본 블롭
+  function finish(source, raw) {
+    return raw.map(source.adapter).map((item, i) => {
+      if (source.design) item.blob = source.design(item, i);
+      return item;
+    });
+  }
+
   // 반환: { items: [공통 형태...], from: 'api' | 'sample' | 'none', fetched: '받은 날짜' }
   window.getItems = async function (zoneId) {
     const zone = window.findZone(zoneId);
@@ -20,9 +28,9 @@
       const unique = source.dedupe ? source.dedupe(saved) : saved; // 중복 합치기
       const chosen = source.pick ? source.pick(unique) : unique;   // 보여줄 것 고르기
       if (chosen.length) {
-        return { items: chosen.map(source.adapter), from: 'api', fetched: source.fetched && source.fetched() };
+        return { items: finish(source, chosen), from: 'api', fetched: source.fetched && source.fetched() };
       }
     }
-    return { items: source.sample().map(source.adapter), from: 'sample' };
+    return { items: finish(source, source.sample()), from: 'sample' };
   };
 })();

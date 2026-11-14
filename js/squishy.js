@@ -8,9 +8,13 @@
 //     ├ 빈 곳을 쓸기      ─▶ 쓴 방향으로 주변 공들이 밀려남
 //     └ 공을 톡 누르기    ─▶ onOpen(index) 호출 → 바깥(페이지)이 상세 모드로 바꿔 줌
 //
-//   [상세 모드]  하나만 크게 위쪽 가운데에
-//     ├ 꾹 누르기   ─▶ 눌린 곳이 쏙 들어감 → 손 떼면 탄성으로 튕겨 나옴
-//     └ 끌기       ─▶ 돌리기 (손 떼면 관성으로 조금 더 돎)
+//   [상세 모드]  하나만 크게, 줄기가 쑥 자라나며 똑바로 선 장미 한 송이
+//     ├ 꽃송이 꾹 누르기 ─▶ 눌린 곳이 쏙 들어감 → 손 떼면 탄성으로 튕겨 나옴
+//     ├ 줄기·잎 누르기   ─▶ 줄기가 휘청 흔들림
+//     └ 끌기            ─▶ 돌리기 (손 떼면 관성으로 조금 더 돎)
+//
+// 블롭 모양(꽃송이 + 줄기 + 잎)은 js/blobShapes.js 의 makeFlowerBlob 이 만든다.
+// 어떤 모양·색으로 만들지는 item.blob 설정(구역별 디자인 파일)이 정한다. 이 파일은 그 내용을 모른다.
 //
 // 말랑함의 원리 = "용수철": 구의 점(꼭짓점)마다 '목표 위치'로 끌려가는 힘(K)과
 // 흔들림을 줄이는 힘(C)을 준다. C를 일부러 약하게 해서 목표를 지나쳤다 돌아오며 출렁인다.
@@ -33,9 +37,10 @@
   // ----- 조작 -----
   const DRAG_THRESHOLD = 6;// 이만큼(px) 움직이면 '누르기'가 아니라 '끌기'
   const MOVE_SPEED = 7;    // 모드 전환 때 움직이는 빠르기
-  // 구의 색: 프로토타입용 임시 도형이라 꽃색과 상관없이 모두 같은 색. (나중에 꽃별 디자인으로 교체 예정)
-  //   목록에서 이름을 숨겨서, 구분용 임시 색을 블롭 순서대로 돌려 씀 (꽃 데이터 색 아님)
-  const BLOB_COLORS = ['#F7B7C5', '#FFD98A', '#B9E3C6', '#B8C8F5', '#D9C2F0']; // 분홍·버터·민트·하늘·라벤더
+  // ----- 줄기 -----
+  const SWAY_K = 45, SWAY_C = 2.2;   // 줄기 휘청임 용수철 (세기, 감쇠) — 감쇠를 낮춰 오래 출렁이게
+  const SWAY_AMP = 0.75;             // 휘청임 크기 (클수록 크게 휨)
+  const UPRIGHT = new THREE.Quaternion().setFromEuler(new THREE.Euler(0.62, 0, -0.08)); // 상세: 꽃 얼굴이 살짝 보이게 선 자세
   const SHOW_LIST_LABELS = false; // 목록에서 이름표 보이기 (지금은 숨김)
 
   // 상세 모드 꽃 자리 두 가지 (interaction.html의 CSS와 같은 값)
@@ -87,33 +92,13 @@
 
     // ---------- 도형 하나 만들기 ----------
     function makeBlob(item, i) {
-      const geo = new THREE.SphereGeometry(1, 72, 54);
-      const pos = geo.attributes.position;
-      const base = Float32Array.from(pos.array); // 원래 모양 (반지름 1이라 = 바깥 방향)
-      const n = pos.count;
-
-      // 색: 위→아래로 살짝 어두워지는 그라데이션 + 소용돌이 무늬 (돌릴 때 회전이 눈에 보이도록)
-      const top = new THREE.Color(BLOB_COLORS[i % BLOB_COLORS.length]).convertSRGBToLinear();
-      const bottom = top.clone().multiplyScalar(0.72);
-      const colors = new Float32Array(n * 3);
-      const c = new THREE.Color();
-      for (let v = 0; v < n; v++) {
-        const x = base[v * 3], y = base[v * 3 + 1], z = base[v * 3 + 2];
-        const t = (1 - y) / 2;
-        const phi = Math.atan2(z, x);
-        const swirl = 0.88 + 0.12 * Math.sin(5 * phi + 7 * y);
-        c.copy(top).lerp(bottom, smooth(t)).multiplyScalar(swirl);
-        colors[v * 3] = c.r; colors[v * 3 + 1] = c.g; colors[v * 3 + 2] = c.b;
-      }
-      geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
-
-      const mat = new THREE.MeshPhysicalMaterial({
-        vertexColors: true, roughness: 0.38, metalness: 0,
-        clearcoat: 0.7, clearcoatRoughness: 0.25
-      });
-      const mesh = new THREE.Mesh(geo, mat);
-      mesh.userData.index = i;
+      // 꽃송이 + 줄기 + 잎 (모양·색은 item.blob 설정대로, 없으면 기본 꽃)
+      const flower = window.makeFlowerBlob(item.blob || {});
+      const mesh = flower.root;                  // 위치·크기·회전은 통째로 (줄기도 같이 움직임)
+      const n = flower.count;
       mesh.rotation.set(0.3, i * 1.3, 0);
+      flower.stemPivot.scale.setScalar(0.0001);  // 목록에서는 꽃송이만 (상세에서 줄기가 자라남)
+      flower.stemPivot.visible = false;
       scene.add(mesh);
 
       const shadow = new THREE.Mesh(
@@ -123,7 +108,11 @@
       scene.add(shadow);
 
       return {
-        item, mesh, shadow, base,
+        item, mesh, shadow,
+        head: flower.head, base: flower.base, dirs: flower.dirs, stemPivot: flower.stemPivot,
+        stemGrow: 0,                                    // 줄기 자라남 (0 목록 → 1 상세)
+        sway: new THREE.Vector2(), swayV: new THREE.Vector2(), // 줄기 휘청임 (각도, 속도)
+        settle: false,                                  // 상세에 들어올 때 똑바로 서는 중
         // 말랑함
         d: new Float32Array(n), v: new Float32Array(n), // 각 점이 밀린 정도와 그 속도
         press: 0, pressTarget: 0,                       // 누르는 세기 (0~1)
@@ -170,15 +159,18 @@
         b.p.x = THREE.MathUtils.clamp(b.p.x, walls.left + b.r, walls.right - b.r);
       });
 
-      // 상세 모드: 정해진 영역(위~아래 px)의 가운데에, 영역에 맞는 크기로
+      // 상세 모드: 줄기까지 포함한 장미 한 송이가 정해진 영역(위~아래 px)에 들어가도록
+      //   꽃송이 반지름을 r이라 하면 장미 전체 세로 길이 = (위 끝 - 아래 끝) × r
+      const EXT = window.FLOWER_BLOB_EXTENT, tall = (EXT.top - EXT.bottom) * 0.95; // 0.95: 살짝 기울어진 만큼
       function fitArea(target, areaTop, areaBottom, maxFrac) {
-        const centerPx = (areaTop + areaBottom) / 2;
-        const radiusPx = Math.max(40, Math.min((areaBottom - areaTop) * 0.4, w * maxFrac));
-        target.pos.set(0, (h / 2 - centerPx) * view.wpp, 0);
+        const radiusPx = Math.max(24, Math.min((areaBottom - areaTop) * 0.92 / tall, w * maxFrac));
+        const midPx = (areaTop + areaBottom) / 2;
+        const headPx = midPx - ((EXT.top + EXT.bottom) / 2) * -radiusPx * 0.95; // 장미 가운데를 영역 가운데에
+        target.pos.set(0, (h / 2 - headPx) * view.wpp, 0);
         target.scale = radiusPx * view.wpp;
       }
-      fitArea(detailFull, HEADER_PX, h - BUTTON_ZONE_PX, 0.36);
-      fitArea(detailSplit, HEADER_PX, h * DETAIL_SPLIT, 0.3);
+      fitArea(detailFull, HEADER_PX + 20, h - BUTTON_ZONE_PX, 0.3);
+      fitArea(detailSplit, HEADER_PX, h * DETAIL_SPLIT, 0.22);
 
       applyTargets(false);
     }
@@ -242,15 +234,16 @@
       });
       return best;
     }
-    // 상세: 가운데 꽃의 표면 어디를 눌렀는지 (3D 광선으로 찾기)
+    // 상세: 가운데 장미의 어디를 눌렀는지 (3D 광선으로 찾기) — part: 'head' 꽃송이 / 'stem' 줄기·잎
     function detailHit(e) {
       toWorld(e);
       ray.setFromCamera(ndc, camera);
-      const hit = ray.intersectObject(blobs[selected].mesh)[0];
-      return hit ? { blob: blobs[selected], point: hit.point } : null;
+      const b = blobs[selected];
+      const hit = ray.intersectObject(b.mesh, true)[0];
+      return hit ? { blob: b, point: hit.point, part: hit.object === b.head ? 'head' : 'stem' } : null;
     }
     function setPressPoint(blob, worldPoint) {
-      blob.pressPoint.copy(blob.mesh.worldToLocal(worldPoint.clone())).normalize();
+      blob.pressPoint.copy(blob.head.worldToLocal(worldPoint.clone())).normalize();
     }
 
     const canvas = renderer.domElement;
@@ -263,11 +256,18 @@
       } else {
         const hit = detailHit(e);
         if (!hit) return;
-        active = { ...base, blob: hit.blob };
+        active = { ...base, blob: hit.blob, part: hit.part };
         hit.blob.spin.set(0, 0);
-        setPressPoint(hit.blob, hit.point);
-        hit.blob.pressTarget = 1;
-        hit.blob.awake = true;
+        hit.blob.settle = false;
+        if (hit.part === 'head') {                 // 꽃송이: 쏙 들어감
+          setPressPoint(hit.blob, hit.point);
+          hit.blob.pressTarget = 1;
+          hit.blob.awake = true;
+        } else {                                   // 줄기·잎: 누른 쪽 반대로 휘청
+          const side = Math.sign(pWorld.x - hit.blob.cur.x) || 1;
+          hit.blob.swayV.x += -side * 5.5;
+          hit.blob.swayV.y += 2.4;
+        }
       }
       canvas.style.cursor = 'grabbing';
     });
@@ -301,7 +301,7 @@
         const b = active.blob;
         if (active.mode === 'tap') {
           const hit = detailHit(e);
-          if (hit && hit.blob === b) setPressPoint(b, hit.point); // 누른 채 미끄러지면 자국도 따라감
+          if (hit && hit.blob === b && hit.part === 'head' && active.part === 'head') setPressPoint(b, hit.point); // 누른 채 미끄러지면 자국도 따라감
         } else {
           rotateBy(b, dx * 0.012, dy * 0.012);
           const now = performance.now(), dt = Math.max(1, now - active.lastT);
@@ -439,6 +439,16 @@
         const visible = b.curScale > 0.005;
         b.mesh.visible = visible;
         b.shadow.visible = visible && mode === 'detail';
+        // 줄기: 상세에서 보고 있는 장미만 쑥 자라남, 목록에서는 쏙 들어감
+        const growTo = (mode === 'detail' && i === selected) ? 1 : 0;
+        b.stemGrow += (growTo - b.stemGrow) * (1 - Math.exp(-dt * (growTo ? 4 : 10)));
+        b.stemPivot.visible = b.stemGrow > 0.01;
+        b.stemPivot.scale.set(Math.max(0.0001, Math.min(1, b.stemGrow * 1.3)), Math.max(0.0001, b.stemGrow), Math.max(0.0001, Math.min(1, b.stemGrow * 1.3)));
+        // 줄기 휘청임 (용수철)
+        b.swayV.x += (-SWAY_K * b.sway.x - SWAY_C * b.swayV.x) * dt;
+        b.swayV.y += (-SWAY_K * b.sway.y - SWAY_C * b.swayV.y) * dt;
+        b.sway.addScaledVector(b.swayV, dt);
+        b.stemPivot.rotation.set(b.sway.y * SWAY_AMP, 0, b.sway.x * SWAY_AMP);
         if (!visible) { labels[i].style.opacity = 0; return; }
         labels[i].style.opacity = '';
 
@@ -446,8 +456,13 @@
         // 누르기(찌그러짐)는 상세 모드에서만. 목록에서는 블롭끼리 눌리지 않음
         b.press += (b.pressTarget - b.press) * (b.pressTarget > b.press ? 1 - Math.exp(-dt * 6) : 1);
         if (mode === 'detail' && (!active || active.blob !== b)) {
-          rotateBy(b, b.spin.x + dt * 0.15, b.spin.y);
-          b.spin.multiplyScalar(Math.pow(0.04, dt));
+          if (b.settle) {                          // 상세에 막 들어옴: 굴러다니던 꽃이 똑바로 섬
+            b.mesh.quaternion.slerp(UPRIGHT, 1 - Math.exp(-dt * 5));
+            if (b.mesh.quaternion.angleTo(UPRIGHT) < 0.01) b.settle = false;
+          } else {
+            rotateBy(b, b.spin.x + dt * 0.15, b.spin.y);
+            b.spin.multiplyScalar(Math.pow(0.04, dt));
+          }
         }
         // 전체 출렁임 (용수철)
         b.wobbleV += (-K * 0.6 * (b.wobble - 1) - C * 0.7 * b.wobbleV) * dt;
@@ -457,7 +472,8 @@
         const bob = mode === 'detail' ? Math.sin(t * 1.4 + b.phase) * 0.05 * s : 0; // 상세에서만 둥실
         b.mesh.position.set(b.cur.x, b.cur.y + bob, b.cur.z);
         b.mesh.scale.set(s * b.wobble, s * (2 - b.wobble), s * b.wobble); // 납작해지면 옆으로 퍼짐
-        b.shadow.position.set(b.cur.x, b.cur.y - 1.05 * s, -0.9 * s);
+        const shadowY = b.stemGrow > 0.5 ? window.FLOWER_BLOB_EXTENT.bottom * 0.95 : -1.05; // 줄기가 있으면 줄기 끝 아래
+        b.shadow.position.set(b.cur.x, b.cur.y + shadowY * s, -0.9 * s);
         b.shadow.scale.setScalar(Math.max(0, s - bob * 1.5));
 
         if (b.awake) updateSurface(b, dt);
@@ -467,14 +483,16 @@
       requestAnimationFrame(frame);
     }
 
+    // 꽃송이 표면 누르기: 각 점을 '꽃송이 중심에서 바깥 방향'으로 밀고 당긴다.
+    //   눌린 곳과 가까운지는 각 점의 방향(dirs)과 누른 방향을 비교해서 정함 (꽃잎 울퉁불퉁과 상관없이)
     function updateSurface(b, dt) {
-      const attr = b.mesh.geometry.attributes.position;
-      const arr = attr.array, base = b.base, d = b.d, v = b.v;
+      const attr = b.head.geometry.attributes.position;
+      const arr = attr.array, base = b.base, dirs = b.dirs, d = b.d, v = b.v;
       const p = b.pressPoint, depth = DENT_DEPTH * b.press;
       let energy = 0;
       for (let k = 0, n = d.length; k < n; k++) {
         const x = base[k * 3], y = base[k * 3 + 1], z = base[k * 3 + 2];
-        const dist2 = (x - p.x) ** 2 + (y - p.y) ** 2 + (z - p.z) ** 2;
+        const dist2 = (dirs[k * 3] - p.x) ** 2 + (dirs[k * 3 + 1] - p.y) ** 2 + (dirs[k * 3 + 2] - p.z) ** 2;
         const fall = Math.exp(-dist2 / (DENT_RADIUS * DENT_RADIUS));
         // 눌린 곳은 들어가고, 나머지는 살짝 부풀어 오름 (부피가 보존되는 느낌)
         const target = -depth * fall + depth * 0.12 * (1 - fall);
@@ -485,7 +503,7 @@
         arr[k * 3] = x * s; arr[k * 3 + 1] = y * s; arr[k * 3 + 2] = z * s;
       }
       attr.needsUpdate = true;
-      b.mesh.geometry.computeVertexNormals();
+      b.head.geometry.computeVertexNormals();
       // 완전히 멈추면 계산 쉬기 (배터리 절약)
       b.awake = energy > 0.002 * d.length || b.pressTarget > 0;
     }
@@ -508,6 +526,8 @@
       showDetail(index, dir = 0) {
         mode = 'detail'; selected = index;
         blobs.forEach(b => { b.held = false; });
+        blobs[index].settle = true;      // 똑바로 서기
+        blobs[index].spin.set(0, 0);
         applyTargets(true, dir);
       },
       // 설명 시트가 열리면 꽃이 위로 비켜 올라가고, 닫히면 다시 가운데로
