@@ -20,6 +20,7 @@ window.SOURCES = {
   roseApi: {
     saved: () => window.ROSE_API,
     fetched: () => window.ROSE_API_FETCHED,
+    dedupe: raw => window.roseDedupe(raw), // 같은 이름은 하나만 (규칙은 roseAdapter.js)
     // 지금은 182건 중 5개만. 같은 이름이 여러 건 있어서 이름이 아니라 API url 속 list_no 번호로 고른다.
     //   에버골드 1111(샘플과 같은 '코르테스' 문장) · 엘르 1124(샘플과 같은 긴 설명)
     pick: raw => [1111, 1116, 1118, 1119, 1124]

@@ -17,7 +17,8 @@
 
     const saved = source.saved && source.saved();
     if (Array.isArray(saved) && saved.length) {
-      const chosen = source.pick ? source.pick(saved) : saved;
+      const unique = source.dedupe ? source.dedupe(saved) : saved; // 중복 합치기
+      const chosen = source.pick ? source.pick(unique) : unique;   // 보여줄 것 고르기
       if (chosen.length) {
         return { items: chosen.map(source.adapter), from: 'api', fetched: source.fetched && source.fetched() };
       }

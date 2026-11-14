@@ -1,14 +1,32 @@
 <!DOCTYPE html>
 <html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>올림픽공원 말랑 지도 – 시안</title>
+<title>올림픽공원 말랑 지도</title>
 <style>
- body{margin:0;background:#f6f1e7;display:flex;justify-content:center;align-items:center;min-height:100vh;font-family:'Apple SD Gothic Neo','Noto Sans KR',sans-serif}
+ body{margin:0;background:#f6f1e7;color:#3f3a33;display:flex;flex-direction:column;justify-content:center;align-items:center;min-height:100vh;font-family:'Apple SD Gothic Neo','Noto Sans KR',sans-serif;transition:opacity .35s}
+ body.leaving{opacity:0}
+ /* 첫 화면 한 줄 소개 (지도 그림 밖에 두어서 휴대폰에서도 글씨가 작아지지 않음) */
+ .intro{width:min(960px,96vw);box-sizing:border-box;padding:20px 16px 4px}
+ .intro h1{margin:0;font-size:24px;font-weight:800;color:#3d5a35}
+ .intro p{margin:6px 0 0;font-size:15px;line-height:1.5;color:#6b665c}
+ .intro b{color:#e5566f}
  .wrap{width:min(960px,96vw);position:relative}
  svg{width:100%;height:auto;display:block}
- #toast{position:absolute;left:50%;bottom:18px;transform:translateX(-50%) translateY(20px);opacity:0;background:#3f3a33;color:#fff;padding:10px 16px;border-radius:999px;font-size:14px;transition:.25s;pointer-events:none;white-space:nowrap}
+ .swipe-hint{display:none}
+ /* 휴대폰: 지도를 화면보다 넓게 그리고 옆으로 밀어서 보기 → 구역 이름이 읽을 만한 크기로 */
+ @media (max-width:680px){
+   body{justify-content:flex-start}
+   .wrap{width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch}
+   svg{width:700px}
+   .swipe-hint{display:block;margin:2px 0 12px;font-size:12px;color:#8a857c;text-align:center}
+ }
+ #toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(20px);opacity:0;background:#3f3a33;color:#fff;padding:10px 16px;border-radius:999px;font-size:14px;transition:.25s;pointer-events:none;white-space:nowrap}
  #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 </style></head><body>
-<div class="wrap">
+<header class="intro">
+  <h1>올림픽공원 말랑 지도</h1>
+  <p>공원에서는 보호 때문에 만질 수 없는 식물을, 여기서는 마음껏 만져보세요. <b>구역을 눌러보세요.</b></p>
+</header>
+<div class="wrap" id="wrap">
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 560" font-family="'Apple SD Gothic Neo','Noto Sans KR','Noto Sans CJK KR',sans-serif">
   <!--
     올림픽공원 일러스트 지도 시안 v0.1
@@ -137,43 +155,108 @@
     <text x="34" y="44" font-size="12" fill="#8a857c">데이터 준비 중</text>
   </g>
 
-  <text x="40" y="38" font-size="22" font-weight="800" fill="#3d5a35">올림픽공원 말랑 지도</text>
-  <text x="40" y="58" font-size="12" fill="#7a7466">구역을 눌러 식물을 만져보세요</text>
-
   <style>
     .zone { cursor: pointer; outline: none; }
     .zone-label { font-size: 14px; font-weight: 700; fill: #3f3a33; paint-order: stroke; stroke: #f6f1e7; stroke-width: 4px; }
     .zone-label.small { font-size: 12px; }
-    .zone > *:not(.zone-label) { transition: transform .25s ease, opacity .25s ease; transform-box: fill-box; transform-origin: center; }
-    .zone:hover > *:not(.zone-label), .zone:focus-visible > *:not(.zone-label) { transform: scale(1.06); }
-    .zone[data-active="false"] { opacity: .78; }
+    /* 마우스 올림·누름 때의 출렁임은 아래 script의 '젤리' 코드가 담당 */
+    .zone[data-active="false"] { opacity: .78; transition: opacity .25s; }
     .zone[data-active="false"]:hover { opacity: 1; }
     .zone-glow { animation: pulse 2.4s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
     @keyframes pulse { 0%,100% { opacity: .55; transform: scale(1);} 50% { opacity: .9; transform: scale(1.08);} }
   </style>
 </svg>
 
-<div id="toast"></div>
 </div>
+<p class="swipe-hint">← 옆으로 밀어서 지도 둘러보기 →</p>
+<div id="toast"></div>
 <!-- 구역 연결표는 js/zones.js 한 곳에서 관리 (인터랙션 페이지와 공유) -->
 <script src="js/zones.js"></script>
 <script>
+const svg = document.querySelector('svg');
 const toast = document.getElementById('toast');
 function say(msg){ toast.textContent = msg; toast.classList.add('show'); clearTimeout(say.t); say.t = setTimeout(()=>toast.classList.remove('show'), 1800); }
-function openZone(zoneEl){
+
+// ------------------------------------------------------------
+// 젤리 구역: 각 구역에 작은 용수철을 달아 둔다.
+//   마우스 올림 → 살짝 출렁 / 누름 → 납작하게 눌림 / 놓음 → 통 튀며 출렁
+//   a = 찌그러진 정도 (+ 옆으로 넓적, - 위로 길쭉), 0이면 원래 모양
+// ------------------------------------------------------------
+const jellies = [];
+function makeJelly(el) {
+  const box = el.getBBox();
+  const j = { el, cx: box.x + box.width / 2, cy: box.y + box.height, a: 0, v: 0, target: 0 }; // 바닥 가운데를 기준으로 찌그러짐
+  jellies.push(j);
+  return j;
+}
+let jellyRunning = false;
+function jellyLoop() {
+  let moving = false;
+  jellies.forEach(j => {
+    j.v += (300 * (j.target - j.a) - 9 * j.v) / 60;  // 용수철 힘 - 흔들림 줄이는 힘
+    j.a += j.v / 60;
+    if (Math.abs(j.v) > 0.0005 || Math.abs(j.target - j.a) > 0.0005) moving = true;
+    const sx = 1 + j.a, sy = 1 - j.a;
+    j.el.setAttribute('transform', `translate(${j.cx} ${j.cy}) scale(${sx} ${sy}) translate(${-j.cx} ${-j.cy})`);
+  });
+  jellyRunning = moving;
+  if (moving) requestAnimationFrame(jellyLoop);
+}
+function poke(j, dv, target) {
+  j.v += dv;
+  if (target !== undefined) j.target = target;
+  if (!jellyRunning) { jellyRunning = true; requestAnimationFrame(jellyLoop); }
+}
+
+// ------------------------------------------------------------
+// 장미광장처럼 데이터가 있는 구역: 그 자리로 확대되면서 다음 화면으로
+// (viewBox = SVG에서 "어디를 얼마나 크게 볼지" 정하는 창. 이걸 좁히면 확대)
+// ------------------------------------------------------------
+const FULL_VIEW = [0, 0, 800, 560];
+function zoomInto(j, done) {
+  const to = [j.cx - 90, j.cy - 100, 180, 126]; // 구역 주변 180×126 영역
+  const start = performance.now(), dur = 750;
+  (function step(now) {
+    const t = Math.min(1, (now - start) / dur);
+    if (t > 0.55) document.body.classList.add('leaving'); // 확대가 반쯤 보인 뒤에 흐려지기 시작
+    const e = t < .5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2; // 천천히-빠르게-천천히
+    svg.setAttribute('viewBox', FULL_VIEW.map((v, i) => v + (to[i] - v) * e).join(' '));
+    if (t < 1) requestAnimationFrame(step); else done();
+  })(start);
+}
+// 뒤로가기로 돌아왔을 때 확대된 상태가 남아 있지 않게 되돌리기
+window.addEventListener('pageshow', () => {
+  svg.setAttribute('viewBox', FULL_VIEW.join(' '));
+  document.body.classList.remove('leaving');
+});
+
+function openZone(zoneEl, j){
   const id = zoneEl.dataset.zone, name = zoneEl.dataset.name, conf = findZone(id);
   if (conf && conf.source) {
-    location.href = 'interaction.html?zone=' + encodeURIComponent(id);
+    zoomInto(j, () => { location.href = 'interaction.html?zone=' + encodeURIComponent(id); });
   } else {
     say(name + ' · 데이터 준비 중이에요');
   }
 }
+
 document.querySelectorAll('.zone').forEach(z => {
   // 연결표 기준으로 활성 표시를 맞춤 (SVG의 data-active를 일일이 고치지 않아도 됨)
   const conf = findZone(z.dataset.zone);
   z.dataset.active = String(!!(conf && conf.source));
-  z.addEventListener('click', () => openZone(z));
-  z.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openZone(z); } });
+  const j = makeJelly(z);
+  z.addEventListener('pointerenter', e => { if (e.pointerType === 'mouse') poke(j, 1.2); });
+  z.addEventListener('pointerdown', () => poke(j, 0, 0.12));             // 꾹 → 납작
+  z.addEventListener('pointerleave', () => { if (j.target) poke(j, 0, 0); });
+  z.addEventListener('pointerup', () => poke(j, -2.5, 0));                // 놓음 → 통!
+  z.addEventListener('click', () => setTimeout(() => openZone(z, j), 180)); // 출렁임을 살짝 보여준 뒤
+  z.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); poke(j, -2.5, 0); openZone(z, j); } });
 });
+
+// 휴대폰에서 지도가 옆으로 길면, 처음엔 장미광장이 보이도록 가운데 맞춤
+const wrap = document.getElementById('wrap');
+if (wrap.scrollWidth > wrap.clientWidth) {
+  const rose = jellies.find(j => j.el.dataset.zone === 'rose');
+  if (rose) wrap.scrollLeft = rose.cx / 800 * wrap.scrollWidth - wrap.clientWidth / 2;
+}
 </script>
 </body></html>

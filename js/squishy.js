@@ -2,10 +2,11 @@
 //
 // 한 화면 안에 두 가지 모드가 있다:
 //
-//   [목록 모드]  여러 개를 격자로 보여줌
-//     ├ 마우스 올림 ─▶ 살짝 출렁
-//     ├ 끌기       ─▶ 돌리기
-//     └ 톡 누르기   ─▶ onOpen(index) 호출 → 바깥(페이지)이 상세 모드로 바꿔 줌
+//   [목록 모드 = 장미 더미]  공들이 중력으로 바닥에 쌓여 있음
+//     ├ 마우스 올림      ─▶ 살짝 출렁
+//     ├ 공을 잡고 끌기    ─▶ 공이 손을 따라오며 다른 공을 밀어냄 (놓으면 던져짐)
+//     ├ 빈 곳을 쓸기      ─▶ 쓴 방향으로 주변 공들이 밀려남
+//     └ 공을 톡 누르기    ─▶ onOpen(index) 호출 → 바깥(페이지)이 상세 모드로 바꿔 줌
 //
 //   [상세 모드]  하나만 크게 위쪽 가운데에
 //     ├ 꾹 누르기   ─▶ 눌린 곳이 쏙 들어감 → 손 떼면 탄성으로 튕겨 나옴
@@ -13,14 +14,23 @@
 //
 // 말랑함의 원리 = "용수철": 구의 점(꼭짓점)마다 '목표 위치'로 끌려가는 힘(K)과
 // 흔들림을 줄이는 힘(C)을 준다. C를 일부러 약하게 해서 목표를 지나쳤다 돌아오며 출렁인다.
+//
+// 더미의 원리 = 아주 단순한 2D 물리: 매 프레임 ① 중력으로 떨어뜨리고 ② 겹친 공끼리 밀어내고
+// ③ 벽·바닥에서 튕긴다. 세게 부딪히면 그 공이 '통' 하고 출렁인다.
 
 (function () {
+  // ----- 말랑함 -----
   const K = 170;           // 용수철 세기: 클수록 빨리 돌아옴
   const C = 8;             // 감쇠: 작을수록 더 출렁거림
   const DENT_DEPTH = 0.42; // 최대로 들어가는 깊이 (반지름 1 기준)
   const DENT_RADIUS = 0.55;// 눌림이 퍼지는 넓이
-  const DRAG_THRESHOLD = 6;// 이만큼(px) 움직이면 '누르기'가 아니라 '돌리기'
-  const SPACING = 2.7;     // 목록에서 도형 사이 간격
+  // ----- 더미 물리 -----
+  const GRAVITY = 18;      // 떨어지는 힘
+  const BOUNCE = 0.35;     // 부딪힐 때 튕기는 정도 (0~1)
+  const PILE_FILL = 0.42;  // 공들이 화면 넓이의 몇 %를 차지할지 (공 크기 결정)
+  const MAX_RADIUS = 1.15; // 공이 적을 때 너무 커지지 않게
+  // ----- 조작 -----
+  const DRAG_THRESHOLD = 6;// 이만큼(px) 움직이면 '누르기'가 아니라 '끌기'
   const MOVE_SPEED = 7;    // 모드 전환 때 움직이는 빠르기
   // 구의 색: 프로토타입용 임시 도형이라 꽃색과 상관없이 모두 같은 색. (나중에 꽃별 디자인으로 교체 예정)
   const BLOB_COLOR = '#E9E4DA';
@@ -28,6 +38,7 @@
   // 상세 모드 화면 나누기: 위쪽 58%는 꽃, 아래는 정보. (interaction.html의 CSS와 같은 값)
   const DETAIL_SPLIT = 0.58;
   const HEADER_PX = 64;
+  const CAMERA_Z = 12;
 
   window.createSquishyScene = function (container, items, { onOpen } = {}) {
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
@@ -38,6 +49,7 @@
 
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(35, 1, 0.1, 100);
+    camera.position.set(0, 0, CAMERA_Z);
 
     scene.add(new THREE.HemisphereLight(0xffffff, 0xd8cdb8, 0.85));
     const key = new THREE.DirectionalLight(0xffffff, 0.75);
@@ -59,7 +71,9 @@
 
     let mode = 'list';     // 'list' | 'detail'
     let selected = -1;     // 상세 모드에서 보여주는 도형 번호
-    const detail = { pos: new THREE.Vector3(), scale: 1, viewW: 10 }; // layout()에서 계산
+    const view = { w: 1, h: 1, W: 1, H: 1, wpp: 1 };            // 화면 크기(px)와 3D 크기, 1px당 3D 길이
+    const walls = { left: -1, right: 1, bottom: -1 };          // 더미를 가두는 벽
+    const detail = { pos: new THREE.Vector3(), scale: 1 };     // 상세 모드 위치·크기
 
     // ---------- 도형 하나 만들기 ----------
     function makeBlob(item, i) {
@@ -93,59 +107,63 @@
       scene.add(mesh);
 
       const shadow = new THREE.Mesh(
-        new THREE.PlaneGeometry(2.2, 0.55), // 납작한 타원 그림자
+        new THREE.PlaneGeometry(2.2, 0.55), // 납작한 타원 그림자 (상세 모드에서만)
         new THREE.MeshBasicMaterial({ map: shadowTex, transparent: true, depthWrite: false })
       );
       scene.add(shadow);
 
       return {
         item, mesh, shadow, base,
-        d: new Float32Array(n),   // 각 점이 안쪽(-)/바깥쪽(+)으로 밀린 정도
-        v: new Float32Array(n),   // 그 속도
-        press: 0, pressTarget: 0, // 누르는 세기 (0~1)
+        // 말랑함
+        d: new Float32Array(n), v: new Float32Array(n), // 각 점이 밀린 정도와 그 속도
+        press: 0, pressTarget: 0,                       // 누르는 세기 (0~1)
         pressPoint: new THREE.Vector3(0, 0, 1),
-        wobble: 1, wobbleV: 0,    // 전체가 통통 튀는 출렁임
-        spin: new THREE.Vector2(0, 0), // 손 뗀 뒤 관성 회전
-        home: new THREE.Vector3(),     // 목록 모드에서의 자리
-        cur: new THREE.Vector3(), curScale: 0,  // 지금 위치·크기
-        tgt: new THREE.Vector3(), tgtScale: 1,  // 가려는 위치·크기
-        phase: Math.random() * 6.28,
-        awake: true
+        wobble: 1, wobbleV: 0,                          // 전체가 통통 튀는 출렁임
+        spin: new THREE.Vector2(0, 0),                  // 상세 모드: 손 뗀 뒤 관성 회전
+        awake: true,
+        // 더미 물리 (목록 모드)
+        p: new THREE.Vector2(), vel: new THREE.Vector2(), // 위치·속도
+        sizeJitter: 0.88 + Math.random() * 0.24,          // 공마다 크기를 조금씩 다르게
+        r: 1,                                             // 반지름 (layout에서 계산)
+        held: false, holdTarget: new THREE.Vector2(),
+        follow: true,                                     // true = 화면 위치가 물리 위치를 바로 따라감
+        // 화면에 그려지는 위치·크기 (모드 전환 때 부드럽게 이동)
+        cur: new THREE.Vector3(), curScale: 0,
+        tgt: new THREE.Vector3(), tgtScale: 1,
+        phase: Math.random() * 6.28
       };
     }
 
-    // ---------- 배치 계산 (화면 크기가 바뀔 때마다) ----------
+    // ---------- 배치 계산 (처음 + 화면 크기가 바뀔 때마다) ----------
     function layout() {
       const w = container.clientWidth, h = container.clientHeight;
       renderer.setSize(w, h);
       camera.aspect = w / h;
-
-      // 목록 모드: 화면 비율에 맞춰 격자
-      const n = blobs.length;
-      const cols = Math.max(1, Math.min(n, Math.ceil(Math.sqrt(n * camera.aspect * 0.9))));
-      const rows = Math.ceil(n / cols);
-      blobs.forEach((b, i) => {
-        const r = Math.floor(i / cols);
-        const inRow = r === rows - 1 ? n - r * cols : cols; // 마지막 줄은 가운데 정렬
-        const col = i % cols;
-        b.home.set((col - (inRow - 1) / 2) * SPACING, ((rows - 1) / 2 - r) * SPACING * 1.08, 0);
-      });
-      const halfFov = THREE.MathUtils.degToRad(camera.fov / 2);
-      const W = cols * SPACING, H = rows * SPACING * 1.08 + 0.4;
-      const dist = Math.max((H / 2) / Math.tan(halfFov), (W / 2) / (Math.tan(halfFov) * camera.aspect)) * 1.08;
-      camera.position.set(0, 0, dist);
-      camera.lookAt(0, 0, 0);
       camera.updateProjectionMatrix();
+      const halfFov = THREE.MathUtils.degToRad(camera.fov / 2);
+      view.w = w; view.h = h;
+      view.H = 2 * CAMERA_Z * Math.tan(halfFov);
+      view.W = view.H * camera.aspect;
+      view.wpp = view.H / h;
 
-      // 상세 모드: 화면 픽셀 → 3D 공간 길이로 바꿔서, 위쪽 영역 가운데에 크게
-      const viewH = 2 * dist * Math.tan(halfFov);
-      const worldPerPx = viewH / h;
+      // 더미: 벽은 화면 양옆과 바닥. 공 크기는 공 개수에 맞춰 화면을 적당히 채우도록
+      const usableH = view.H - HEADER_PX * view.wpp;
+      const sumJ2 = blobs.reduce((s, b) => s + b.sizeJitter * b.sizeJitter, 0);
+      const base = Math.min(MAX_RADIUS, Math.sqrt(PILE_FILL * view.W * usableH / (Math.PI * sumJ2)), view.W / 5);
+      // 원근 때문에 가장자리 공이 조금 커 보여서, 벽을 화면 끝보다 살짝 안쪽에 둔다
+      const margin = 14 * view.wpp + base * 0.18;
+      walls.left = -view.W / 2 + margin; walls.right = view.W / 2 - margin; walls.bottom = -view.H / 2 + margin;
+      blobs.forEach(b => {
+        b.r = base * b.sizeJitter;
+        b.p.x = THREE.MathUtils.clamp(b.p.x, walls.left + b.r, walls.right - b.r);
+      });
+
+      // 상세 모드: 화면 위쪽 영역 가운데에 크게
       const areaTop = HEADER_PX, areaBottom = h * DETAIL_SPLIT;
       const centerPx = (areaTop + areaBottom) / 2;
       const radiusPx = Math.max(40, Math.min((areaBottom - areaTop) * 0.4, w * 0.3));
-      detail.pos.set(0, (h / 2 - centerPx) * worldPerPx, 0);
-      detail.scale = radiusPx * worldPerPx;
-      detail.viewW = viewH * camera.aspect;
+      detail.pos.set(0, (h / 2 - centerPx) * view.wpp, 0);
+      detail.scale = radiusPx * view.wpp;
 
       applyTargets(false);
     }
@@ -153,90 +171,127 @@
     // ---------- 모드에 따라 각 도형이 갈 곳 정하기 ----------
     function applyTargets(fromNav, dir = 0) {
       blobs.forEach((b, i) => {
+        b.pressTarget = 0;
         if (mode === 'list') {
-          if (b.curScale < 0.01) { b.cur.copy(b.home); } // 숨어 있던 것은 제자리에서 자라남
-          b.tgt.copy(b.home); b.tgtScale = 1;
+          b.follow = false;                     // 물리 위치로 부드럽게 돌아간 뒤 따라가기 시작
+          if (b.curScale < 0.01) b.cur.set(b.p.x, b.p.y, 0); // 숨어 있던 공은 제자리에서 자라남
+          b.tgtScale = b.r;
         } else if (i === selected) {
           if (fromNav && dir) { // 이전/다음: 옆에서 미끄러져 들어옴
-            b.cur.copy(detail.pos); b.cur.x += dir * detail.viewW * 0.55; b.curScale = detail.scale * 0.4;
+            b.cur.copy(detail.pos); b.cur.x += dir * view.W * 0.55; b.curScale = detail.scale * 0.4;
           }
           b.tgt.copy(detail.pos); b.tgtScale = detail.scale;
         } else {
+          b.tgt.copy(b.cur);
           if (fromNav && dir && b.curScale > 0.01) { // 이전 꽃은 반대쪽으로 빠져나감
-            b.tgt.copy(detail.pos); b.tgt.x -= dir * detail.viewW * 0.55;
+            b.tgt.copy(detail.pos); b.tgt.x -= dir * view.W * 0.55;
           }
           b.tgtScale = 0;
         }
-        b.pressTarget = 0;
       });
       labels.forEach(el => el.classList.toggle('hidden', mode !== 'list'));
     }
 
     layout();
-    blobs.forEach(b => { b.cur.copy(b.home); b.curScale = 1; });
+    // 첫 등장: 화면 위에서 하나씩 떨어져 쌓임
+    blobs.forEach((b, i) => {
+      b.p.set(
+        THREE.MathUtils.lerp(walls.left + b.r, walls.right - b.r, Math.random()),
+        view.H / 2 + b.r + i * b.r * 1.6
+      );
+      b.cur.set(b.p.x, b.p.y, 0); b.curScale = b.r; b.follow = true;
+    });
     window.addEventListener('resize', layout);
 
     // ---------- 포인터 (마우스·터치 공통) ----------
     const ray = new THREE.Raycaster();
     const ndc = new THREE.Vector2();
-    let active = null; // 누르고 있는 중인 정보
+    const pWorld = new THREE.Vector2();   // 포인터의 3D 평면 위치
+    let active = null;                    // 누르고 있는 중인 정보
     let hovered = null;
 
-    function hitTest(e) {
+    function toWorld(e) {
       const r = renderer.domElement.getBoundingClientRect();
       ndc.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
-      ray.setFromCamera(ndc, camera);
-      // 상세 모드에서는 가운데 꽃만 만질 수 있음
-      const targets = mode === 'detail' ? [blobs[selected].mesh] : blobs.map(b => b.mesh);
-      const hit = ray.intersectObjects(targets)[0];
-      return hit ? { blob: blobs[hit.object.userData.index], point: hit.point } : null;
+      return pWorld.set(ndc.x * view.W / 2, ndc.y * view.H / 2);
     }
 
+    // 목록: 포인터 아래에 있는 공 (2D 거리로 찾기)
+    function ballAt(e) {
+      const w = toWorld(e);
+      let best = null, bestD = Infinity;
+      blobs.forEach(b => {
+        const d = b.p.distanceTo(w);
+        if (d < b.r && d < bestD) { best = b; bestD = d; }
+      });
+      return best;
+    }
+    // 상세: 가운데 꽃의 표면 어디를 눌렀는지 (3D 광선으로 찾기)
+    function detailHit(e) {
+      toWorld(e);
+      ray.setFromCamera(ndc, camera);
+      const hit = ray.intersectObject(blobs[selected].mesh)[0];
+      return hit ? { blob: blobs[selected], point: hit.point } : null;
+    }
     function setPressPoint(blob, worldPoint) {
       blob.pressPoint.copy(blob.mesh.worldToLocal(worldPoint.clone())).normalize();
     }
 
-    renderer.domElement.addEventListener('pointerdown', e => {
-      const hit = hitTest(e);
-      if (!hit) return;
-      try { renderer.domElement.setPointerCapture(e.pointerId); } catch (_) { /* 일부 환경에서 실패해도 진행 */ }
-      active = { blob: hit.blob, startX: e.clientX, startY: e.clientY, lastX: e.clientX, lastY: e.clientY, mode: 'tap', lastT: performance.now() };
-      hit.blob.spin.set(0, 0);
-      if (mode === 'detail') { // 상세 모드에서만 꾹 눌림
+    const canvas = renderer.domElement;
+    canvas.addEventListener('pointerdown', e => {
+      try { canvas.setPointerCapture(e.pointerId); } catch (_) { /* 일부 환경에서 실패해도 진행 */ }
+      const base = { startX: e.clientX, startY: e.clientY, lastX: e.clientX, lastY: e.clientY, mode: 'tap', lastT: performance.now() };
+      if (mode === 'list') {
+        const b = ballAt(e);
+        active = { ...base, blob: b, grabOffset: b ? b.p.clone().sub(pWorld) : null }; // b가 없으면 '빈 곳 쓸기'
+      } else {
+        const hit = detailHit(e);
+        if (!hit) return;
+        active = { ...base, blob: hit.blob };
+        hit.blob.spin.set(0, 0);
         setPressPoint(hit.blob, hit.point);
         hit.blob.pressTarget = 1;
         hit.blob.awake = true;
       }
-      renderer.domElement.style.cursor = 'grabbing';
+      canvas.style.cursor = 'grabbing';
     });
 
-    renderer.domElement.addEventListener('pointermove', e => {
+    canvas.addEventListener('pointermove', e => {
       if (!active) {
-        const hit = hitTest(e);
-        const over = hit ? hit.blob : null;
-        // 목록 모드 + 마우스일 때: 새로 올라간 도형이 살짝 출렁
-        if (mode === 'list' && over && over !== hovered && e.pointerType === 'mouse') over.wobbleV += 1.6;
-        hovered = over;
-        renderer.domElement.style.cursor = over ? (mode === 'list' ? 'pointer' : 'grab') : 'default';
+        if (mode === 'list') {
+          const over = ballAt(e);
+          if (over && over !== hovered && e.pointerType === 'mouse') over.wobbleV += 1.6; // 새로 올라간 공 출렁
+          hovered = over;
+          canvas.style.cursor = over ? 'pointer' : 'grab';
+        } else {
+          canvas.style.cursor = detailHit(e) ? 'grab' : 'default';
+        }
         return;
       }
-      const b = active.blob;
       const moved = Math.hypot(e.clientX - active.startX, e.clientY - active.startY);
       if (active.mode === 'tap' && moved > DRAG_THRESHOLD) {
-        active.mode = 'rotate';
-        b.pressTarget = 0; // 돌리기 시작하면 누름은 풀린다
+        active.mode = 'drag';
+        if (active.blob) { active.blob.pressTarget = 0; if (mode === 'list') active.blob.held = true; }
       }
-      if (active.mode === 'tap') {
-        if (mode === 'detail') {
-          const hit = hitTest(e);
-          if (hit && hit.blob === b) setPressPoint(b, hit.point); // 누른 채 미끄러지면 자국도 따라감
+      const dx = e.clientX - active.lastX, dy = e.clientY - active.lastY;
+      if (mode === 'list') {
+        const w = toWorld(e);
+        if (active.mode === 'drag' && active.blob) {
+          active.blob.holdTarget.copy(w).add(active.grabOffset);      // 잡은 공이 손을 따라옴
+        } else if (active.mode === 'drag') {
+          stir(w, dx * view.wpp, -dy * view.wpp);                      // 빈 곳 쓸기
         }
       } else {
-        const dx = e.clientX - active.lastX, dy = e.clientY - active.lastY;
-        rotateBy(b, dx * 0.012, dy * 0.012);
-        const now = performance.now(), dt = Math.max(1, now - active.lastT);
-        b.spin.set(dx * 0.012 / dt * 16, dy * 0.012 / dt * 16);
-        active.lastT = now;
+        const b = active.blob;
+        if (active.mode === 'tap') {
+          const hit = detailHit(e);
+          if (hit && hit.blob === b) setPressPoint(b, hit.point); // 누른 채 미끄러지면 자국도 따라감
+        } else {
+          rotateBy(b, dx * 0.012, dy * 0.012);
+          const now = performance.now(), dt = Math.max(1, now - active.lastT);
+          b.spin.set(dx * 0.012 / dt * 16, dy * 0.012 / dt * 16);
+          active.lastT = now;
+        }
       }
       active.lastX = e.clientX; active.lastY = e.clientY;
     });
@@ -244,25 +299,90 @@
     function release(e) {
       if (!active) return;
       const b = active.blob;
-      if (active.mode === 'tap') {
-        if (mode === 'detail') {
-          b.pressTarget = 0;
-          b.wobbleV += 2.2 * b.press; // 놓는 순간 몸 전체가 '통' 하고 튐
-        } else if (e.type === 'pointerup') {
-          onOpen && onOpen(blobs.indexOf(b)); // 목록에서 톡 → 상세로
-        }
+      if (mode === 'list') {
+        if (b) b.held = false;                          // 놓으면 그 순간 속도로 던져짐
+        if (active.mode === 'tap' && b && e.type === 'pointerup') onOpen && onOpen(blobs.indexOf(b));
+      } else if (active.mode === 'tap') {
+        b.pressTarget = 0;
+        b.wobbleV += 2.2 * b.press; // 놓는 순간 몸 전체가 '통' 하고 튐
       }
       active = null;
-      renderer.domElement.style.cursor = 'default';
+      canvas.style.cursor = 'default';
     }
-    renderer.domElement.addEventListener('pointerup', release);
-    renderer.domElement.addEventListener('pointercancel', release);
+    canvas.addEventListener('pointerup', release);
+    canvas.addEventListener('pointercancel', release);
 
-    const qTmp = new THREE.Quaternion(), axisY = new THREE.Vector3(0, 1, 0), axisX = new THREE.Vector3(1, 0, 0);
+    // 빈 곳을 쓸면: 손가락 근처 공들에 쓴 방향의 힘을 줌
+    function stir(at, mvx, mvy) {
+      blobs.forEach(b => {
+        const d = b.p.distanceTo(at), reach = b.r * 2.2;
+        if (d < reach) {
+          const k = (1 - d / reach) * 30;
+          b.vel.x += mvx * k; b.vel.y += mvy * k;
+        }
+      });
+    }
+
+    const qTmp = new THREE.Quaternion();
+    const axisX = new THREE.Vector3(1, 0, 0), axisY = new THREE.Vector3(0, 1, 0), axisZ = new THREE.Vector3(0, 0, 1);
     function rotateBy(b, ax, ay) {
       qTmp.setFromAxisAngle(axisY, ax); b.mesh.quaternion.premultiply(qTmp);
       qTmp.setFromAxisAngle(axisX, ay); b.mesh.quaternion.premultiply(qTmp);
     }
+
+    // ---------- 더미 물리 한 걸음 ----------
+    const nTmp = new THREE.Vector2();
+    function physics(dt) {
+      blobs.forEach(b => {
+        if (b.held) {
+          // 잡힌 공: 손 위치로 용수철처럼 끌려감 → 놓을 때 이 속도가 남아 '던지기'가 됨
+          b.vel.copy(b.holdTarget).sub(b.p).multiplyScalar(18);
+        } else {
+          b.vel.y -= GRAVITY * dt;
+          b.vel.multiplyScalar(Math.pow(0.7, dt)); // 공기 저항 조금
+        }
+        b.p.addScaledVector(b.vel, dt);
+      });
+      for (let iter = 0; iter < 4; iter++) {
+        // 공끼리 겹치면 밀어내기
+        for (let i = 0; i < blobs.length; i++) {
+          for (let j = i + 1; j < blobs.length; j++) {
+            const a = blobs[i], c = blobs[j];
+            nTmp.copy(c.p).sub(a.p);
+            const dist = nTmp.length(), minD = a.r + c.r;
+            if (dist >= minD || dist === 0) continue;
+            nTmp.divideScalar(dist);
+            const overlap = minD - dist;
+            const wa = a.held ? 0 : c.held ? 1 : 0.5;  // 잡힌 공은 밀리지 않음
+            a.p.addScaledVector(nTmp, -overlap * wa);
+            c.p.addScaledVector(nTmp, overlap * (1 - wa));
+            const vn = (c.vel.x - a.vel.x) * nTmp.x + (c.vel.y - a.vel.y) * nTmp.y;
+            if (vn < 0) {
+              const imp = -(1 + BOUNCE) * vn / 2;
+              if (!a.held) a.vel.addScaledVector(nTmp, -imp);
+              if (!c.held) c.vel.addScaledVector(nTmp, imp);
+              if (-vn > 2) { kick(a, -vn); kick(c, -vn); } // 세게 부딪히면 출렁
+            }
+          }
+        }
+        // 벽과 바닥
+        blobs.forEach(b => {
+          if (b.p.x - b.r < walls.left) { b.p.x = walls.left + b.r; if (b.vel.x < 0) b.vel.x *= -BOUNCE; }
+          if (b.p.x + b.r > walls.right) { b.p.x = walls.right - b.r; if (b.vel.x > 0) b.vel.x *= -BOUNCE; }
+          if (b.p.y - b.r < walls.bottom) {
+            b.p.y = walls.bottom + b.r;
+            if (b.vel.y < 0) { if (-b.vel.y > 3) kick(b, -b.vel.y); b.vel.y *= -BOUNCE; }
+            b.vel.x *= 0.985; // 바닥 마찰
+          }
+        });
+      }
+      // 굴러가는 만큼 실제로 돌기 (오른쪽으로 굴러가면 시계 방향)
+      blobs.forEach(b => {
+        qTmp.setFromAxisAngle(axisZ, -b.vel.x / b.r * dt);
+        b.mesh.quaternion.premultiply(qTmp);
+      });
+    }
+    function kick(b, speed) { b.wobbleV += Math.min(speed, 12) * 0.12; }
 
     // ---------- 매 프레임 ----------
     const tmp = new THREE.Vector3();
@@ -272,18 +392,28 @@
       last = now;
       const t = now / 1000;
       const ease = 1 - Math.exp(-dt * MOVE_SPEED);
+      if (mode === 'list') physics(dt);
+
       blobs.forEach((b, i) => {
-        // 가려는 곳으로 부드럽게 이동·확대
-        b.cur.lerp(b.tgt, ease);
+        // 화면 위치: 목록이면 물리 위치를 따라가고, 상세면 정해진 곳으로
+        if (mode === 'list') {
+          b.tgt.set(b.p.x, b.p.y, 0);
+          if (b.follow) b.cur.copy(b.tgt);
+          else { b.cur.lerp(b.tgt, ease); if (b.cur.distanceTo(b.tgt) < 0.02) b.follow = true; }
+          b.tgtScale = b.r;
+        } else {
+          b.cur.lerp(b.tgt, ease);
+        }
         b.curScale += (b.tgtScale - b.curScale) * ease;
         const visible = b.curScale > 0.005;
-        b.mesh.visible = b.shadow.visible = visible;
-        if (!visible) { updateLabel(b, labels[i]); return; }
+        b.mesh.visible = visible;
+        b.shadow.visible = visible && mode === 'detail';
+        if (!visible) { labels[i].style.opacity = 0; return; }
+        labels[i].style.opacity = '';
 
-        // 누르는 세기는 서서히 올라가고(꾹~) 놓으면 바로 풀림
+        // 상세 모드: 누르는 세기·관성 회전·느린 자전
         b.press += (b.pressTarget - b.press) * (b.pressTarget > b.press ? 1 - Math.exp(-dt * 6) : 1);
-        // 관성 회전 + 아무도 안 만질 때 느린 자전
-        if (!active || active.blob !== b) {
+        if (mode === 'detail' && (!active || active.blob !== b)) {
           rotateBy(b, b.spin.x + dt * 0.15, b.spin.y);
           b.spin.multiplyScalar(Math.pow(0.04, dt));
         }
@@ -292,11 +422,11 @@
         b.wobble += b.wobbleV * dt;
 
         const s = b.curScale;
-        const bob = Math.sin(t * 1.4 + b.phase) * 0.05 * s;
+        const bob = mode === 'detail' ? Math.sin(t * 1.4 + b.phase) * 0.05 * s : 0; // 상세에서만 둥실
         b.mesh.position.set(b.cur.x, b.cur.y + bob, b.cur.z);
         b.mesh.scale.set(s * b.wobble, s * (2 - b.wobble), s * b.wobble); // 납작해지면 옆으로 퍼짐
         b.shadow.position.set(b.cur.x, b.cur.y - 1.05 * s, -0.9 * s);
-        b.shadow.scale.setScalar(s * (1 - bob * 1.5 / Math.max(s, 0.01)));
+        b.shadow.scale.setScalar(Math.max(0, s - bob * 1.5));
 
         if (b.awake) updateSurface(b, dt);
         updateLabel(b, labels[i]);
@@ -328,10 +458,10 @@
       b.awake = energy > 0.002 * d.length || b.pressTarget > 0;
     }
 
+    // 이름표: 목록에서는 공 한가운데 아래쪽에
     function updateLabel(b, el) {
-      tmp.copy(b.home); tmp.y -= 1.32;
-      tmp.project(camera);
-      el.style.transform = `translate(-50%, 0) translate(${(tmp.x + 1) / 2 * container.clientWidth}px, ${(1 - tmp.y) / 2 * container.clientHeight}px)`;
+      tmp.set(b.cur.x, b.cur.y - b.curScale * 0.35, 0).project(camera);
+      el.style.transform = `translate(-50%, -50%) translate(${(tmp.x + 1) / 2 * view.w}px, ${(1 - tmp.y) / 2 * view.h}px)`;
     }
 
     requestAnimationFrame(frame);
@@ -345,6 +475,7 @@
       // dir: 0 = 목록에서 들어옴, +1 = 다음(오른쪽에서 등장), -1 = 이전(왼쪽에서 등장)
       showDetail(index, dir = 0) {
         mode = 'detail'; selected = index;
+        blobs.forEach(b => { b.held = false; });
         applyTargets(true, dir);
       }
     };

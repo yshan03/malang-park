@@ -79,4 +79,24 @@
       ].filter(Boolean)
     };
   };
+
+  // 같은 이름(title)이 여러 건이면 하나만 남긴다. (API 182건 → 153개)
+  //   규칙: 설명이 가장 긴 것 → 길이가 같으면 나중에 등록된 것(url 속 list_no가 큰 것)
+  //   예) 에버골드 1002·1111 → 1111,  엘르 1027·1053·1124 → 1124
+  function listNo(item) {
+    const m = String(item.url || '').match(/list_no=(\d+)/);
+    return m ? Number(m[1]) : 0;
+  }
+  window.roseDedupe = function (rawItems) {
+    const best = new Map(); // 이름 → 지금까지 고른 한 건
+    rawItems.forEach(item => {
+      const key = String(item.title || '').trim();
+      const prev = best.get(key);
+      const longer = prev && (item.description || '').length - (prev.description || '').length;
+      if (!prev || longer > 0 || (longer === 0 && listNo(item) > listNo(prev))) best.set(key, item);
+    });
+    // 원래 순서를 유지하면서 고른 것만 남김
+    const keep = new Set(best.values());
+    return rawItems.filter(it => keep.has(it));
+  };
 })();
