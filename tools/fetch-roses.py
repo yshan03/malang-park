@@ -3,13 +3,13 @@
 장미정보 API에서 전체 데이터를 받아 data/rose-api.js 로 저장한다.
 
   내 컴퓨터에서 한 번 실행
-    js/config.local.js 에서 키 읽기
+    ../private/config.local.js 에서 키 읽기 (공개 폴더 site/ 밖에 둠)
           ↓
     API를 페이지별로 호출 (100건씩)
           ↓
     data/rose-api.js 로 저장  ← 사이트는 이 파일만 읽는다 (키는 사이트에 안 들어감)
 
-실행 방법 (project 0 폴더에서):
+실행 방법 (project 0/site 폴더에서):
     python3 tools/fetch-roses.py            전체 받아서 저장
     python3 tools/fetch-roses.py --peek     3건만 받아서 화면에 보여주기 (저장 안 함)
 """
@@ -28,9 +28,10 @@ PAGE_SIZE = 100
 
 
 def read_key():
-    path = ROOT / 'js' / 'config.local.js'
+    # 인증키는 공개 폴더(site/) 밖, project 0/private/ 에 둔다
+    path = ROOT.parent / 'private' / 'config.local.js'
     if not path.exists():
-        sys.exit('js/config.local.js 파일이 없어요. config.local.example.js를 복사해서 키를 넣어 주세요.')
+        sys.exit('private/config.local.js 파일이 없어요. site/js/config.local.example.js를 복사해서 키를 넣어 주세요.')
     m = re.search(r"API_KEY\s*=\s*['\"]([^'\"]+)['\"]", path.read_text(encoding='utf-8'))
     if not m or '여기에' in m.group(1):
         sys.exit('config.local.js 안에 인증키가 들어 있지 않아요.')

@@ -1,8 +1,12 @@
-# 인증키 파일은 절대 저장소에 올리지 않는다
+# 이 폴더(site/)는 공개 저장소다. 비공개 파일은 project 0/private/ 에 둔다.
+# 아래는 혹시 실수로 넣었을 때를 위한 안전장치
 js/config.local.js
-# 공모전 기획 메모와 Claude 설정은 공개하지 않는다
+config.local.js
 CLAUDE.md
 .claude/
 .DS_Store
-# 지도 시안 원본 (index.html 안에 같은 그림이 있음, 로컬 백업용)
-park-map.svg
+*.hwp
+*.hwpx
+*.docx
+*.pdf
+기획서/
