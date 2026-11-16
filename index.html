@@ -12,12 +12,12 @@
  body{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent}
  #zone-card .desc{-webkit-user-select:text;user-select:text;-webkit-touch-callout:default}
  /* 모바일 지도 한 장: 휴대폰에서는 화면 가득, 컴퓨터에서는 휴대폰 폭으로 가운데 (양옆은 바탕색만) */
- .stage{position:relative;width:min(100vw,460px);height:100vh;height:100dvh;margin:0 auto;overflow:hidden;background:#cbe7b3}
+ .stage{position:relative;width:min(100vw,460px);height:100vh;height:100dvh;margin:0 auto;overflow:hidden;background:#d9e8c8}
  /* 지도 전체가 항상 보이게(meet) 맞추고, 남는 공간은 지도 밖까지 그려 둔 잔디 배경이 채움(overflow visible) */
  .stage svg{position:absolute;inset:0;width:100%;height:100%;display:block;overflow:visible}
  /* 제목·소개: 지도 위에 겹쳐서, 위쪽은 바탕색으로 부드럽게 */
  .intro{position:absolute;z-index:2;left:0;right:0;top:0;box-sizing:border-box;padding:18px 18px 28px;
-   background:linear-gradient(#f6f1e7 62%,rgba(246,241,231,0));pointer-events:none}
+   background:linear-gradient(#d9e8c8 62%,rgba(217,232,200,0));pointer-events:none}
  .intro h1{margin:0;font-size:24px;font-weight:800;color:#3d5a35}
  .intro p{margin:6px 0 0;font-size:15px;line-height:1.5;color:#6b665c}
  .intro b{color:#e5566f}
@@ -37,7 +37,7 @@
 <div class="stage">
 <header class="intro">
   <h1>올림픽공원 말랑 지도</h1>
-  <p>공원에선 눈으로만 👀 여기선 손으로 마음껏 🤲<br><b>구역을 눌러 보세요.</b></p>
+  <p>공원에선 눈으로만 👀 여기선 손으로 마음껏 🤲<br><b>식물 구역을 눌러 보세요.</b></p>
 </header>
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 390 844" preserveAspectRatio="xMidYMid meet" font-family="'Jua','Apple SD Gothic Neo','Noto Sans KR',sans-serif">
   <!--
@@ -47,14 +47,15 @@
     - 누를 수 있는 구역은 <g class="zone" data-zone="..."> 입니다. <g class="landmark">는 누를 수 없는 장식.
   -->
   <defs>
+    <!-- 그림자 두 종류. 지금은 꺼 둠(flood-opacity 0, 나중에 고려). 켜려면 soft 0.20, softSmall 0.22 -->
     <filter id="soft" x="-30%" y="-30%" width="160%" height="160%">
-      <feDropShadow dx="0" dy="6" stdDeviation="6" flood-color="#2f4a2a" flood-opacity="0.22"/>
+      <feDropShadow dx="0" dy="6" stdDeviation="6" flood-color="#4a4238" flood-opacity="0"/>
     </filter>
     <filter id="softSmall" x="-40%" y="-40%" width="180%" height="180%">
-      <feDropShadow dx="0" dy="3" stdDeviation="2.5" flood-color="#2f4a2a" flood-opacity="0.25"/>
+      <feDropShadow dx="0" dy="3" stdDeviation="2.5" flood-color="#4a4238" flood-opacity="0"/>
     </filter>
     <!-- 점토 재질: 왼쪽 위 밝게 → 오른쪽 아래 어둡게 -->
-    <radialGradient id="clayGround" cx="35%" cy="25%" r="85%"><stop offset="0" stop-color="#d9efc4"/><stop offset="1" stop-color="#bcdca2"/></radialGradient>
+    <radialGradient id="clayGround" cx="35%" cy="25%" r="85%"><stop offset="0" stop-color="#f1efea"/><stop offset="1" stop-color="#dedbd3"/></radialGradient>
     <radialGradient id="clayHill" cx="30%" cy="25%" r="80%"><stop offset="0" stop-color="#c3e2a6"/><stop offset=".65" stop-color="#9fcc82"/><stop offset="1" stop-color="#86b86c"/></radialGradient>
     <radialGradient id="clayLeaf" cx="30%" cy="25%" r="75%"><stop offset="0" stop-color="#7fc06b"/><stop offset="1" stop-color="#3f7f38"/></radialGradient>
     <radialGradient id="clayTrunk" cx="30%" cy="30%" r="80%"><stop offset="0" stop-color="#b07a52"/><stop offset="1" stop-color="#7a4c2e"/></radialGradient>
@@ -64,119 +65,301 @@
     <radialGradient id="clayRose" cx="32%" cy="28%" r="80%"><stop offset="0" stop-color="#f58a9d"/><stop offset="1" stop-color="#c9334f"/></radialGradient>
     <linearGradient id="clayWater" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#bfe6f3"/><stop offset="1" stop-color="#86c4dd"/></linearGradient>
     <radialGradient id="clayPath" cx="35%" cy="30%" r="80%"><stop offset="0" stop-color="#fbf3df"/><stop offset="1" stop-color="#e8d7b4"/></radialGradient>
+    <radialGradient id="claySkin" cx="30%" cy="25%" r="80%"><stop offset="0" stop-color="#ffdcc6"/><stop offset="1" stop-color="#e6a685"/></radialGradient>
   </defs>
 
-  <!-- 배경: 공원 녹지가 화면 가득 (점토 바닥 + 몽글몽글한 잔디 얼룩) -->
-  <rect x="-200" y="-100" width="790" height="1044" fill="url(#clayGround)"/>
-  <g fill="#c6e3ad" opacity=".7">
-    <ellipse cx="40" cy="160" rx="38" ry="22"/><ellipse cx="350" cy="580" rx="40" ry="24"/><ellipse cx="60" cy="660" rx="30" ry="18"/>
-    <ellipse cx="220" cy="640" rx="26" ry="14"/><ellipse cx="330" cy="120" rx="22" ry="12"/><ellipse cx="210" cy="820" rx="44" ry="18"/>
+  <!-- 배경: 아주 연한 연두 한 색 (공원 전체가 잔디. 성내천 풀길·몽촌토성 언덕보다는 연하게 해서 구분) (안내도처럼 건물·광장 구역은 회색, 가운데 몽촌토성 언덕만 초록). 얼룩·그라데이션 없음 -->
+  <rect x="-200" y="-100" width="790" height="1044" fill="#d9e8c8"/>
+
+  <!-- (산책로 장식 2줄은 2026-11-16 사용자 피드백으로 뺌) -->
+
+  <!-- 성내천 양옆 풀길: 물길과 같은 선을 더 굵게 그려 물가를 잔디로 감쌈 (배경이라 누를 수 없음).
+       물길(성내천 구역)을 누르면 이 풀길도 같이 출렁임 → 아래 script의 data-jelly-with 참고 -->
+  <g id="stream-grass" aria-hidden="true" fill="none" stroke-linecap="round">
+    <path d="M32 480 C 24 400, 22 300, 30 235 C 38 165, 90 128, 175 125 C 215 124, 240 124, 260 124 C 316 124, 346 150, 356 215 C 366 280, 362 400, 356 520" stroke="#b3d494" stroke-width="36"/>
+    <path d="M32 480 C 24 400, 22 300, 30 235 C 38 165, 90 128, 175 125 C 215 124, 240 124, 260 124 C 316 124, 346 150, 356 215 C 366 280, 362 400, 356 520" stroke="#c6e2aa" stroke-width="28"/>
   </g>
 
-  <!-- 산책로: 통통한 점토 길 (장식용, 세부 길 아님) -->
-  <g filter="url(#softSmall)" fill="none" stroke-linecap="round">
-    <path d="M330 590 C 300 640, 250 660, 200 650 S 90 640, 30 690" stroke="#e8d7b4" stroke-width="13"/>
-    <path d="M330 590 C 300 640, 250 660, 200 650 S 90 640, 30 690" stroke="#fbf3df" stroke-width="7" transform="translate(-1 -2)"/>
-    <path d="M-20 800 C 100 780, 260 810, 410 785" stroke="#e8d7b4" stroke-width="13"/>
-    <path d="M-20 800 C 100 780, 260 810, 410 785" stroke="#fbf3df" stroke-width="7" transform="translate(-1 -2)"/>
+  <!-- 몽촌토성 언덕: 공원 가운데~서쪽의 큰 토성 (지형 배경, 누를 수 없음. 산책로 구역은 아래 '구역들'에 따로) -->
+  <g aria-hidden="true">
+    <path d="M60 330 C 55 230, 140 175, 220 182 C 290 188, 305 260, 300 340 C 296 430, 290 520, 230 572 C 175 610, 85 590, 68 510 C 55 450, 62 390, 60 330 Z"
+          fill="url(#clayHill)" filter="url(#soft)"/>
+    <path d="M86 300 C 92 240, 150 205, 205 210" fill="none" stroke="#ffffff" stroke-opacity=".45" stroke-width="7" stroke-linecap="round"/>
+  </g>
+
+  <!-- ============ 배경 건물들 (장식, 누를 수 없음, 이름표 없음) ============
+       ⚠️ 전부 프로토타입용 임시 건물. 실제 올림픽공원 건물·위치와 맞춘 게 아님 (이름도 "배경 건물 N" 번호만).
+       빈 공간을 공원 분위기로 채우려고 흰 건물 + 연한 지붕 + 하늘색 유리로 모양만 다양하게 둠.
+       공모전 이후 안내도를 보고 디테일화할 때 바꾸거나 지울 것 (data-temp="true"로 한 번에 찾을 수 있음).
+       랜드마크·구역보다 뒤에 그려서 항상 아래에 깔림 -->
+  <g class="bg-buildings" aria-hidden="true" opacity=".8">
+    <!-- 건물마다 작은 묶음(g) 하나. 안의 도형 숫자는 그 건물 가운데(0,0) 기준이고,
+         지도 위 자리는 translate(x y) 숫자 하나로 정함 → 건물을 옮길 땐 이 숫자만 바꾸면 됨 -->
+    <!-- 배경 건물 1: 키 큰 층층 건물 -->
+    <g data-name="배경 건물 1" data-temp="true" transform="translate(15 512)">
+      <rect x="-9" y="-20" width="18" height="40" rx="4" fill="#f5f2ec"/>
+      <path d="M -6 -10 h 12 M -6 -2 h 12 M -6 6 h 12" stroke="#d3dde3" stroke-width="2.5" stroke-linecap="round"/>
+    </g>
+    <!-- 배경 건물 2: 둥근 탑 둘 -->
+    <g data-name="배경 건물 2" data-temp="true" transform="translate(42 518)">
+      <rect x="-12" y="-14" width="12" height="28" rx="6" fill="#ebe6dd"/>
+      <rect x="2" y="-6" width="11" height="20" rx="5.5" fill="#f5f2ec"/>
+    </g>
+    <!-- 배경 건물 3: 깃대 줄 + 깃대 밑 작은 타원 광장 (자리가 좁아 광장을 깃대 바로 밑으로 붙여 줄임) -->
+    <g data-name="배경 건물 3" data-temp="true" transform="translate(36 661)">
+      <ellipse cx="2" cy="-4" rx="27" ry="7" fill="#ebe6dd"/>
+      <path d="M -20 -4 v -12 M -10 -4 v -12 M 0 -4 v -12 M 10 -4 v -12 M 20 -4 v -12" stroke="#f5f2ec" stroke-width="2.5" stroke-linecap="round"/>
+      <path d="M -20 -16 h 5 M -10 -16 h 5 M 0 -16 h 5 M 10 -16 h 5 M 20 -16 h 5" stroke="#d3dde3" stroke-width="3" stroke-linecap="round"/>
+    </g>
+    <!-- 배경 건물 4: 작은 조각 기둥 셋 -->
+    <g data-name="배경 건물 4" data-temp="true" transform="translate(82 676)">
+      <rect x="-16" y="-8" width="8" height="20" rx="4" fill="#f5f2ec"/>
+      <circle cx="2" cy="4" r="7" fill="#ebe6dd"/>
+      <rect x="10" y="-12" width="7" height="24" rx="3.5" fill="#f5f2ec"/>
+    </g>
+    <!-- 배경 건물 5: 네모 건물 셋이 모인 단지 -->
+    <g data-name="배경 건물 5" data-temp="true" transform="translate(36 680)">
+      <rect x="-22" y="-16" width="22" height="18" rx="4" fill="#f5f2ec"/>
+      <rect x="2" y="-10" width="20" height="24" rx="4" fill="#ebe6dd"/>
+      <rect x="-18" y="4" width="18" height="12" rx="3" fill="#f5f2ec"/>
+    </g>
+    <!-- 배경 건물 6: 납작한 직사각형 -->
+    <g data-name="배경 건물 6" data-temp="true" transform="translate(214 710)">
+      <rect x="-20" y="-10" width="40" height="20" rx="5" fill="#f5f2ec"/>
+      <rect x="-16" y="-6" width="32" height="5" rx="2.5" fill="#d3dde3"/>
+    </g>
+    <!-- 배경 건물 7: 반달 아치 지붕 -->
+    <g data-name="배경 건물 7" data-temp="true" transform="translate(254 586)">
+      <path d="M -20 6 L -20 -6 A 20 16 0 0 1 20 -6 L 20 6 Z" fill="#f5f2ec"/>
+      <path d="M -12 6 L -12 -2 A 12 9 0 0 1 12 -2 L 12 6 Z" fill="#ebe6dd"/>
+    </g>
+    <!-- 배경 건물 8: 둥글게 휜 곡선 건물 -->
+    <g data-name="배경 건물 8" data-temp="true" transform="translate(87 708)">
+      <path d="M -25 18 C -27 -4 -9 -18 17 -16 C 25 -15 27 -8 19 -6 C 1 -6 -9 4 -9 18 Z" fill="#f5f2ec"/>
+    </g>
+    <!-- 배경 건물 9: 낮은 네모 둘 -->
+    <g data-name="배경 건물 9" data-temp="true" transform="translate(304 544)">
+      <rect x="-40" y="-7" width="44" height="16" rx="5" fill="#f5f2ec"/>
+      <rect x="10" y="-11" width="30" height="22" rx="5" fill="#ebe6dd"/>
+    </g>
+    <!-- 배경 건물 10: 길고 낮은 네모 + 유리창 띠 -->
+    <g data-name="배경 건물 10" data-temp="true" transform="translate(38 754)">
+      <rect x="-26" y="-9" width="52" height="18" rx="5" fill="#f5f2ec"/>
+      <rect x="-21" y="-4" width="42" height="5" rx="2.5" fill="#d3dde3"/>
+    </g>
+    <!-- 배경 건물 11: 키 큰 네모 + 층 줄 -->
+    <g data-name="배경 건물 11" data-temp="true" transform="translate(104 762)">
+      <rect x="-11" y="-18" width="22" height="36" rx="4" fill="#ebe6dd"/>
+      <path d="M -7 -10 h 14 M -7 -2 h 14 M -7 6 h 14" stroke="#d3dde3" stroke-width="2.5" stroke-linecap="round"/>
+    </g>
+    <!-- 배경 건물 12: 작은 둥근 지붕 -->
+    <g data-name="배경 건물 12" data-temp="true" transform="translate(28 794)">
+      <circle cx="0" cy="0" r="13" fill="#f5f2ec"/>
+      <circle cx="0" cy="0" r="6" fill="#ebe6dd"/>
+    </g>
+    <!-- 배경 건물 13: ㄱ자로 붙은 네모 둘 -->
+    <g data-name="배경 건물 13" data-temp="true" transform="translate(70 800)">
+      <rect x="-14" y="-10" width="28" height="18" rx="4" fill="#f5f2ec"/>
+      <rect x="4" y="-2" width="18" height="16" rx="4" fill="#ebe6dd"/>
+    </g>
+    <!-- 배경 건물 14: 작은 아치 지붕 -->
+    <g data-name="배경 건물 14" data-temp="true" transform="translate(118 806)">
+      <path d="M -14 8 L -14 -1 A 14 11 0 0 1 14 -1 L 14 8 Z" fill="#f5f2ec"/>
+      <path d="M -7 8 L -7 3 A 7 5 0 0 1 7 3 L 7 8 Z" fill="#ebe6dd"/>
+    </g>
+    <!-- 배경 건물 15: 흰 돔 -->
+    <g data-name="배경 건물 15" data-temp="true" transform="translate(322 577)">
+      <path d="M -20 -1 A 20 18 0 0 1 20 -1 Z" fill="#f5f2ec"/>
+      <rect x="-22" y="-3" width="44" height="6" rx="3" fill="#ebe6dd"/>
+    </g>
+    <!-- 배경 건물 16: 네모 상자 -->
+    <g data-name="배경 건물 16" data-temp="true" transform="translate(322 598)">
+      <rect x="-18" y="-10" width="36" height="20" rx="4" fill="#f5f2ec"/>
+      <rect x="-18" y="-10" width="36" height="6" rx="3" fill="#ebe6dd"/>
+    </g>
+    <!-- 배경 건물 17: 납작한 코트 -->
+    <g data-name="배경 건물 17" data-temp="true" transform="translate(368 588)">
+      <rect x="-16" y="-8" width="32" height="16" rx="4" fill="#ebe6dd"/>
+      <rect x="-10" y="-4" width="20" height="8" rx="2" fill="#d3dde3"/>
+    </g>
+    <!-- 배경 건물 18: 둥근 지붕 -->
+    <g data-name="배경 건물 18" data-temp="true" transform="translate(365 614)">
+      <circle cx="0" cy="0" r="15" fill="#f5f2ec"/>
+      <circle cx="0" cy="0" r="8" fill="#ebe6dd"/>
+    </g>
+  </g>
+
+  <!-- ============ 랜드마크 5개 (장식용, 누를 수 없음) ============
+       구역보다 먼저 그려서 구역이 항상 위에 올라옴. 이름표는 작게·연하게, 크기는 구역 아이콘의 절반쯤.
+       자리는 공식 안내도(ksponco.or.kr/map)의 방향을 따름 (2026-11-16 확인):
+         북쪽 88호수 → 동쪽(올림픽공원역 앞) 엄지손가락 → 공원 바로 아래 벨로드롬과 그 오른쪽 티켓링크 라이브 아레나
+         남서쪽 끝 세계평화의 문 (몽촌호는 사용자 피드백으로 뺌, 2026-11-16) -->
+  <g class="landmark" aria-hidden="true" opacity="1" filter="url(#softSmall)">
+    <!-- 1. 세계평화의 문: 남서쪽 끝. 안내도 참고(2026-11-16): 굵은 흰 기둥 둘 + 바깥으로 휘어 오른 날개 지붕 둘
+         (빨강·파랑 물결무늬) + 문 아래 성화. 디테일은 빼고 특징만. translate로 처음 그린 자리에서 78 위로 올림 -->
+    <g class="lm-done" transform="translate(0 -78)">
+      <!-- 문 본체는 80% 크기 (기둥 아래 가운데 41,659를 기준으로 줄임). 성화는 원래 크기 그대로 -->
+      <g transform="translate(41 659) scale(0.8) translate(-41 -659)">
+        <!-- 기둥 둘: 두툼한 흰 네모 (오른쪽 면은 살짝 그늘) -->
+        <rect x="25" y="619" width="12" height="40" rx="3" fill="#f7f5f0"/>
+        <rect x="33" y="619" width="4" height="40" rx="2" fill="#e3ded4"/>
+        <rect x="45" y="621" width="12" height="38" rx="3" fill="#f7f5f0"/>
+        <rect x="53" y="621" width="4" height="38" rx="2" fill="#e3ded4"/>
+        <!-- 날개 지붕 둘: 가운데에서 바깥 위로 휘어 오름 -->
+        <path d="M38 618 Q 22 618 4 603 L 6 611 Q 22 628 38 626 Z" fill="#fbf8f2"/>
+        <path d="M44 619 Q 60 619 68 604 L 69 612 Q 60 628 44 627 Z" fill="#fbf8f2"/>
+        <!-- 지붕 물결무늬: 빨강·파랑 -->
+        <path d="M8 609 Q 14 611 18 614 T 30 620" fill="none" stroke="#e46d78" stroke-width="2.2" stroke-linecap="round"/>
+        <path d="M12 615 Q 18 617 23 620 T 35 623" fill="none" stroke="#6f9fd8" stroke-width="2.2" stroke-linecap="round"/>
+        <path d="M47 622 Q 54 621 58 618 T 66 609" fill="none" stroke="#e46d78" stroke-width="2.2" stroke-linecap="round"/>
+        <path d="M48 625 Q 56 624 61 620 T 67 614" fill="none" stroke="#6f9fd8" stroke-width="2.2" stroke-linecap="round"/>
+      </g>
+      <!-- 성화: 문 아래(문과 이름표 사이). 육각 하늘색 받침 + 주황 불꽃 -->
+      <path d="M34 672 L37 669 L45 669 L48 672 L45 675 L37 675 Z" fill="#a9d3ea"/>
+      <path d="M41 669 C 37 666, 38 662, 41 658 C 44 662, 45 666, 41 669 Z" fill="#f2a541"/>
+      <path d="M41 668 C 39.5 666.5, 40 665, 41 663 C 42 665, 42.5 666.5, 41 668 Z" fill="#fde29a"/>
+    </g>
+    <!-- 3. 88호수: 성내천 풀길과 초록 공원 사이 빈자리(오른쪽 위). 풀길·공원 어디에도 안 닿음. 안내도 모양 참고(2026-11-16): 위는 가늘게 오른쪽 위로 뻗고,
+         가운데가 불룩, 아래로 갈수록 오므라드는 길쭉한 호수. 왼쪽 가장자리 가운데가 안으로 파여 위아래로 혹 두 개. (0,0) = 호수 가운데, translate로 자리만 옮김 -->
+    <g class="lm-done" transform="translate(301 204)">
+      <path d="M13.3 -30.0 C 14.6 -30.0, 15.9 -28.0, 16.0 -25.2 C 16.1 -22.4, 14.3 -17.6, 14.0 -13.2 C 13.7 -8.8, 14.6 -3.8, 14.0 1.2 C 13.4 6.2, 11.6 12.0, 10.7 16.8 C 9.8 21.6, 11.1 28.7, 8.7 30.0 C 6.2 31.3, -0.3 26.8, -4.0 24.5 C -7.7 22.2, -11.6 18.9, -13.5 16.5 C -15.4 14.1, -16.2 12.4, -15.5 10.0 C -14.8 7.6, -9.1 4.8, -9.0 2.0 C -8.9 -0.8, -14.5 -3.8, -15.0 -6.5 C -15.5 -9.2, -14.1 -12.2, -12.0 -14.5 C -9.9 -16.8, -6.0 -18.6, -2.7 -20.4 C 0.6 -22.2, 5.3 -23.6, 8.0 -25.2 C 10.7 -26.8, 12.0 -30.0, 13.3 -30.0 Z" fill="url(#clayWater)" stroke="#cfe9f1" stroke-width="3" stroke-linejoin="round"/>
+      <ellipse cx="0" cy="-6" rx="3.5" ry="7" fill="#ffffff" opacity=".55" transform="rotate(20 0 -6)"/>
+    </g>
+    <!-- 4. 티켓링크 라이브 아레나(옛 핸드볼경기장): 벨로드롬 오른쪽. 처음엔 KSPO DOME으로 그렸는데, 안내도와 비교해 보니
+         이 모양(꽃잎처럼 퍼지는 판으로 된 둥근 지붕)은 티켓링크 라이브 아레나라서 이름과 자리를 바꿈(2026-11-17).
+         위에서 비스듬히 내려다본 모습: 꼭대기 한 점에서 퍼지는 부채꼴 판 12장(흰색·연회색 번갈아, 살짝 비틀어 바람개비처럼),
+         앞쪽 아래에만 보이는 세로 줄무늬 창문 띠, 왼쪽 아래로 깔린 짙은 회색 그림자 받침. (0,0) = 지붕 가운데 -->
+    <g class="lm-done" transform="translate(224 626)">
+      <ellipse cx="-4" cy="10" rx="31" ry="22" fill="#8d9096"/>
+      <ellipse cx="0" cy="5" rx="28" ry="21" fill="#dfe2e5"/>
+      <path d="M-24 10.8 v5 M-21 13.9 v5 M-18 16.1 v5 M-15 17.7 v5 M-12 19.0 v5 M-9 19.9 v5 M-6 20.5 v5 M-3 20.9 v5 M0 21.0 v5 M3 20.9 v5 M6 20.5 v5 M9 19.9 v5 M12 19.0 v5 M15 17.7 v5 M18 16.1 v5 M21 13.9 v5 M24 10.8 v5" stroke="#ffffff" stroke-width="1.2" stroke-linecap="round" fill="none"/>
+      <path d="M-3 -4 L0.0 -21.0 Q 11.8 -22.0 14.0 -18.2 Z" fill="#fbfbfa" stroke="#d3d6da" stroke-width=".8" stroke-linejoin="round"/>
+      <path d="M-3 -4 L14.0 -18.2 Q 24.9 -14.7 24.2 -10.5 Z" fill="#e8eaed" stroke="#d3d6da" stroke-width=".8" stroke-linejoin="round"/>
+      <path d="M-3 -4 L24.2 -10.5 Q 31.3 -3.4 28.0 0.0 Z" fill="#fbfbfa" stroke="#d3d6da" stroke-width=".8" stroke-linejoin="round"/>
+      <path d="M-3 -4 L28.0 0.0 Q 29.4 8.8 24.2 10.5 Z" fill="#e8eaed" stroke="#d3d6da" stroke-width=".8" stroke-linejoin="round"/>
+      <path d="M-3 -4 L24.2 10.5 Q 19.5 18.7 14.0 18.2 Z" fill="#fbfbfa" stroke="#d3d6da" stroke-width=".8" stroke-linejoin="round"/>
+      <path d="M-3 -4 L14.0 18.2 Q 4.5 23.5 0.0 21.0 Z" fill="#e8eaed" stroke="#d3d6da" stroke-width=".8" stroke-linejoin="round"/>
+      <path d="M-3 -4 L0.0 21.0 Q -11.8 22.0 -14.0 18.2 Z" fill="#fbfbfa" stroke="#d3d6da" stroke-width=".8" stroke-linejoin="round"/>
+      <path d="M-3 -4 L-14.0 18.2 Q -24.9 14.7 -24.2 10.5 Z" fill="#e8eaed" stroke="#d3d6da" stroke-width=".8" stroke-linejoin="round"/>
+      <path d="M-3 -4 L-24.2 10.5 Q -31.3 3.4 -28.0 0.0 Z" fill="#fbfbfa" stroke="#d3d6da" stroke-width=".8" stroke-linejoin="round"/>
+      <path d="M-3 -4 L-28.0 0.0 Q -29.4 -8.8 -24.2 -10.5 Z" fill="#e8eaed" stroke="#d3d6da" stroke-width=".8" stroke-linejoin="round"/>
+      <path d="M-3 -4 L-24.2 -10.5 Q -19.5 -18.7 -14.0 -18.2 Z" fill="#fbfbfa" stroke="#d3d6da" stroke-width=".8" stroke-linejoin="round"/>
+      <path d="M-3 -4 L-14.0 -18.2 Q -4.5 -23.5 -0.0 -21.0 Z" fill="#e8eaed" stroke="#d3d6da" stroke-width=".8" stroke-linejoin="round"/>
+      <circle cx="-3" cy="-4" r="2" fill="#c9ccd1"/>
+      <ellipse cx="-13" cy="-10" rx="3" ry="6" fill="#ffffff" opacity=".7" transform="rotate(-50 -13 -10)"/>
+    </g>
+    <!-- 6. 엄지손가락 조각: 동쪽 올림픽공원역 앞(만남의 광장), DOME 남쪽. 안내도 참고(2026-11-16), 수직으로 세움:
+         주먹이 아니라 엄지 하나만 위로 서 있는 청동 조각. 받침·광장 없이 손가락만.
+         전체 높이 40 중 손톱 8 (= 1/5), 손톱은 손가락보다 어두운 색. (0,0) = 손가락 가운데 -->
+    <g class="lm-done" transform="translate(322 448)">
+      <path d="M-7.5 20 L-7.5 -12 C -7.5 -22, 7.5 -22, 7.5 -12 L 8.5 20 Q 0 23 -7.5 20 Z" fill="#d2c4b1"/>
+      <path d="M3.5 -16 C 7 -13, 7.5 -6, 7.5 0 L 8.5 20 Q 6 21.5 3.5 21.8 Z" fill="#bfae97"/>
+      <rect x="-5" y="-19" width="10" height="8" rx="3.5" fill="#a08c74"/>
+      <path d="M-5 1 q 5 2.5 10 0 M-4.5 5 q 4.5 2 9 0" fill="none" stroke="#a8957d" stroke-width="1.2" stroke-linecap="round"/>
+      <path d="M-4.5 -8 L -4.5 14" stroke="#ffffff" stroke-opacity=".45" stroke-width="2" stroke-linecap="round"/>
+    </g>
+    <!-- 5. 벨로드롬: 초록 공원(몽촌토성 언덕) 바로 아래. 안내도 참고(2026-11-16): 흰 타원 경기장 + 회색 트랙
+         + 가운데 청록 경기장 바닥(트랙 안쪽에 꽉 차게) + 오른쪽 알록달록 관중석. 디테일은 빼고 특징만.
+         세로로 세운 타원(덜 길쭉하게: 폭:높이 ≈ 0.7). (0,0) = 경기장 가운데, translate(자리) + scale(1.4, 크기 140%)
+         흰 링 두께: 왼쪽·오른쪽 7, 위·아래 6 (바깥 타원 rx22·ry32, 트랙 rx15·ry26) -->
+    <g class="lm-done" transform="translate(133 635) scale(1.4)">
+      <ellipse cx="0" cy="4" rx="22" ry="32" fill="#e3ded4"/>
+      <ellipse cx="0" cy="0" rx="22" ry="32" fill="#ffffff"/>
+      <ellipse cx="0" cy="0" rx="15" ry="26" fill="#d6d2ca"/>
+      <!-- 경기장 바닥: 청록 네모를 트랙 타원 안쪽에 딱 맞게 + 가로 가운데 선과 가운데 원 -->
+      <rect x="-10.5" y="-18.5" width="21" height="37" rx="4" fill="#5fb3a6"/>
+      <path d="M-9.5 0 h19" stroke="#ffffff" stroke-opacity=".8" stroke-width="1" fill="none"/>
+      <circle cx="0" cy="0" r="3.5" fill="none" stroke="#ffffff" stroke-opacity=".8" stroke-width="1"/>
+      <!-- 관중석: 흰 링 오른쪽 가운데에 분홍·노랑 -->
+      <circle cx="17.5" cy="-6.5" r="2.2" fill="#f2a3b5"/><circle cx="18.8" cy="-2.2" r="2.2" fill="#f6d77a"/>
+      <circle cx="18.8" cy="2.2" r="2.2" fill="#f2a3b5"/><circle cx="17.5" cy="6.5" r="2.2" fill="#f6d77a"/>
+    </g>
+    <!-- 랜드마크 이름표 (작게, 구역 이름표보다 연한 색). 빼고 싶으면 이 묶음만 지우면 됨 -->
+    <g class="landmark-label">
+      <text x="38" y="610" text-anchor="middle">세계평화의 문</text>
+      <text x="309" y="246" text-anchor="middle">88호수</text>
+      <text x="220" y="669" text-anchor="middle">티켓링크</text>
+      <text x="220" y="681" text-anchor="middle">라이브 아레나</text>
+      <text x="322" y="483" text-anchor="middle">엄지손가락</text>
+      <text x="322" y="495" text-anchor="middle">조각</text>
+      <text x="133" y="697" text-anchor="middle">벨로드롬</text>
+    </g>
   </g>
 
   <!-- ============ 구역들 (누를 수 있음) ============ -->
 
-  <!-- 몽촌토성 산책로 (5경): 가운데~서쪽의 큰 언덕 — 점토 언덕 -->
-  <g class="zone" id="zone-tosung" data-zone="tosung" data-name="몽촌토성 산책로" data-active="false" tabindex="0" role="button" aria-label="몽촌토성 산책로">
-    <path class="zone-hit" d="M60 330 C 55 230, 140 175, 220 182 C 290 188, 305 260, 300 340 C 296 430, 290 520, 230 572 C 175 610, 85 590, 68 510 C 55 450, 62 390, 60 330 Z"
-          fill="url(#clayHill)" filter="url(#soft)"/>
-    <path d="M86 300 C 92 240, 150 205, 205 210" fill="none" stroke="#ffffff" stroke-opacity=".45" stroke-width="7" stroke-linecap="round"/>
-    <!-- 언덕 위 산책로: 동글동글한 조약돌 -->
-    <g fill="url(#clayPath)" filter="url(#softSmall)">
-      <circle cx="94" cy="512" r="4.5"/><circle cx="110" cy="486" r="4.5"/><circle cx="132" cy="466" r="4.5"/><circle cx="158" cy="452" r="4.5"/>
-      <circle cx="176" cy="428" r="4.5"/><circle cx="184" cy="400" r="4.5"/><circle cx="200" cy="376" r="4.5"/><circle cx="222" cy="356" r="4.5"/>
-      <circle cx="244" cy="334" r="4.5"/><circle cx="258" cy="308" r="4.5"/><circle cx="268" cy="282" r="4.5"/>
-    </g>
-    <text class="zone-label" x="175" y="600" text-anchor="middle">몽촌토성 산책로</text>
+  <!-- 몽촌토성 산책로 (5경): 구역은 언덕 남서쪽 자락의 이름표 자리만. 누르면 카드만 뜨고 출렁이지 않음(data-jelly="false") -->
+  <g class="zone" id="zone-tosung" data-zone="tosung" data-name="몽촌토성 산책로" data-active="false" data-jelly="false" tabindex="0" role="button" aria-label="몽촌토성 산책로">
+    <rect class="zone-hit" x="63" y="518" width="150" height="48" rx="24" fill="#fff" opacity="0.001"/>
+    <text class="zone-label small" x="138" y="552" text-anchor="middle">몽촌토성 산책로</text>
   </g>
 
   <!-- 나홀로나무 (6경): 토성 위 서쪽 — 점토 공 나무 -->
   <g class="zone" id="zone-lonetree" data-zone="lonetree" data-name="나홀로나무" data-active="false" tabindex="0" role="button" aria-label="나홀로나무">
-    <circle class="zone-hit" cx="125" cy="296" r="38" fill="#fff" opacity="0.001"/>
+    <circle class="zone-hit" cx="145" cy="354" r="38" fill="#fff" opacity="0.001"/>
     <g filter="url(#soft)">
-      <rect x="119" y="296" width="12" height="28" rx="6" fill="url(#clayTrunk)"/>
-      <circle cx="125" cy="282" r="24" fill="url(#clayLeaf)"/>
-      <circle cx="108" cy="292" r="13" fill="url(#clayLeaf)"/>
-      <circle cx="142" cy="290" r="12" fill="url(#clayLeaf)"/>
-      <ellipse cx="116" cy="270" rx="7" ry="4.5" fill="#ffffff" opacity=".45"/>
+      <rect x="139" y="354" width="12" height="28" rx="6" fill="url(#clayTrunk)"/>
+      <circle cx="145" cy="340" r="24" fill="url(#clayLeaf)"/>
+      <circle cx="128" cy="350" r="13" fill="url(#clayLeaf)"/>
+      <circle cx="162" cy="348" r="12" fill="url(#clayLeaf)"/>
+      <ellipse cx="136" cy="328" rx="7" ry="4.5" fill="#ffffff" opacity=".45"/>
     </g>
-    <text class="zone-label small" x="125" y="346" text-anchor="middle">나홀로나무</text>
+    <text class="zone-label small" x="145" y="404" text-anchor="middle">나홀로나무</text>
   </g>
 
-  <!-- 야생화학습장: 토성 남동쪽 자락 — 라벤더 점토 방석 + 동글 꽃 -->
+  <!-- 야생화학습장: 토성 남쪽 자락 (몽촌토성 산책로 오른쪽) — 라벤더 점토 방석 + 동글 꽃 -->
   <g class="zone" id="zone-wildlab" data-zone="wildlab" data-name="야생화학습장" data-active="false" tabindex="0" role="button" aria-label="야생화학습장">
-    <circle class="zone-hit" cx="225" cy="462" r="48" fill="#fff" opacity="0.001"/>
-    <ellipse cx="225" cy="464" rx="48" ry="25" fill="url(#clayLav)" filter="url(#soft)"/>
+    <circle class="zone-hit" cx="184" cy="470" r="48" fill="#fff" opacity="0.001"/>
+    <ellipse cx="184" cy="472" rx="48" ry="25" fill="url(#clayLav)" filter="url(#soft)"/>
     <g filter="url(#softSmall)">
-      <circle cx="205" cy="458" r="8" fill="#9b7fc9"/><circle cx="205" cy="458" r="3" fill="#fff3c4"/>
-      <circle cx="229" cy="448" r="7" fill="#ffffff"/><circle cx="229" cy="448" r="3" fill="#f2c230"/>
-      <circle cx="249" cy="465" r="8" fill="#b9a3da"/><circle cx="249" cy="465" r="3" fill="#fff3c4"/>
-      <circle cx="222" cy="474" r="6" fill="#ffffff"/><circle cx="222" cy="474" r="2.5" fill="#f2c230"/>
+      <circle cx="164" cy="466" r="8" fill="#9b7fc9"/><circle cx="164" cy="466" r="3" fill="#fff3c4"/>
+      <circle cx="188" cy="456" r="7" fill="#ffffff"/><circle cx="188" cy="456" r="3" fill="#f2c230"/>
+      <circle cx="208" cy="473" r="8" fill="#b9a3da"/><circle cx="208" cy="473" r="3" fill="#fff3c4"/>
+      <circle cx="181" cy="482" r="6" fill="#ffffff"/><circle cx="181" cy="482" r="2.5" fill="#f2c230"/>
     </g>
-    <text class="zone-label small" x="225" y="508" text-anchor="middle">야생화학습장</text>
+    <text class="zone-label small" x="184" y="516" text-anchor="middle">야생화학습장</text>
   </g>
 
-  <!-- 성내천: 공원 북쪽~동쪽 가장자리 물길 — 통통한 물 파이프 + 점토 풀숲 -->
-  <g class="zone" id="zone-stream" data-zone="stream" data-name="성내천" data-active="false" tabindex="0" role="button" aria-label="성내천">
-    <path class="zone-hit" d="M120 150 C 220 120, 330 125, 350 210 C 370 290, 362 400, 356 520" fill="none" stroke="#fff" stroke-width="64" stroke-linecap="round" opacity="0.001"/>
+  <!-- 성내천: 언덕 서쪽에서 시작해 북쪽을 돌아 동쪽 가장자리로 흐르며 언덕을 감싸는 물길. 왼쪽 위 모퉁이를 들어 올려 이름표 자리를 만듦 — 통통한 물 파이프 (풀숲 장식은 2026-11-16 뺌) -->
+  <g class="zone" id="zone-stream" data-zone="stream" data-name="성내천" data-active="false" data-jelly-with="stream-grass" tabindex="0" role="button" aria-label="성내천">
+    <path class="zone-hit" d="M32 480 C 24 400, 22 300, 30 235 C 38 165, 90 128, 175 125 C 215 124, 240 124, 260 124 C 316 124, 346 150, 356 215 C 366 280, 362 400, 356 520" fill="none" stroke="#fff" stroke-width="64" stroke-linecap="round" opacity="0.001"/>
     <g filter="url(#softSmall)">
-      <path d="M120 150 C 220 120, 330 125, 350 210 C 370 290, 362 400, 356 520" fill="none" stroke="url(#clayWater)" stroke-width="16" stroke-linecap="round"/>
-      <path d="M150 140 C 230 122, 320 128, 342 196" fill="none" stroke="#ffffff" stroke-opacity=".55" stroke-width="3" stroke-linecap="round" transform="translate(0 -3)"/>
+      <path d="M32 480 C 24 400, 22 300, 30 235 C 38 165, 90 128, 175 125 C 215 124, 240 124, 260 124 C 316 124, 346 150, 356 215 C 366 280, 362 400, 356 520" fill="none" stroke="url(#clayWater)" stroke-width="16" stroke-linecap="round"/>
+      <!-- 물 반짝임: 물길 가운데에서 바깥쪽으로 3.5만큼 옮긴 선 (물길 모양을 따라 자동 계산한 점들이라 물길 밖으로 안 나감) -->
+      <path d="M23.3 409.4 L23.0 403.4 L22.7 397.4 L22.5 391.3 L22.3 385.3 L22.1 379.3 L21.9 373.3 L21.8 367.3 L21.6 361.3 L21.5 355.3 L21.5 349.3 L21.4 343.2 L21.4 337.2 L21.4 331.2 L21.5 325.2 L21.5 319.2 L21.6 313.2 L21.7 307.1 L21.9 301.1 L22.1 295.1 L22.3 289.1 L22.6 283.1 L22.9 277.1 L23.3 271.0 L23.7 265.0 L24.1 259.0 L24.6 253.0 L25.2 247.0 M53.2 169.2 L57.4 164.6 L61.8 160.3 L66.4 156.1 L71.2 152.3 L76.3 148.7 L81.5 145.4 L86.8 142.3 L92.3 139.5 L97.9 137.0 L103.6 134.7 L109.3 132.6 L115.2 130.7 L121.1 129.0 L127.0 127.5 L132.9 126.2 L138.9 125.1 L145.0 124.1 L151.0 123.3 L157.0 122.7 L163.1 122.1 L169.1 121.8 L175.2 121.5 L181.2 121.3 L187.2 121.2 L193.2 121.1 L199.3 121.0 L205.3 120.9 L211.3 120.8 L217.3 120.7 L223.3 120.6 L229.3 120.6 L235.3 120.6 L241.3 120.5 L247.3 120.5 L253.3 120.5 L259.3 120.5 L265.4 120.6 L271.6 120.9 L277.7 121.5 L283.8 122.3 L289.9 123.5 L295.9 125.0 L301.8 127.0 L307.6 129.3 L313.3 132.2 L318.6 135.4 L323.7 139.2 L328.4 143.3 L332.8 147.9 L336.8 152.7 L340.3 157.8 L343.5 163.2" fill="none" stroke="#ffffff" stroke-opacity=".55" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
     </g>
-    <g filter="url(#softSmall)" stroke-linecap="round">
-      <g transform="translate(262 162)">
-        <path d="M-8 10 L -10 -10 M0 10 L 0 -14 M8 10 L 11 -9" stroke="#6faa58" stroke-width="4" fill="none"/>
-        <circle cx="-10" cy="-13" r="5" fill="#8f7bd1"/><circle cx="11" cy="-12" r="5" fill="#f2c230"/>
-      </g>
-      <g transform="translate(330 262)">
-        <path d="M-7 10 L -9 -8 M1 10 L 1 -12 M9 10 L 12 -7" stroke="#6faa58" stroke-width="4" fill="none"/>
-        <ellipse cx="1" cy="-16" rx="3.5" ry="7" fill="#c9a66b"/>
-        <circle cx="12" cy="-10" r="5" fill="#8f7bd1"/>
-      </g>
-      <g transform="translate(334 402)">
-        <path d="M-8 10 L -10 -9 M0 10 L 0 -13 M8 10 L 10 -8" stroke="#6faa58" stroke-width="4" fill="none"/>
-        <circle cx="-10" cy="-12" r="5" fill="#f2c230"/><ellipse cx="0" cy="-17" rx="3.5" ry="7" fill="#c9a66b"/>
-      </g>
-    </g>
-    <text class="zone-label" x="298" y="218" text-anchor="middle">성내천</text>
+    <text class="zone-label" x="76" y="210" text-anchor="middle">성내천</text>
   </g>
 
   <!-- 들꽃마루 (8경): 남쪽 끝, 장미광장 바로 서쪽 — 크림 점토 꽃밭 + 동글 들꽃 -->
   <g class="zone" id="zone-wildflower" data-zone="wildflower" data-name="들꽃마루" data-active="false" tabindex="0" role="button" aria-label="들꽃마루">
-    <ellipse class="zone-hit" cx="130" cy="728" rx="90" ry="38" fill="#fff" opacity="0.001"/>
-    <ellipse cx="130" cy="730" rx="84" ry="26" fill="url(#clayCream)" filter="url(#soft)"/>
-    <ellipse cx="104" cy="718" rx="30" ry="6" fill="#ffffff" opacity=".4"/>
+    <ellipse class="zone-hit" cx="210" cy="774" rx="72" ry="38" fill="#fff" opacity="0.001"/>
+    <ellipse cx="210" cy="776" rx="67" ry="26" fill="url(#clayCream)" filter="url(#soft)"/>
+    <ellipse cx="189" cy="764" rx="24" ry="6" fill="#ffffff" opacity=".4"/>
     <g filter="url(#softSmall)">
-      <circle cx="80" cy="728" r="8" fill="#f2a541"/><circle cx="80" cy="728" r="3.2" fill="#7a4b1d"/>
-      <circle cx="108" cy="720" r="9" fill="#f28ab2"/><circle cx="108" cy="720" r="3.2" fill="#fff3c4"/>
-      <circle cx="138" cy="732" r="8" fill="#e5566f"/><circle cx="138" cy="732" r="3" fill="#3a2a2a"/>
-      <circle cx="168" cy="722" r="8" fill="#f2a541"/><circle cx="168" cy="722" r="3" fill="#7a4b1d"/>
-      <circle cx="124" cy="742" r="6" fill="#f28ab2"/><circle cx="124" cy="742" r="2.2" fill="#fff3c4"/>
-      <circle cx="190" cy="736" r="6" fill="#e5566f"/><circle cx="190" cy="736" r="2.2" fill="#fff3c4"/>
+      <circle cx="170" cy="774" r="8" fill="#f2a541"/><circle cx="170" cy="774" r="3.2" fill="#7a4b1d"/>
+      <circle cx="192" cy="766" r="9" fill="#f28ab2"/><circle cx="192" cy="766" r="3.2" fill="#fff3c4"/>
+      <circle cx="216" cy="778" r="8" fill="#e5566f"/><circle cx="216" cy="778" r="3" fill="#3a2a2a"/>
+      <circle cx="240" cy="768" r="8" fill="#f2a541"/><circle cx="240" cy="768" r="3" fill="#7a4b1d"/>
+      <circle cx="205" cy="788" r="6" fill="#f28ab2"/><circle cx="205" cy="788" r="2.2" fill="#fff3c4"/>
+      <circle cx="258" cy="782" r="6" fill="#e5566f"/><circle cx="258" cy="782" r="2.2" fill="#fff3c4"/>
     </g>
-    <text class="zone-label" x="130" y="778" text-anchor="middle">들꽃마루</text>
+    <text class="zone-label" x="210" y="824" text-anchor="middle">들꽃마루</text>
   </g>
 
   <!-- 장미광장 (9경): 남동쪽 끝 — 점토 장미 (실제 API 연결 구역) -->
   <g class="zone" id="zone-rose" data-zone="rose" data-name="장미광장" data-active="true" tabindex="0" role="button" aria-label="장미광장">
-    <circle class="zone-hit" cx="292" cy="705" r="64" fill="#fde2e4" opacity="0.001"/>
-    <circle class="zone-glow" cx="292" cy="698" r="54" fill="url(#clayPinkGlow)"/>
+    <circle class="zone-hit" cx="328" cy="696" r="64" fill="#fde2e4" opacity="0.001"/>
+    <circle class="zone-glow" cx="328" cy="689" r="54" fill="url(#clayPinkGlow)"/>
     <g filter="url(#soft)">
-      <ellipse cx="262" cy="722" rx="15" ry="8" fill="url(#clayLeaf)" transform="rotate(-30 262 722)"/>
-      <ellipse cx="322" cy="722" rx="15" ry="8" fill="url(#clayLeaf)" transform="rotate(30 322 722)"/>
-      <circle cx="292" cy="696" r="32" fill="url(#clayRose)"/>
-      <path d="M292 674 C 306 674, 312 690, 302 698 C 294 704, 280 700, 280 690 C 280 680, 288 676, 294 680" fill="none" stroke="#a82340" stroke-width="4" stroke-linecap="round" opacity=".75"/>
-      <path d="M272 700 C 274 714, 292 722, 308 714" fill="none" stroke="#a82340" stroke-width="4" stroke-linecap="round" opacity=".75"/>
-      <ellipse cx="280" cy="680" rx="8" ry="5" fill="#ffffff" opacity=".45"/>
+      <ellipse cx="298" cy="713" rx="15" ry="8" fill="url(#clayLeaf)" transform="rotate(-30 298 713)"/>
+      <ellipse cx="358" cy="713" rx="15" ry="8" fill="url(#clayLeaf)" transform="rotate(30 358 713)"/>
+      <circle cx="328" cy="687" r="32" fill="url(#clayRose)"/>
+      <path d="M328 665 C 342 665, 348 681, 338 689 C 330 695, 316 691, 316 681 C 316 671, 324 667, 330 671" fill="none" stroke="#a82340" stroke-width="4" stroke-linecap="round" opacity=".75"/>
+      <path d="M308 691 C 310 705, 328 713, 344 705" fill="none" stroke="#a82340" stroke-width="4" stroke-linecap="round" opacity=".75"/>
+      <ellipse cx="316" cy="671" rx="8" ry="5" fill="#ffffff" opacity=".45"/>
     </g>
-    <text class="zone-label" x="292" y="774" text-anchor="middle">장미광장</text>
+    <text class="zone-label" x="328" y="765" text-anchor="middle">장미광장</text>
   </g>
 
   <style>
@@ -185,8 +368,8 @@
     .zone-label { font-family: 'Jua', 'Apple SD Gothic Neo', sans-serif; font-size: 17px; fill: #3f3a33;
                   paint-order: stroke; stroke: #ffffff; stroke-width: 6px; stroke-linejoin: round; }
     .zone-label.small { font-size: 15px; }
-    .landmark { pointer-events: none; }
-    .landmark-label { font-family: 'Jua', sans-serif; font-size: 13px; fill: #5f8aa0; stroke: #e6f4ea; stroke-width: 4px; paint-order: stroke; stroke-linejoin: round; }
+    .landmark, .bg-buildings { pointer-events: none; }
+    .landmark-label { font-family: 'Jua', sans-serif; font-size: 11px; fill: #4f6f85; stroke: #e6f4ea; stroke-width: 3px; paint-order: stroke; stroke-linejoin: round; }
     .zone[data-active="false"] { opacity: .9; transition: opacity .25s; }
     .zone[data-active="false"]:hover { opacity: 1; }
     .zone-glow { animation: pulse 2.4s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
@@ -236,6 +419,8 @@ const jellies = [];
 function makeJelly(el) {
   const box = el.getBBox();
   const j = { el, cx: box.x + box.width / 2, cy: box.y + box.height, a: 0, v: 0, target: 0 }; // 바닥 가운데를 기준으로 찌그러짐
+  // data-jelly-with="id": 구역 밖에 따로 그린 짝꿍(예: 성내천 풀길)도 같은 모양으로 함께 출렁이게
+  j.buddy = el.dataset.jellyWith ? document.getElementById(el.dataset.jellyWith) : null;
   jellies.push(j);
   return j;
 }
@@ -247,7 +432,9 @@ function jellyLoop() {
     j.a += j.v / 60;
     if (Math.abs(j.v) > 0.0005 || Math.abs(j.target - j.a) > 0.0005) moving = true;
     const sx = 1 + j.a, sy = 1 - j.a;
-    j.el.setAttribute('transform', `translate(${j.cx} ${j.cy}) scale(${sx} ${sy}) translate(${-j.cx} ${-j.cy})`);
+    const tf = `translate(${j.cx} ${j.cy}) scale(${sx} ${sy}) translate(${-j.cx} ${-j.cy})`;
+    j.el.setAttribute('transform', tf);
+    if (j.buddy) j.buddy.setAttribute('transform', tf);
   });
   jellyRunning = moving;
   if (moving) requestAnimationFrame(jellyLoop);
@@ -282,7 +469,7 @@ window.addEventListener('pageshow', () => {
 
 function openZone(zoneEl, j){
   const id = zoneEl.dataset.zone, name = zoneEl.dataset.name, conf = findZone(id);
-  if (conf && conf.source) {
+  if (conf && conf.source && j) {
     hideCard();
     zoomInto(j, () => { location.href = 'interaction.html?zone=' + encodeURIComponent(id); });
   } else {
@@ -294,6 +481,12 @@ document.querySelectorAll('.zone').forEach(z => {
   // 연결표 기준으로 활성 표시를 맞춤 (SVG의 data-active를 일일이 고치지 않아도 됨)
   const conf = findZone(z.dataset.zone);
   z.dataset.active = String(!!(conf && conf.source));
+  // data-jelly="false"인 구역(몽촌토성 산책로)은 출렁임 없이 누르면 바로 카드만
+  if (z.dataset.jelly === 'false') {
+    z.addEventListener('click', () => openZone(z, null));
+    z.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openZone(z, null); } });
+    return;
+  }
   const j = makeJelly(z);
   z.addEventListener('pointerenter', e => { if (e.pointerType === 'mouse') poke(j, 1.2); });
   z.addEventListener('pointerdown', () => poke(j, 0, 0.12));             // 꾹 → 납작
