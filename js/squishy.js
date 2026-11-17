@@ -187,6 +187,7 @@
         sizeJitter: 0.88 + Math.random() * 0.24,          // 공마다 크기를 조금씩 다르게
         r: 1,                                             // 반지름 (layout에서 계산)
         held: false, holdTarget: new THREE.Vector2(),
+        asleep: false, sleepT: 0,                         // 자리 잡고 멈춘 꽃 = 잠듦 (작게 밀려도 꿈쩍 안 함 → 떨림 없음)
         entered: false,                                   // 처음 위에서 떨어져 화면 안으로 들어왔나 (들어온 뒤부터 천장 적용)
         follow: true,                                     // true = 화면 위치가 물리 위치를 바로 따라감
         // 화면에 그려지는 위치·크기 (모드 전환 때 부드럽게 이동)
@@ -251,6 +252,7 @@
 
     // ---------- 배치 계산 (처음 + 화면 크기가 바뀔 때마다) ----------
     function layout() {
+      blobs.forEach(wake);                    // 화면 크기가 바뀌면 다시 자리 잡도록 모두 깨움
       const w = container.clientWidth, h = container.clientHeight;
       renderer.setSize(w, h);
       camera.aspect = w / h;
@@ -301,6 +303,7 @@
       blobs.forEach((b, i) => {
         b.pressTarget = 0;
         if (mode === 'list') {
+          wake(b);                              // 목록으로 돌아오면 다시 자리 잡도록 깨움
           b.follow = false;                     // 물리 위치로 부드럽게 돌아간 뒤 따라가기 시작
           if (b.curScale < 0.01) b.cur.set(b.p.x, b.p.y, 0); // 숨어 있던 공은 제자리에서 자라남
           b.tgtScale = b.r;
@@ -429,7 +432,7 @@
       const moved = Math.hypot(e.clientX - active.startX, e.clientY - active.startY);
       if (active.mode === 'tap' && moved > DRAG_THRESHOLD) {
         active.mode = 'drag';
-        if (active.blob) { active.blob.pressTarget = 0; if (mode === 'list') active.blob.held = true; }
+        if (active.blob) { active.blob.pressTarget = 0; if (mode === 'list') { active.blob.held = true; wake(active.blob); } }
       }
       const dx = e.clientX - active.lastX, dy = e.clientY - active.lastY;
       if (mode === 'list') {
@@ -480,6 +483,7 @@
         const d = b.p.distanceTo(at), reach = b.r * 2.2;
         if (d < reach) {
           const k = (1 - d / reach) * 30;
+          wake(b);
           b.vel.x += mvx * k; b.vel.y += mvy * k;
         }
       });
@@ -500,14 +504,28 @@
     //   한 프레임을 작은 걸음(1/120초) 여러 번으로 나눠 계산 → 휴대폰처럼 프레임이 느려도 덜 겹침.
     const SUB_DT = 1 / 120, ITER = 8;
     const CONTACT_DAMP = 4;      // 다른 꽃에 닿아 있으면 이만큼 빨리 느려짐 (자리 잡기)
-    const SLEEP_SPEED = 0.12;    // 닿아 있고 이보다 느리면 멈춘 것으로 보고 거의 정지
+    const SLEEP_SPEED = 0.25;    // 받쳐져 있고 이보다 느리면 '멈추는 중'
+    const SLEEP_AFTER = 0.25;    // 그 상태로 이만큼(초) 있으면 잠듦
+    const WAKE_PUSH = 0.04;      // 잠든 꽃은 지름의 4%보다 깊게 눌려야 깨어남 (그보다 작은 겹침은 무시 → 덜덜 떨림 없음)
+    // 떨림을 없애는 원리:
+    //   꽃이 빽빽하면 겹침이 매 순간 조금씩 남아서, '밀어내기 ↔ 중력'이 아주 작게 반복되며 떨려 보였음.
+    //   → 자리 잡은 꽃은 재워서(움직이지 않게) 작은 겹침은 그냥 두고, 크게 밀릴 때만 깨워 움직이게 함.
+    function wake(b) { b.asleep = false; b.sleepT = 0; }
+    // 받침이 어느 쪽에 있는지 기록 (sx: 받침이 있는 쪽의 가로 방향, -1 왼쪽 … +1 오른쪽)
+    function markSupport(b, sx) { if (sx < -0.25) b.supL = true; else if (sx > 0.25) b.supR = true; else b.supC = true; }
+    // 굴러떨어지지 않고 버틸 수 있나: 바닥 위, 바로 아래 받침, 양쪽 받침, 또는 한쪽 받침 + 반대쪽 벽
+    function stable(b) {
+      const nearL = b.p.x - b.r < walls.left + 0.03 * b.r, nearR = b.p.x + b.r > walls.right - 0.03 * b.r;
+      const onFloor = b.p.y - b.r < walls.bottom + 0.03 * b.r;
+      return onFloor || b.supC || ((b.supL || nearL) && (b.supR || nearR));
+    }
     const prevP = new THREE.Vector2();
     function physics(dt) {
       const steps = Math.max(1, Math.ceil(dt / SUB_DT)), h = dt / steps;
       for (let s = 0; s < steps; s++) physicsStep(h);
       // 굴러가는 만큼 돌기 — 실제로 굴러갈 때만 (작은 떨림으로 빙글빙글 돌지 않게)
       blobs.forEach(b => {
-        if (Math.abs(b.vel.x) > 0.25 && !b.faceSettle) {
+        if (!b.asleep && Math.abs(b.vel.x) > 0.8 && !b.faceSettle) {   // 작게 흔들릴 땐 돌지 않게 (0.25 → 0.8)
           qTmp.setFromAxisAngle(axisZ, -b.vel.x / b.r * dt);
           b.mesh.quaternion.premultiply(qTmp);
         }
@@ -519,9 +537,12 @@
         b.prev = b.prev || new THREE.Vector2();
         b.prev.copy(b.p);
         b.contacts = 0; b.supported = false; b.wallHitX = 0; b.wallHitY = 0; b.domeHit = false;
+        b.supL = false; b.supR = false; b.supC = false;   // 받침이 왼쪽 아래 / 오른쪽 아래 / 바로 아래에 있나
         if (b.held) {
           // 잡힌 공: 손 위치로 용수철처럼 끌려감 → 놓을 때 이 속도가 남아 '던지기'가 됨
           b.vel.copy(b.holdTarget).sub(b.p).multiplyScalar(18);
+        } else if (b.asleep) {
+          b.vel.set(0, 0);                        // 잠든 꽃: 중력도 받지 않고 제자리
         } else {
           b.vel.y -= GRAVITY * h;
           b.vel.multiplyScalar(Math.pow(0.7, h)); // 공기 저항 조금
@@ -547,18 +568,25 @@
               const a = blobs[i], c = blobs[j];
               nTmp.copy(c.p).sub(a.p);
               const dist = nTmp.length(), minD = a.r + c.r;
-              if (dist >= minD || dist === 0) continue;
+              if (dist >= minD * 1.02 || dist === 0) continue;   // 2% 여유: 딱 맞닿아 있어도 '받침'으로 셈
               nTmp.divideScalar(dist);
               const overlap = minD - dist;
               if (iter === 0) {
                 a.contacts++; c.contacts++;
                 // 아래에서 받쳐 주는 꽃이 있나 (떠 있는 꽃끼리 닿은 건 받침이 아님)
-                if (nTmp.y > 0.4) c.supported = true;   // c가 a 위에 얹힘
-                if (nTmp.y < -0.4) a.supported = true;  // a가 c 위에 얹힘
+                if (nTmp.y > 0.4) { c.supported = true; markSupport(c, -nTmp.x); }  // c가 a 위에 얹힘 (받침 a는 c에서 -n 방향)
+                if (nTmp.y < -0.4) { a.supported = true; markSupport(a, nTmp.x); }  // a가 c 위에 얹힘
               }
+              if (overlap <= 0) continue;               // 맞닿기만 했으면 밀어낼 필요 없음
               // 잡은 공이 밀 때: 잡은 공은 25%만 밀리고(버티는 느낌) 나머지는 밀린 공이 비켜남
               //   (속도는 ③에서 움직인 거리로 정해져서, 밀린 공이 자연스럽게 따라 밀려남)
-              const wa = a.held ? 0.25 : c.held ? 0.75 : 0.5;
+              let wa = a.held ? 0.25 : c.held ? 0.75 : 0.5;
+              // 잠든 꽃: 작은 겹침이면 꿈쩍 안 하고(상대만 비켜남), 깊게 눌리면 깨어나서 같이 움직임
+              if (a.asleep || c.asleep) {
+                if (overlap > WAKE_PUSH * minD) { if (a.asleep) wake(a); if (c.asleep) wake(c); }
+                else if (a.asleep && c.asleep) continue;         // 둘 다 잠들었고 살짝 겹침 → 그대로 둠
+                else wa = a.asleep ? 0 : 1;                      // 잠든 쪽은 벽처럼 버팀
+              }
               a.p.addScaledVector(nTmp, -overlap * wa);
               c.p.addScaledVector(nTmp, overlap * (1 - wa));
             }
@@ -598,11 +626,16 @@
           const vn = vx0 * b.domeN.x + vy0 * b.domeN.y;
           if (vn > 2) { b.vel.set(vx0 - (1 + BOUNCE) * vn * b.domeN.x, vy0 - (1 + BOUNCE) * vn * b.domeN.y); }
         }
+        if (b.asleep && !stable(b)) wake(b);                // 받쳐 주던 꽃이 빠지면 깨어나서 떨어지거나 굴러감
         if (b.wallHitY > 0) b.vel.x *= Math.pow(0.2, h);    // 바닥 마찰
         if (b.supported) {                                  // 바닥이나 다른 꽃 위에 얹혀 있을 때만 (떨어지는 중엔 X)
           b.vel.multiplyScalar(Math.exp(-h * CONTACT_DAMP)); // 받쳐져 있으면 점점 느려짐
-          if (b.vel.lengthSq() < SLEEP_SPEED * SLEEP_SPEED) b.vel.multiplyScalar(0.5); // 거의 멈춘 꽃은 재우기
-        }
+          if (b.vel.lengthSq() < SLEEP_SPEED * SLEEP_SPEED) {
+            b.vel.multiplyScalar(0.5);
+            b.sleepT += h;
+            if (b.sleepT > SLEEP_AFTER && stable(b)) { b.asleep = true; b.vel.set(0, 0); }  // 한동안 거의 멈춰 있고 안정하면 재움
+          } else b.sleepT = 0;
+        } else b.sleepT = 0;
       });
     }
     // (목록에서는 부딪혀도 찌그러지지 않음 — 2026-11-15 사용자 요청으로 부딪힘 출렁임 제거)
@@ -621,7 +654,8 @@
         // 화면 위치: 목록이면 물리 위치를 따라가고, 상세면 정해진 곳으로
         if (mode === 'list') {
           b.tgt.set(b.p.x, b.p.y, 0);
-          if (b.follow) b.cur.copy(b.tgt);
+          // 화면 위치는 물리 위치를 아주 살짝 늦게 따라감 (남은 미세한 흔들림을 걸러 줌). 잡은 꽃은 손을 바로 따라감
+          if (b.follow) { if (b.held) b.cur.copy(b.tgt); else b.cur.lerp(b.tgt, 1 - Math.exp(-dt * 25)); }
           else { b.cur.lerp(b.tgt, ease); if (b.cur.distanceTo(b.tgt) < 0.02) b.follow = true; }
           b.tgtScale = b.r;
         } else {
