@@ -172,19 +172,10 @@
     }
 
     // (2) 반짝이: 네 갈래 별 모양 그림(캔버스로 한 번 그림)을 붙인 작은 판. 색은 꽃마다 바꿈
-    const sparkTex = (function () {
-      const c = document.createElement('canvas'); c.width = c.height = 64;
-      const g = c.getContext('2d');
-      g.translate(32, 32); g.fillStyle = '#fff';
-      g.beginPath();                                   // 가운데가 오목한 네 갈래 별
-      for (let i = 0; i < 4; i++) {
-        const a = i * Math.PI / 2;
-        g.quadraticCurveTo(0, 0, Math.cos(a) * 30, Math.sin(a) * 30);
-        g.quadraticCurveTo(0, 0, Math.cos(a + Math.PI / 4) * 7, Math.sin(a + Math.PI / 4) * 7);
-      }
-      g.fill();
-      return new THREE.CanvasTexture(c);
-    })();
+    const sparkTex = makeAlphaTexture(64, (x, y) => {    // 가운데가 오목한 네 갈래 별: |x|^0.38 + |y|^0.38 ≤ 1 (지수가 작을수록 갈래가 가늘어짐, 예전 캔버스 별과 비슷하게)
+      const v = Math.pow(Math.abs(x), 0.38) + Math.pow(Math.abs(y), 0.38);
+      return (1 - v) * 10;                                   // 가장자리만 살짝 부드럽게
+    });
     const sparks = [];
     for (let k = 0; k < 260; k++) {
       const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: sparkTex, transparent: true, depthWrite: false }));
@@ -195,14 +186,23 @@
 
     // (3) 빛: 꽃 뒤에서 차오르는 동그란 빛무리 (가운데가 진하고 바깥으로 옅어지는 그림)
     //     꽃보다 뒤에 두어서 꽃 가장자리 둘레로만 은은하게 보임. 놓는 순간 "팡" 커지며 사라짐
-    const glowTex = (function () {
-      const c = document.createElement('canvas'); c.width = c.height = 128;
-      const g = c.getContext('2d');
-      const grad = g.createRadialGradient(64, 64, 0, 64, 64, 64);
-      grad.addColorStop(0, 'rgba(255,255,255,1)'); grad.addColorStop(0.4, 'rgba(255,255,255,0.55)'); grad.addColorStop(1, 'rgba(255,255,255,0)');
-      g.fillStyle = grad; g.fillRect(0, 0, 128, 128);
-      return new THREE.CanvasTexture(c);
-    })();
+    // 그림을 캔버스(2D 그리기) 대신 "숫자로 직접" 만듦 (2026-11-18)
+    //   캔버스 그라데이션은 사파리가 미세한 잡티(디더링)를 섞는데, 거의 투명한 가장자리에서 그 잡티가 크게 부풀려져
+    //   아이폰에서 빛무리 안이 알록달록한 점으로 보였음 → 점마다 하양 + 투명도만 계산해서 넣으면 잡티가 없음
+    function makeAlphaTexture(size, alphaAt) {          // alphaAt(x, y): -1~1 좌표에서 투명도 0~1
+      const data = new Uint8Array(size * size * 4);
+      for (let j = 0; j < size; j++) for (let i = 0; i < size; i++) {
+        const k = (j * size + i) * 4, a = Math.max(0, Math.min(1, alphaAt((i + 0.5) / size * 2 - 1, (j + 0.5) / size * 2 - 1)));
+        data[k] = data[k + 1] = data[k + 2] = 255; data[k + 3] = Math.round(a * 255);
+      }
+      const t = new THREE.DataTexture(data, size, size, THREE.RGBAFormat);
+      t.magFilter = THREE.LinearFilter; t.minFilter = THREE.LinearFilter; t.needsUpdate = true;
+      return t;
+    }
+    const glowTex = makeAlphaTexture(64, (x, y) => {      // 가운데 진하고 바깥으로 부드럽게 옅어지는 동그라미
+      const d = Math.hypot(x, y);
+      return d >= 1 ? 0 : Math.pow(1 - d, 1.6);
+    });
     const glow = { sp: new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex, transparent: true, depthWrite: false })), level: 0, burst: 0, blob: null };
     glow.sp.visible = false; glow.sp.renderOrder = 1;
     scene.add(glow.sp);
@@ -1334,15 +1334,15 @@
 
   function smooth(t) { return t * t * (3 - 2 * t); }
 
+  // 바닥 그림자: 가운데 0.28 → 바깥 0 으로 옅어지는 갈색 동그라미. 캔버스 대신 숫자로 직접 (아이폰 알록달록 잡티 방지)
   function makeShadowTexture() {
-    const cv = document.createElement('canvas');
-    cv.width = cv.height = 128;
-    const g = cv.getContext('2d');
-    const grd = g.createRadialGradient(64, 64, 0, 64, 64, 64);
-    grd.addColorStop(0, 'rgba(60,50,30,0.28)');
-    grd.addColorStop(1, 'rgba(60,50,30,0)');
-    g.fillStyle = grd;
-    g.fillRect(0, 0, 128, 128);
-    return new THREE.CanvasTexture(cv);
+    const size = 64, data = new Uint8Array(size * size * 4);
+    for (let j = 0; j < size; j++) for (let i = 0; i < size; i++) {
+      const k = (j * size + i) * 4, d = Math.hypot((i + 0.5) / size * 2 - 1, (j + 0.5) / size * 2 - 1);
+      data[k] = 60; data[k + 1] = 50; data[k + 2] = 30; data[k + 3] = Math.round(Math.max(0, 1 - d) * 0.28 * 255);
+    }
+    const t = new THREE.DataTexture(data, size, size, THREE.RGBAFormat);
+    t.magFilter = THREE.LinearFilter; t.minFilter = THREE.LinearFilter; t.needsUpdate = true;
+    return t;
   }
 })();
