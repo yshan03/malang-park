@@ -114,7 +114,7 @@
       IDLE_MIN: 3.5,         // 가만히 있을 때 저절로 피어오르는 간격 (초, 최소~최대)
       IDLE_MAX: 6.5,
       IDLE_SCENT: 0.6,       // 이 세기 이상인 장미만 저절로 피어오름
-      FAN: 2.0               // 놓을 때 리본이 퍼지는 범위 (위쪽 기준 좌우 각도, 라디안. 2.0 ≈ 115°)
+      FAN: Math.PI           // 놓을 때 리본이 퍼지는 범위 (위쪽 기준 좌우 각도). π = 사방 360° (2026-11-18: 115° → 360°, 아래가 비어 보여서)
     };
 
     // 꽃 색으로 향기 색 만들기: 크림색 배경 위에서도 보이게 밝기를 0.5~0.68로 맞춤
@@ -232,18 +232,19 @@
     // 놓을 때: 모은 만큼 빛이 "팡" + 향기 리본이 여러 방향으로 + 반짝이가 사방으로
     function scentRelease(b) {
       const scent = scentOf(b), charge = b.charge || 0;
-      const amount = 0.35 + 0.65 * charge;                    // 톡 눌러도 조금은 나옴, 꾹 누를수록 많이
-      const count = 3 + Math.round(5 * scent * amount);         // 리본 3~8줄기 (향기 세고 꾹 누를수록 많이)
+      // 모은 정도(charge 0~1)에 따른 세기. 꾹(1초 꽉) = 1 그대로, 톡 = 아주 조금 (2026-11-18: 톡 0.35 → 약 0.2로 줄여 차이를 키움)
+      const amount = 0.15 + 0.85 * charge;
+      const count = Math.max(1, Math.round((4 + 6 * scent) * (0.25 + 0.75 * charge)));   // 리본: 꾹이면 4~10줄기, 톡이면 1~3줄기
       spawnRibbons(b, count, amount, false);
       const s = b.curScale, c = b.mesh.position;
-      const n = Math.round((10 + 25 * scent) * amount);        // 리본과 따로 사방으로 톡톡 흩어지는 반짝이 (최대 35개)
+      const n = Math.round((16 + 30 * scent) * amount);        // 리본과 따로 사방으로 톡톡 흩어지는 반짝이 (최대 46개)
       for (let k = 0; k < n; k++) {
         const p = useSpark(b, s * (0.12 + Math.random() * 0.12), 0.8 + Math.random() * 0.7);
-        const a = Math.PI / 2 + (Math.random() - 0.5) * Math.PI * 1.6;   // 위쪽 위주로 넓게 (아래로는 덜)
+        const a = Math.random() * Math.PI * 2;                           // 꽃 중심에서 사방으로 고르게
         p.sp.position.set(c.x + Math.cos(a) * s * 0.4, c.y + Math.sin(a) * s * 0.4, c.z + s * 0.4);
         p.vel.set(Math.cos(a), Math.sin(a), 0).multiplyScalar(s * (1.6 + Math.random() * 1.8));
       }
-      if (glow.blob === b) { glow.level = Math.max(glow.level, 0.35 + 0.65 * charge); glow.burst = 0.001; }   // 빛: 모은 만큼 "팡" 커지며 사라짐
+      if (glow.blob === b) { glow.level = Math.max(glow.level, 0.15 + 0.85 * charge); glow.burst = 0.001; }   // 빛: 모은 만큼 "팡" 커지며 사라짐
       b.charge = 0;
     }
 
@@ -253,8 +254,8 @@
       const turn = (Math.random() - 0.5) * 0.4;                 // 부채꼴 전체를 살짝 랜덤하게 돌림
       for (let i = 0; i < count; i++) {
         const R = ribbons[nextRibbon++ % ribbons.length];
-        // 방향: 여러 줄기면 위쪽 기준 좌우 부채꼴(±FAN)로 고르게 + 살짝 흔듦. 한 줄기(가만히)면 위로
-        const dir = faint ? (Math.random() - 0.5) * 0.5 : (count === 1 ? 0 : (i / (count - 1) * 2 - 1) * SCENT.FAN) + turn + (Math.random() - 0.5) * 0.25;
+        // 방향: 여러 줄기면 꽃 중심에서 사방으로 고르게 나눔(한 바퀴를 count등분) + 살짝 흔듦. 한 줄기(가만히)면 위로
+        const dir = faint ? (Math.random() - 0.5) * 0.5 : (i / count) * 2 * SCENT.FAN + turn * 4 + (Math.random() - 0.5) * 0.3;
         R.dir = dir;
         R.mesh.material.uniforms.color.value.copy(toneOf(b).line);
         R.mesh.material.uniforms.color2.value.copy(toneOf(b).light);
@@ -263,7 +264,7 @@
         R.spin = i % 2 ? 1 : -1;                                // 이웃한 리본은 반대로 감김
         R.phase = Math.random() * 6.28;
         R.flow = (Math.random() - 0.5) * 0.8;
-        const sideways = 0.7 + 0.3 * Math.cos(dir);               // 옆으로 가는 리본은 조금 짧게 (화면 밖으로 덜 나가게)
+        const sideways = 0.8 + 0.2 * Math.abs(Math.cos(dir));     // 옆으로 가는 리본만 살짝 짧게 (화면 밖으로 덜 나가게). 위·아래는 같은 길이
         R.height = s * (0.8 + 0.7 * scent) * (0.6 + 0.4 * amount) * (faint ? 1 : sideways * (0.85 + Math.random() * 0.3));
         R.width = s * (faint ? 0.02 : 0.03);
         R.alpha = faint ? 0.5 : 0.95;
