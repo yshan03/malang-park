@@ -69,6 +69,9 @@
 
   window.createSquishyScene = function (container, items, { onOpen } = {}) {
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    // 캔버스 바탕을 페이지 바탕색으로 꽉 칠함 (투명 X). 투명하면 휴대폰(아이폰 사파리)에서 빛무리·향기처럼 아주 옅게 사라지는 부분에
+    //   색 정밀도가 깨져 알록달록한 점이 보였음 (2026-11-18). 페이지 바탕이 한 가지 색이라 겉보기는 똑같음
+    renderer.setClearColor(new THREE.Color(getComputedStyle(document.body).backgroundColor || '#f6f1e7'), 1);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.outputEncoding = THREE.sRGBEncoding;
     container.appendChild(renderer.domElement);
