@@ -94,7 +94,40 @@
     return colors;
   }
 
+  // ---------- 줄기·잎: 장미마다 다르게 (이름으로 정해지는 '가짜 무작위' → 열 때마다 같음) ----------
+  //   줄기 길이 3그룹: 짧게(약 2.0) · 보통(2.6) · 길게(약 3.3)
+  //   잎 1~3장: 줄기 위 높이, 둘러 붙는 방향, 들린 정도, 크기를 장미마다 다르게
+  function seededRandom(text) {
+    let h = 2166136261;                                   // 이름 글자로 시작값 만들기 (FNV 해시)
+    for (let i = 0; i < text.length; i++) { h ^= text.charCodeAt(i); h = Math.imul(h, 16777619); }
+    return function () {                                  // 부를 때마다 0~1 사이 다음 수
+      h = Math.imul(h ^ (h >>> 15), 2246822507); h = Math.imul(h ^ (h >>> 13), 3266489909); h ^= h >>> 16;
+      return (h >>> 0) / 4294967296;
+    };
+  }
+  const STEM_GROUPS = [2.0, 2.6, 3.3];
+  function stemStyle(name) {
+    const rand = seededRandom(name || '');
+    const stemLength = STEM_GROUPS[Math.floor(rand() * 3)] + (rand() - 0.5) * 0.15;
+    const count = 1 + Math.floor(rand() * 3);              // 잎 1~3장
+    const leaves = [];
+    let side = rand() < 0.5 ? 0 : Math.PI;                // 첫 잎이 오른쪽(0) / 왼쪽(π)
+    for (let i = 0; i < count; i++) {
+      leaves.push({
+        t: 0.3 + 0.5 * (count === 1 ? rand() : (i + rand() * 0.6) / count),  // 위아래로 고루 흩어지게
+        yaw: side + (rand() - 0.5) * 1.2,                  // 대체로 옆으로 (화면 쪽을 정면으로 향하면 고리처럼 보여서 피함)
+        lift: 0.1 + rand() * 0.4,
+        size: 0.8 + rand() * 0.35
+      });
+      side += Math.PI;                                     // 다음 잎은 반대쪽 (어긋나게)
+    }
+    return { stemLength, leaves };
+  }
+
   window.roseBlobDesign = function (item, index) {
+    return Object.assign(designOf(item, index), stemStyle(item.name));
+  };
+  function designOf(item, index) {
     // 1) 대표 5개: 손으로 디자인한 모양과 색
     const own = BY_NAME[item.name];
     if (own) return Object.assign({ kind: 'featured' }, own);
@@ -105,5 +138,5 @@
     if (colors) return Object.assign({ kind: 'sample' }, SAMPLE_SHAPE, { colors: colors });   // 모양 종류가 없으면 공통 모양
     // 3) 사진 색도 없으면: 공통 모양 + 7가지 색 중 하나
     return Object.assign({ kind: 'sample' }, SAMPLE_SHAPE, { colors: SAMPLE_COLORS[index % SAMPLE_COLORS.length] });
-  };
+  }
 })();

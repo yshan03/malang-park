@@ -3,7 +3,8 @@
 <title>올림픽공원 말랑 지도</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Jua&display=swap" rel="stylesheet">
+<!-- Jua = 지도 제목·랜드마크 이름 / Gaegu(손글씨) = 구역 이름 (꽃 상세 이름표와 같은 글씨) -->
+<link href="https://fonts.googleapis.com/css2?family=Jua&family=Gaegu:wght@700&display=swap" rel="stylesheet">
 <style>
  html,body{margin:0;height:100%}
  body{background:#ece6d9;color:#3f3a33;font-family:'Apple SD Gothic Neo','Noto Sans KR',sans-serif;transition:opacity .35s;overflow:hidden}
@@ -21,6 +22,10 @@
  .intro h1{margin:0;font-size:24px;font-weight:800;color:#3d5a35}
  .intro p{margin:6px 0 0;font-size:15px;line-height:1.5;color:#6b665c}
  .intro b{color:#e5566f}
+ /* '식물 구역': 지도 구역 이름과 같은 손글씨(Gaegu 굵게). 같은 크기면 작아 보여서 3px 키움. 글자별 삐뚤기는 아래 스크립트가 넣음 */
+ .intro .hand{font-family:'Gaegu','Apple SD Gothic Neo',sans-serif;font-weight:700;font-size:18px}
+ .intro .hand span{display:inline-block;white-space:pre;margin-right:-0.08em} /* 손글씨는 글자 사이가 넓어서 살짝 좁힘 */
+ .intro .hand span.gap{margin-right:-0.2em} /* 띄어쓰기는 더 좁힘 */
  /* 구역 소개 카드: 준비 중인 구역을 누르면 아래에서 올라옴 */
  #zone-card{position:fixed;left:50%;bottom:20px;width:min(360px,calc(100vw - 32px));box-sizing:border-box;
    background:#fffaf2;border:1px solid #e6dcc8;border-radius:18px;padding:14px 44px 14px 16px;
@@ -37,7 +42,7 @@
 <div class="stage">
 <header class="intro">
   <h1>올림픽공원 말랑 지도</h1>
-  <p>공원에선 눈으로만 👀 여기선 손으로 마음껏 🤲<br><b>식물 구역을 눌러 보세요.</b></p>
+  <p>공원에선 눈으로만 👀 여기선 손으로 마음껏 🤲<br><b><span class="hand">식물 구역</span> 을 눌러 보세요.</b></p>
 </header>
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 390 844" preserveAspectRatio="xMidYMid meet" font-family="'Jua','Apple SD Gothic Neo','Noto Sans KR',sans-serif">
   <!--
@@ -66,6 +71,13 @@
     <linearGradient id="clayWater" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#bfe6f3"/><stop offset="1" stop-color="#86c4dd"/></linearGradient>
     <radialGradient id="clayPath" cx="35%" cy="30%" r="80%"><stop offset="0" stop-color="#fbf3df"/><stop offset="1" stop-color="#e8d7b4"/></radialGradient>
     <radialGradient id="claySkin" cx="30%" cy="25%" r="80%"><stop offset="0" stop-color="#ffdcc6"/><stop offset="1" stop-color="#e6a685"/></radialGradient>
+    <!-- 구역 이름 그림자: 글자를 아래로 2px 옮긴 "같은 색" 복사본을 연하게(28%) 살짝 흐리게 깔아서 도톰하게 -->
+    <filter id="labelShadow" x="-10%" y="-20%" width="120%" height="160%">
+      <feOffset in="SourceGraphic" dy="2" result="moved"/>
+      <feGaussianBlur in="moved" stdDeviation="0.6" result="blurred"/>
+      <feComponentTransfer in="blurred" result="faint"><feFuncA type="linear" slope="0.28"/></feComponentTransfer>
+      <feMerge><feMergeNode in="faint"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
   </defs>
 
   <!-- 배경: 아주 연한 연두 한 색 (공원 전체가 잔디. 성내천 풀길·몽촌토성 언덕보다는 연하게 해서 구분) (안내도처럼 건물·광장 구역은 회색, 가운데 몽촌토성 언덕만 초록). 얼룩·그라데이션 없음 -->
@@ -76,8 +88,8 @@
   <!-- 성내천 양옆 풀길: 물길과 같은 선을 더 굵게 그려 물가를 잔디로 감쌈 (배경이라 누를 수 없음).
        물길(성내천 구역)을 누르면 이 풀길도 같이 출렁임 → 아래 script의 data-jelly-with 참고 -->
   <g id="stream-grass" aria-hidden="true" fill="none" stroke-linecap="round">
-    <path d="M32 480 C 24 400, 22 300, 30 235 C 38 165, 90 128, 175 125 C 215 124, 240 124, 260 124 C 316 124, 346 150, 356 215 C 366 280, 362 400, 356 520" stroke="#b3d494" stroke-width="36"/>
-    <path d="M32 480 C 24 400, 22 300, 30 235 C 38 165, 90 128, 175 125 C 215 124, 240 124, 260 124 C 316 124, 346 150, 356 215 C 366 280, 362 400, 356 520" stroke="#c6e2aa" stroke-width="28"/>
+    <path d="M38 428 C 22 398, 20 350, 22 300 C 23 270, 28 255, 28 245 C 28 180, 36 150, 85 143 C 130 138, 165 160, 220 160 C 250 160, 265 160, 280 150 C 296 138, 348 132, 348 175 L348 215 C 348 248, 366 252, 366 282 C 366 305, 357 318, 359 340 C 361 365, 371 372, 371 398 C 371 420, 362 428, 364 450 C 366 478, 368 496, 355 509" stroke="#b3d494" stroke-width="36"/>
+    <path d="M38 428 C 22 398, 20 350, 22 300 C 23 270, 28 255, 28 245 C 28 180, 36 150, 85 143 C 130 138, 165 160, 220 160 C 250 160, 265 160, 280 150 C 296 138, 348 132, 348 175 L348 215 C 348 248, 366 252, 366 282 C 366 305, 357 318, 359 340 C 361 365, 371 372, 371 398 C 371 420, 362 428, 364 450 C 366 478, 368 496, 355 509" stroke="#c6e2aa" stroke-width="28"/>
   </g>
 
   <!-- 몽촌토성 언덕: 공원 가운데~서쪽의 큰 토성 (지형 배경, 누를 수 없음. 산책로 구역은 아래 '구역들'에 따로) -->
@@ -291,7 +303,7 @@
   <!-- 몽촌토성 산책로 (5경): 구역은 언덕 남서쪽 자락의 이름표 자리만. 누르면 카드만 뜨고 출렁이지 않음(data-jelly="false") -->
   <g class="zone" id="zone-tosung" data-zone="tosung" data-name="몽촌토성 산책로" data-active="false" data-jelly="false" tabindex="0" role="button" aria-label="몽촌토성 산책로">
     <rect class="zone-hit" x="63" y="518" width="150" height="48" rx="24" fill="#fff" opacity="0.001"/>
-    <text class="zone-label small" x="138" y="552" text-anchor="middle">몽촌토성 산책로</text>
+    <text class="zone-label small" x="138" y="552" text-anchor="middle" transform="rotate(-2 138 552)">몽촌토성 산책로</text>
   </g>
 
   <!-- 나홀로나무 (6경): 토성 위 서쪽 — 점토 공 나무 -->
@@ -304,7 +316,7 @@
       <circle cx="162" cy="348" r="12" fill="url(#clayLeaf)"/>
       <ellipse cx="136" cy="328" rx="7" ry="4.5" fill="#ffffff" opacity=".45"/>
     </g>
-    <text class="zone-label small" x="145" y="404" text-anchor="middle">나홀로나무</text>
+    <text class="zone-label small" x="145" y="404" text-anchor="middle" transform="rotate(-3 145 404)">나홀로나무</text>
   </g>
 
   <!-- 야생화학습장: 토성 남쪽 자락 (몽촌토성 산책로 오른쪽) — 라벤더 점토 방석 + 동글 꽃 -->
@@ -317,18 +329,23 @@
       <circle cx="208" cy="473" r="8" fill="#b9a3da"/><circle cx="208" cy="473" r="3" fill="#fff3c4"/>
       <circle cx="181" cy="482" r="6" fill="#ffffff"/><circle cx="181" cy="482" r="2.5" fill="#f2c230"/>
     </g>
-    <text class="zone-label small" x="184" y="516" text-anchor="middle">야생화학습장</text>
+    <text class="zone-label small" x="184" y="516" text-anchor="middle" transform="rotate(3 184 516)">야생화학습장</text>
   </g>
 
-  <!-- 성내천: 언덕 서쪽에서 시작해 북쪽을 돌아 동쪽 가장자리로 흐르며 언덕을 감싸는 물길. 왼쪽 위 모퉁이를 들어 올려 이름표 자리를 만듦 — 통통한 물 파이프 (풀숲 장식은 2026-11-16 뺌) -->
+  <!-- 성내천: 언덕 서쪽에서 시작해 북쪽을 돌아 동쪽으로 흐르며 언덕을 감싸는 물길.
+       2026-11-18 사용자가 그린 선을 따라 다시 그림: 언덕 꼭대기를 따라 살짝 내려앉고, 88호수 위로 넘어간 뒤
+       88호수를 지나면 바로 바깥(오른쪽) 가장자리로 붙어 내려감 → 88호수 아래·언덕 오른쪽 빈자리는 나중 랜드마크 자리로 비워 둠.
+       양 끝은 똑 떨어지지 않고 언덕 쪽으로 부드럽게 휘어 감싸듯 끝남 (왼쪽 끝 38,428 / 오른쪽 끝 355,509).
+       오른쪽 줄기는 곧게 떨어지지 않고 안팎으로 살짝 굽이침(울퉁불퉁한 냇물 느낌).
+       풀길 가장자리가 이름표·랜드마크·언덕과 3 이상 떨어지게 맞춤. 물길 선을 바꾸면 풀길 2줄·누르는 자리·물 반짝임도 같이 바꿀 것 — 통통한 물 파이프 (풀숲 장식은 2026-11-16 뺌) -->
   <g class="zone" id="zone-stream" data-zone="stream" data-name="성내천" data-active="false" data-jelly-with="stream-grass" tabindex="0" role="button" aria-label="성내천">
-    <path class="zone-hit" d="M32 480 C 24 400, 22 300, 30 235 C 38 165, 90 128, 175 125 C 215 124, 240 124, 260 124 C 316 124, 346 150, 356 215 C 366 280, 362 400, 356 520" fill="none" stroke="#fff" stroke-width="64" stroke-linecap="round" opacity="0.001"/>
+    <path class="zone-hit" d="M38 428 C 22 398, 20 350, 22 300 C 23 270, 28 255, 28 245 C 28 180, 36 150, 85 143 C 130 138, 165 160, 220 160 C 250 160, 265 160, 280 150 C 296 138, 348 132, 348 175 L348 215 C 348 248, 366 252, 366 282 C 366 305, 357 318, 359 340 C 361 365, 371 372, 371 398 C 371 420, 362 428, 364 450 C 366 478, 368 496, 355 509" fill="none" stroke="#fff" stroke-width="64" stroke-linecap="round" opacity="0.001"/>
     <g filter="url(#softSmall)">
-      <path d="M32 480 C 24 400, 22 300, 30 235 C 38 165, 90 128, 175 125 C 215 124, 240 124, 260 124 C 316 124, 346 150, 356 215 C 366 280, 362 400, 356 520" fill="none" stroke="url(#clayWater)" stroke-width="16" stroke-linecap="round"/>
+      <path d="M38 428 C 22 398, 20 350, 22 300 C 23 270, 28 255, 28 245 C 28 180, 36 150, 85 143 C 130 138, 165 160, 220 160 C 250 160, 265 160, 280 150 C 296 138, 348 132, 348 175 L348 215 C 348 248, 366 252, 366 282 C 366 305, 357 318, 359 340 C 361 365, 371 372, 371 398 C 371 420, 362 428, 364 450 C 366 478, 368 496, 355 509" fill="none" stroke="url(#clayWater)" stroke-width="16" stroke-linecap="round"/>
       <!-- 물 반짝임: 물길 가운데에서 바깥쪽으로 3.5만큼 옮긴 선 (물길 모양을 따라 자동 계산한 점들이라 물길 밖으로 안 나감) -->
-      <path d="M23.3 409.4 L23.0 403.4 L22.7 397.4 L22.5 391.3 L22.3 385.3 L22.1 379.3 L21.9 373.3 L21.8 367.3 L21.6 361.3 L21.5 355.3 L21.5 349.3 L21.4 343.2 L21.4 337.2 L21.4 331.2 L21.5 325.2 L21.5 319.2 L21.6 313.2 L21.7 307.1 L21.9 301.1 L22.1 295.1 L22.3 289.1 L22.6 283.1 L22.9 277.1 L23.3 271.0 L23.7 265.0 L24.1 259.0 L24.6 253.0 L25.2 247.0 M53.2 169.2 L57.4 164.6 L61.8 160.3 L66.4 156.1 L71.2 152.3 L76.3 148.7 L81.5 145.4 L86.8 142.3 L92.3 139.5 L97.9 137.0 L103.6 134.7 L109.3 132.6 L115.2 130.7 L121.1 129.0 L127.0 127.5 L132.9 126.2 L138.9 125.1 L145.0 124.1 L151.0 123.3 L157.0 122.7 L163.1 122.1 L169.1 121.8 L175.2 121.5 L181.2 121.3 L187.2 121.2 L193.2 121.1 L199.3 121.0 L205.3 120.9 L211.3 120.8 L217.3 120.7 L223.3 120.6 L229.3 120.6 L235.3 120.6 L241.3 120.5 L247.3 120.5 L253.3 120.5 L259.3 120.5 L265.4 120.6 L271.6 120.9 L277.7 121.5 L283.8 122.3 L289.9 123.5 L295.9 125.0 L301.8 127.0 L307.6 129.3 L313.3 132.2 L318.6 135.4 L323.7 139.2 L328.4 143.3 L332.8 147.9 L336.8 152.7 L340.3 157.8 L343.5 163.2" fill="none" stroke="#ffffff" stroke-opacity=".55" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M18.6 356.5 L18.3 350.4 L18.1 344.4 L17.9 338.4 L17.9 332.3 L17.9 326.3 L17.9 320.3 L18.0 314.2 L18.2 308.2 L18.4 302.2 L18.6 296.2 L19.0 290.1 L19.5 284.0 L20.1 278.0 L20.8 272.0 L21.7 266.0 L22.6 260.0 L23.6 254.1 L24.3 248.4 L24.5 242.7 L24.5 236.7 L24.7 230.6 L24.8 224.6 L25.1 218.5 L25.5 212.4 L26.1 206.4 L26.8 200.3 L27.7 194.2 L29.0 188.2 L30.6 182.2 L32.6 176.2 L35.1 170.4 L38.3 164.9 L42.1 159.7 L46.6 155.0 L51.7 151.0 L57.1 147.7 L62.9 145.0 L68.8 142.9 L74.9 141.3 L80.9 140.1 L87.2 139.3 L93.3 138.9 L99.5 138.8 L105.6 139.0 L111.8 139.4 L117.9 140.1 L123.9 141.0 L129.9 142.0 L135.8 143.2 L141.8 144.5 L147.6 145.8 L153.5 147.1 L159.3 148.5 L165.2 149.8 L171.0 151.0 L176.8 152.1 L182.7 153.2 L188.5 154.1 L194.4 154.9 L200.2 155.5 L206.1 156.0 L212.0 156.3 L217.9 156.5 L223.9 156.5 L229.9 156.5 L235.8 156.4 L241.8 156.3 L247.6 156.0 L253.4 155.5 L259.1 154.7 L264.6 153.4 L269.9 151.5 L274.9 149.0 L279.9 145.9 L285.7 142.9 L291.7 140.7 L297.8 139.1 L304.0 138.2 L310.3 137.7 L316.7 137.9 L323.1 138.9 L329.3 140.7 L335.3 143.5 L340.7 147.4 L345.2 152.5 L348.4 158.4" fill="none" stroke="#ffffff" stroke-opacity=".55" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
     </g>
-    <text class="zone-label" x="76" y="210" text-anchor="middle">성내천</text>
+    <text class="zone-label" x="90" y="198" text-anchor="middle" transform="rotate(-4 90 198)">성내천</text>
   </g>
 
   <!-- 들꽃마루 (8경): 남쪽 끝, 장미광장 바로 서쪽 — 크림 점토 꽃밭 + 동글 들꽃 -->
@@ -344,7 +361,7 @@
       <circle cx="205" cy="788" r="6" fill="#f28ab2"/><circle cx="205" cy="788" r="2.2" fill="#fff3c4"/>
       <circle cx="258" cy="782" r="6" fill="#e5566f"/><circle cx="258" cy="782" r="2.2" fill="#fff3c4"/>
     </g>
-    <text class="zone-label" x="210" y="824" text-anchor="middle">들꽃마루</text>
+    <text class="zone-label" x="210" y="824" text-anchor="middle" transform="rotate(3 210 824)">들꽃마루</text>
   </g>
 
   <!-- 장미광장 (9경): 남동쪽 끝 — 점토 장미 (실제 API 연결 구역) -->
@@ -359,15 +376,23 @@
       <path d="M308 691 C 310 705, 328 713, 344 705" fill="none" stroke="#a82340" stroke-width="4" stroke-linecap="round" opacity=".75"/>
       <ellipse cx="316" cy="671" rx="8" ry="5" fill="#ffffff" opacity=".45"/>
     </g>
-    <text class="zone-label" x="328" y="765" text-anchor="middle">장미광장</text>
+    <text class="zone-label" x="328" y="765" text-anchor="middle" transform="rotate(-3 328 765)">장미광장</text>
   </g>
 
   <style>
     .zone { cursor: pointer; outline: none; }
-    /* 구역 이름: 꽃 이름과 같은 둥근 Jua 글씨 + 흰 테두리 스티커 */
-    .zone-label { font-family: 'Jua', 'Apple SD Gothic Neo', sans-serif; font-size: 17px; fill: #3f3a33;
-                  paint-order: stroke; stroke: #ffffff; stroke-width: 6px; stroke-linejoin: round; }
-    .zone-label.small { font-size: 15px; }
+    /* 구역 이름: 꽃 상세 이름표와 같은 손글씨(Gaegu 굵게), 테두리 없이 글자만
+       (크기: 큰 구역 23px, 작은 구역 21px — 2026-11-18 이름표를 더 눈에 띄게 키움) */
+    .zone-label { font-family: 'Gaegu', 'Apple SD Gothic Neo', sans-serif; font-weight: 700; font-size: 23px; fill: #3f3a33; }
+    .zone-label.small { font-size: 21px; }
+    .zone-label { filter: url(#labelShadow); }
+    /* 구역마다 글자 색 = 그 구역 그림의 색을 진하게 (장미 상세 이름표의 "꽃 색을 진하게"와 같은 규칙) */
+    #zone-rose       .zone-label { fill: #a82340; }  /* 장미: 점토 장미의 진한 줄 색 */
+    #zone-stream     .zone-label { fill: #2f7898; }  /* 성내천: 물 색을 진하게 */
+    #zone-lonetree   .zone-label { fill: #2b5e27; }  /* 나홀로나무: 잎 색을 진하게 (초록 언덕 위라 더 어둡게) */
+    #zone-wildlab    .zone-label { fill: #6a4fa0; }  /* 야생화학습장: 라벤더 꽃 색을 진하게 */
+    #zone-wildflower .zone-label { fill: #b8661a; }  /* 들꽃마루: 주황 들꽃 색을 진하게 */
+    #zone-tosung     .zone-label { fill: #7a4c2e; }  /* 몽촌토성 산책로: 흙(나무 줄기) 갈색 */
     .landmark, .bg-buildings { pointer-events: none; }
     .landmark-label { font-family: 'Jua', sans-serif; font-size: 11px; fill: #4f6f85; stroke: #e6f4ea; stroke-width: 3px; paint-order: stroke; stroke-linejoin: round; }
     .zone[data-active="false"] { opacity: .9; transition: opacity .25s; }
@@ -390,6 +415,47 @@ const svg = document.querySelector('svg');
 // 지도를 길게 누를 때 브라우저 기본 동작(글자 선택, 메뉴) 막기
 svg.addEventListener('contextmenu', e => e.preventDefault());
 svg.addEventListener('selectstart', e => e.preventDefault());
+
+// ------------------------------------------------------------
+// 구역 이름을 손으로 쓴 것처럼: 글자마다 조금씩 다르게 기울이고 위아래로 들쭉날쭉하게
+//   SVG <text>는 글자별 값을 목록으로 받는다
+//     rotate="a1 a2 a3 …"  → 글자 하나하나를 각자 기울임 (도)
+//     dy="d1 d2 d3 …"      → 글자를 위아래로 옮김. 단, "앞 글자 기준" 이동이라
+//                            원하는 높이 h에서 앞 글자 높이를 빼서 넣음 (dy = h - 앞 h)
+//   값은 이름에서 만든 고정 난수라 새로고침해도 모양이 그대로다
+// ------------------------------------------------------------
+function nameRandom(text) { // 이름 → 0~1 사이 난수를 차례로 주는 함수 (같은 이름이면 늘 같은 순서)
+  let h = 2166136261;
+  for (const ch of text) h = Math.imul(h ^ ch.charCodeAt(0), 16777619);
+  return () => { h = Math.imul(h ^ (h >>> 15), 2246822507); h ^= h >>> 13; return ((h >>> 0) % 10000) / 10000; };
+}
+document.querySelectorAll('.zone-label').forEach(label => {
+  const chars = [...label.textContent];
+  const rand = nameRandom(label.textContent);
+  const angles = chars.map(() => ((rand() * 2 - 1) * 4).toFixed(1));   // 글자마다 -4° ~ +4°
+  const heights = chars.map(() => (rand() * 2 - 1) * 1.6);            // 글자마다 -1.6 ~ +1.6px 위아래
+  const dys = heights.map((h, i) => (h - (i ? heights[i - 1] : 0)).toFixed(1));
+  // dx = 글자를 왼쪽(-)으로 당기는 값 (앞 글자 기준). 손글씨는 글자 사이가 넓어서 1.2px, 띄어쓰기는 3px 당김
+  const dxs = chars.map((ch, i) => i === 0 ? 0 : (ch === ' ' || chars[i - 1] === ' ' ? -1.5 : -1.2));
+  label.setAttribute('rotate', angles.join(' '));
+  label.setAttribute('dy', dys.join(' '));
+  label.setAttribute('dx', dxs.join(' '));
+});
+// 위 안내 문구의 '식물 구역'도 같은 방식으로 (HTML 글자라서 글자마다 <span>으로 나눠 transform으로 기울이고 올림)
+document.querySelectorAll('.intro .hand').forEach(el => {
+  const text = el.textContent;
+  const rand = nameRandom(text);
+  el.textContent = '';                                   // 비우고 글자 하나씩 다시 넣기
+  for (const ch of text) {
+    const span = document.createElement('span');
+    span.textContent = ch;
+    if (ch === ' ') span.className = 'gap';
+    const angle = (rand() * 2 - 1) * 4;                  // -4° ~ +4°
+    const up = (rand() * 2 - 1) * 1.6;                   // -1.6 ~ +1.6px
+    span.style.transform = `translateY(${up.toFixed(1)}px) rotate(${angle.toFixed(1)}deg)`;
+    el.appendChild(span);
+  }
+});
 // 구역 소개 카드: 내용은 js/zones.js의 icon · name · scenic · intro 에서 가져옴
 const card = document.getElementById('zone-card');
 function showCard(conf, fallbackName) {

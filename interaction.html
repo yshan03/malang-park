@@ -4,10 +4,10 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>말랑 장미 만지기</title>
-<!-- 꽃 이름용 둥근 글꼴 (Jua) -->
+<!-- 꽃 이름용 손글씨 글꼴 (Gaegu 굵게, 무료 구글 웹폰트) -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Jua&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Gaegu:wght@700&display=swap" rel="stylesheet">
 <style>
   :root {
     --bg: #f6f1e7; --ink: #3f3a33; --muted: #8a857c; --card: #fffaf2; --line: #e6dcc8; --accent: #e5566f;
@@ -72,15 +72,12 @@
   #find-none { display: none; margin: 0; padding: 18px; text-align: center; font-size: 14px; color: var(--muted); }
 
   /* ----- 상세 모드: 위 가운데 꽃 이름 ----- */
-  /* 꽃 이름: 둥근 스티커 글씨 — 흰 글자 + 꽃 색 테두리 + 아래로 두꺼운 그림자 (색은 꽃마다 JS가 넣음) */
+  /* 꽃 이름: 손글씨 — 진한 꽃 색 글자 하나, 테두리·그림자 없이 가볍게 (색은 꽃마다 JS가 --deep에 넣음) */
   #flower-name {
-    --c: #E86B86; --c-deep: #B8456A;
+    --deep: #8A3550;
     position: fixed; z-index: 5; top: 8px; left: 60px; right: 60px; margin: 0; padding: 4px 6px 8px; text-align: center;
-    font-family: 'Jua', 'Apple SD Gothic Neo', sans-serif; font-weight: 400; font-size: 30px; line-height: 38px;
-    color: #fff; letter-spacing: 0.01em;
-    text-shadow: 2px 0 0 var(--c), -2px 0 0 var(--c), 0 2px 0 var(--c), 0 -2px 0 var(--c),
-                 2px 2px 0 var(--c), -2px 2px 0 var(--c), 2px -2px 0 var(--c), -2px -2px 0 var(--c),
-                 0 5px 0 var(--c-deep), 2px 5px 0 var(--c-deep), -2px 5px 0 var(--c-deep);
+    font-family: 'Gaegu', 'Apple SD Gothic Neo', sans-serif; font-weight: 700; font-size: 34px; line-height: 38px;
+    color: var(--deep);
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     opacity: 0; transform: translateY(-8px); transition: opacity .3s, transform .3s; pointer-events: none;
   }
@@ -254,13 +251,12 @@
     current = index;
     setSheet(false);                      // 새 꽃은 이름만 보이게 (설명은 닫고 시작)
     renderInfo(items[index], index);
-    // 꽃 이름: 꽃 디자인 색으로 스티커 테두리 + 통 튀는 등장 / 안내 문구도 같은 색 (꽃에 대한 안내임을 보여줌)
+    // 꽃 이름: 진한 꽃 색 손글씨 + 통 튀는 등장 / 안내 문구도 같은 색 (꽃에 대한 안내임을 보여줌)
     const nameEl = document.getElementById('flower-name');
     nameEl.textContent = items[index].name;
-    const tone = stickerTone(items[index]);
-    nameEl.style.setProperty('--c', tone.c);
-    nameEl.style.setProperty('--c-deep', tone.deep);
-    document.body.style.setProperty('--hint-c', tone.deep);
+    const deep = nameTone(items[index]);
+    nameEl.style.setProperty('--deep', deep);
+    document.body.style.setProperty('--hint-c', deep);
     nameEl.classList.remove('pop'); void nameEl.offsetWidth; nameEl.classList.add('pop');
     document.body.classList.add('detail');
     document.title = items[index].name + ' · ' + zoneName;
@@ -284,15 +280,25 @@
     openDetail((current + dir + n) % n, dir, 'replace');
   }
 
-  // 꽃 디자인 색(item.blob.colors)으로 스티커 테두리 색 만들기. 밝은 꽃(흰·크림)은 배경과 구분되게 진하게
-  function stickerTone(item) {
+  // 꽃 디자인 색(item.blob.colors.outer = 꽃잎 바깥 색)으로 이름 글자 색 만들기
+  // 색을 HSL(색상 h · 채도 s · 밝기 l)로 나눠서 "밝기"만 낮춤 → 꽃 색 느낌은 남고 배경 위에서 잘 읽힘
+  //   그냥 RGB를 곱해 어둡게 하면: 흰 꽃 → 회색, 노란 꽃 → 올리브색으로 탁해짐. 그래서 두 경우만 따로 처리
+  function nameTone(item) {
     const col = (item.blob && item.blob.colors) || {};
-    const base = col.center || col.outer || '#E86B86';
-    const rgb = [1, 3, 5].map(i => parseInt(base.slice(i, i + 2), 16));
-    const lum = (0.299 * rgb[0] + 0.587 * rgb[1] + 0.114 * rgb[2]) / 255;
-    const shade = (k) => '#' + rgb.map(v => Math.round(v * k).toString(16).padStart(2, '0')).join('');
-    const k = lum > 0.75 ? 0.62 : lum > 0.6 ? 0.8 : 1;           // 밝은 색은 테두리를 진하게
-    return { c: shade(k), deep: shade(k * 0.72) };
+    const toHsl = hex => { const o = {}; new THREE.Color(hex).getHSL(o); return o; };   // three.js가 hex → HSL 변환
+    // 색 하나를 밝기 light로 진하게 (흰·노랑은 탁해지지 않게 색상을 살짝 옮김)
+    const warmDeep = (hex, light) => {
+      let { h, s } = toHsl(hex);
+      if (s < 0.12) { h = 0.08; s = 0.32; }            // 흰·크림 꽃(채도 거의 0) → 따뜻한 베이지 갈색
+      else if (h > 0.1 && h < 0.2) h -= 0.035;          // 노란 꽃 → 살짝 주황 쪽으로
+      return '#' + new THREE.Color().setHSL(h, Math.min(1, s * 1.05), light).getHexString();
+    };
+    // 1단계: 아주 밝은 꽃은 먼저 한 번 진하게 (밝기 0.62 / 0.55), 보통 꽃은 그대로
+    const outer = col.outer || col.center || '#E86B86';
+    const L = toHsl(outer).l;
+    const fill = L > 0.72 ? warmDeep(outer, 0.62) : L > 0.6 ? warmDeep(outer, 0.55) : outer;
+    // 2단계: 글자 색 = 그 색의 밝기를 약 0.6배 (최대 0.36) → 배경(#f6f1e7) 위에서 또렷하게
+    return warmDeep(fill, Math.min(0.36, toHsl(fill).l * 0.62));
   }
 
   // ----- 정보 영역 채우기 (공통 형태의 필드만 사용) -----

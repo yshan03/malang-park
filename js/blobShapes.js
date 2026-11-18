@@ -35,6 +35,9 @@
 //   rimOpen 맨 바깥 겹만 더 눕히는 정도 (0 기본 … 1 바깥 겹이 낮게 벌어져 안쪽 겹들이 옆에서도 보임, 컵)
 //   colors  { center 가운데, outer 바깥, edge 꽃잎 끝(선택), stamen 수술(선택) }
 //   stem / leaf  줄기·잎 색
+//   stemLength   줄기 길이 (없으면 STEM_LENGTH)
+//   leaves       잎 목록 [{ t 줄기 위→아래 위치 0~1, yaw 줄기를 도는 방향(라디안), lift 들린 정도, size 크기 }]
+//                (없으면 줄기 중간에 양쪽으로 2장)
 
 (function () {
   const DEFAULTS = {
@@ -42,7 +45,7 @@
     colors: { center: '#E86B86', outer: '#F7A9B8', edge: null, stamen: null },
     stem: '#5F8F4A', leaf: '#6FAE5A'
   };
-  const STEM_LENGTH = 4.0;   // 꽃송이 지름(2)의 2배 → 꽃:줄기 = 1:2
+  const STEM_LENGTH = 2.6;   // 꽃송이 지름(2)의 1.3배 → 꽃이 부각되게 (예전 4.0 = 1:2에서 줄임, 2026-11-18)
   const STEM_TOP = -0.5;     // 줄기가 꽃송이(반지름 1로 맞춘 뒤) 아래에 붙는 높이
   // 촘촘함: full = 상세(누르기용), lite = 목록(가볍게)
   const QUALITY = {
@@ -192,16 +195,18 @@
     return { geo, base, dirs, count: n };
   }
 
-  // 줄기 + 잎 2장 (상세에 들어갈 때만 만듦)
+  // 줄기 + 잎 (상세에 들어갈 때만 만듦)
+  const DEFAULT_LEAVES = [{ t: 0.47, yaw: 0, lift: 0.25, size: 1 }, { t: 0.6, yaw: Math.PI, lift: 0.25, size: 1 }];
   function buildStem(settings) {
     const P = Object.assign({}, DEFAULTS, settings);
+    const len = P.stemLength || STEM_LENGTH;
     const stemPivot = new THREE.Group();     // 꽃송이 아래 붙는 점 = 휘청거리는 중심
     stemPivot.position.set(0, STEM_TOP, 0);
     const curve = new THREE.CatmullRomCurve3([
       new THREE.Vector3(0, 0.15, 0),
-      new THREE.Vector3(0.05, -STEM_LENGTH * 0.33, 0.02),
-      new THREE.Vector3(-0.05, -STEM_LENGTH * 0.66, -0.01),
-      new THREE.Vector3(0.04, -STEM_LENGTH, 0.02)
+      new THREE.Vector3(0.05, -len * 0.33, 0.02),
+      new THREE.Vector3(-0.05, -len * 0.66, -0.01),
+      new THREE.Vector3(0.04, -len, 0.02)
     ]);
     const stemMat = new THREE.MeshPhysicalMaterial({ color: lin(P.stem), roughness: 0.5, clearcoat: 0.3 });
     stemPivot.add(new THREE.Mesh(new THREE.TubeGeometry(curve, 32, 0.11, 12, false), stemMat));
@@ -210,11 +215,11 @@
     const leafGeo = new THREE.SphereGeometry(1, 28, 14);
     leafGeo.scale(0.6, 0.07, 0.27);
     leafGeo.translate(0.62, 0, 0);           // 잎자루 쪽이 줄기에 붙도록
-    const midY = -STEM_LENGTH * 0.5;          // 줄기 중간
-    [1, -1].forEach((side, i) => {
+    (P.leaves || DEFAULT_LEAVES).forEach(lf => {
       const leaf = new THREE.Mesh(leafGeo, leafMat);
-      leaf.position.set(0, midY + (i ? -0.25 : 0.1), 0);
-      leaf.rotation.set(0.25 * side, side > 0 ? 0 : Math.PI, 0.45);  // 위쪽으로 살짝 들린 잎
+      leaf.position.set(0, -len * lf.t, 0);                 // 줄기 위에서 t만큼 내려온 곳
+      leaf.rotation.set(0.25 * Math.cos(lf.yaw), lf.yaw, 0.2 + lf.lift); // yaw: 줄기를 빙 둘러 어느 쪽, lift: 위로 들린 정도
+      leaf.scale.setScalar(lf.size);
       stemPivot.add(leaf);
     });
     return stemPivot;
@@ -229,6 +234,8 @@
       return liteCache.get(key);
     },
     stem: buildStem,
+    // 줄기 끝 높이 (꽃송이 반지름 1 기준) — 상세 화면에서 그림자를 줄기 끝 아래에 둘 때 씀
+    stemBottom(settings = {}) { return STEM_TOP - (settings.stemLength || STEM_LENGTH); },
     // 모든 꽃송이가 함께 쓰는 재질 (꽃잎은 얇은 면이라 양쪽 다 그림)
     material: new THREE.MeshPhysicalMaterial({
       vertexColors: true, roughness: 0.45, metalness: 0, clearcoat: 0.4, clearcoatRoughness: 0.35,
@@ -236,6 +243,8 @@
     })
   };
 
-  // 줄기까지 포함한 블롭의 세로 길이 (꽃송이 반지름 1 기준) — 상세 화면 배치에 씀
-  window.FLOWER_BLOB_EXTENT = { top: 1, bottom: STEM_TOP - STEM_LENGTH };
+  // 상세 화면 배치에 쓰는 세로 길이 (꽃송이 반지름 1 기준)
+  //   줄기 길이가 장미마다 달라도 꽃 크기·자리는 같게: 긴 줄기(약 3.3)에 가깝게 3.0으로 맞춤
+  //   → 짧은 줄기는 일찍 끝나고, 긴 줄기는 조금 더 아래로 내려감
+  window.FLOWER_BLOB_EXTENT = { top: 1, bottom: STEM_TOP - 3.0 };
 })();

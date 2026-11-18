@@ -707,7 +707,7 @@
         const bob = mode === 'detail' ? Math.sin(t * 1.4 + b.phase) * 0.05 * s : 0; // 상세에서만 둥실
         b.mesh.position.set(b.cur.x, b.cur.y + bob, b.cur.z);
         b.mesh.scale.set(s * b.wobble, s * (2 - b.wobble), s * b.wobble); // 납작해지면 옆으로 퍼짐
-        const shadowY = (b.stemPivot && b.stemGrow > 0.5) ? window.FLOWER_BLOB_EXTENT.bottom * 0.95 : -1.05; // 줄기가 있으면 줄기 끝 아래
+        const shadowY = (b.stemPivot && b.stemGrow > 0.5) ? window.FlowerBlob.stemBottom(b.item.blob || {}) * 0.95 : -1.05; // 줄기가 있으면 그 장미의 줄기 끝 아래
         b.shadow.position.set(b.cur.x, b.cur.y + shadowY * s, -0.9 * s);
         b.shadow.scale.setScalar(Math.max(0, s - bob * 1.5));
 
