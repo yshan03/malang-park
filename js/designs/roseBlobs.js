@@ -58,6 +58,36 @@
     }
     return shape;
   }
+  // ---------- 같은 종류 안에서도 장미마다 조금씩 다르게 (2026-11-18, 자동 1차) ----------
+  //   [최소, 최대] 범위 안에서 이름으로 정해지는 '가짜 무작위' 값을 고름 → 같은 장미는 늘 같은 모양
+  //   int: true = 정수(꽃잎 장수·겹 수). 꽃잎 장수의 최솟값은 그 종류다움이 유지되는 선에서 정함 (너무 적어지지 않게)
+  //   범위는 종류의 기본값(SHAPE_TYPES)을 가운데 두고 앞뒤로 조금씩
+  const SHAPE_VARY = {
+    // (2026-11-18 2차: 꽃잎 장수는 그대로, 나머지 값의 범위를 넓혀서 장미끼리 차이가 더 드러나게)
+    single:     { petals: [5, 6, true], petalWidth: [0.52, 0.92], open: [0.5, 0.8], spread: [0.5, 0.8], ruffle: [0, 0.55], core: [1.6, 2.8], spiral: [0.05, 0.7] },
+    highCenter: { petals: [7, 9, true], rings: [5, 9, true], petalWidth: [0.75, 1.15], open: [0.45, 0.72], spread: [0.55, 0.85], flare: [0.65, 1.2], bud: [0.6, 1.0], tip: [0.15, 0.6], spiral: [1.0, 1.8] },
+    cup:        { petals: [9, 12, true], rings: [4, 8, true], petalWidth: [0.95, 1.4], open: [0.72, 0.95], flare: [-1.4, -0.75], ruffle: [0.05, 0.55], rimOpen: [0.2, 0.6], spiral: [0.9, 1.7] },
+    open:       { petals: [7, 10, true], rings: [4, 8, true], petalWidth: [0.78, 1.22], open: [0.55, 0.85], spread: [0.62, 0.9], flare: [0.15, 0.65], ruffle: [0.1, 0.6], pointy: [0, 0.35], spiral: [0.6, 1.4] }
+  };
+  function shapeVariant(type, name) {
+    const vary = SHAPE_VARY[type];
+    if (!vary) return {};
+    const rand = seededRandom('shape:' + (name || ''));   // 줄기 무작위와 겹치지 않게 앞에 'shape:'를 붙임
+    const out = {};
+    Object.keys(vary).forEach(key => {
+      const [min, max, int] = vary[key];
+      let u = rand();
+      // 꽃잎 장수·겹 수(정수)가 아닌 값은 가운데보다 양 끝 쪽으로 밀어서 뽑음 → "다 비슷한 중간값"이 덜 나오고 차이가 잘 보임
+      //   u가 0.5에서 멀수록 더 멀리: 0.5 ± (|2u-1|^0.6)/2  (0.6 < 1 이라 끝 쪽으로 쏠림)
+      if (!int) u = 0.5 + Math.sign(u - 0.5) * Math.pow(Math.abs(2 * u - 1), 0.6) / 2;
+      const v = min + (max - min) * u;
+      out[key] = int ? Math.min(max, Math.floor(v + 0.5)) : Math.round(v * 100) / 100;
+    });
+    return out;
+  }
+  window.ROSE_SHAPE_VARY = SHAPE_VARY;     // 확인 페이지에서 씀
+  window.roseShapeVariant = shapeVariant;
+
   window.ROSE_SHAPE_TYPES = SHAPE_TYPES;   // 확인용 도감에서도 씀
   window.roseShapeOf = shapeOf;
 
@@ -134,7 +164,11 @@
     // 2) 나머지: 그 장미의 모양 종류(data/rose-shapes.js) + 사진에서 뽑은 색
     const colors = photoColors(item.name);
     const type = (window.ROSE_SHAPES || {})[item.name];
-    if (colors && type && SHAPE_TYPES[type]) return Object.assign({ kind: 'sample', shapeType: type }, shapeOf(type, colors), { colors: colors });
+    //    종류 기본 모양 → 장미마다 조금씩 다른 값(shapeVariant) → 확인 페이지에서 손으로 고친 값(ROSE_SHAPE_FIX, 있으면)
+    if (colors && type && SHAPE_TYPES[type]) {
+      const fix = (window.ROSE_SHAPE_FIX || {})[item.name] || {};
+      return Object.assign({ kind: 'sample', shapeType: type }, shapeOf(type, colors), shapeVariant(type, item.name), fix, { colors: colors });
+    }
     if (colors) return Object.assign({ kind: 'sample' }, SAMPLE_SHAPE, { colors: colors });   // 모양 종류가 없으면 공통 모양
     // 3) 사진 색도 없으면: 공통 모양 + 7가지 색 중 하나
     return Object.assign({ kind: 'sample' }, SAMPLE_SHAPE, { colors: SAMPLE_COLORS[index % SAMPLE_COLORS.length] });

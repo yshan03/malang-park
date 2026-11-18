@@ -19,8 +19,10 @@
  /* 제목·소개: 지도 위에 겹쳐서, 위쪽은 바탕색으로 부드럽게 */
  .intro{position:absolute;z-index:2;left:0;right:0;top:0;box-sizing:border-box;padding:18px 18px 28px;
    background:linear-gradient(#d9e8c8 62%,rgba(217,232,200,0));pointer-events:none}
- .intro h1{margin:0;font-size:24px;font-weight:800;color:#3d5a35}
+ /* 제목·첫 줄도 손글씨(Gaegu 굵게). 손글씨는 같은 크기면 작아 보여서 키움 (제목 24→30px, 첫 줄 15→18px) */
+ .intro h1{margin:0;font-family:'Gaegu','Apple SD Gothic Neo',sans-serif;font-size:30px;font-weight:700;line-height:1.2;color:#3d5a35}
  .intro p{margin:6px 0 0;font-size:15px;line-height:1.5;color:#6b665c}
+ .intro .hand-line{font-family:'Gaegu','Apple SD Gothic Neo',sans-serif;font-weight:700;font-size:18px}
  .intro b{color:#e5566f}
  /* '식물 구역': 지도 구역 이름과 같은 손글씨(Gaegu 굵게). 같은 크기면 작아 보여서 3px 키움. 글자별 삐뚤기는 아래 스크립트가 넣음 */
  .intro .hand{font-family:'Gaegu','Apple SD Gothic Neo',sans-serif;font-weight:700;font-size:18px}
@@ -42,7 +44,7 @@
 <div class="stage">
 <header class="intro">
   <h1>올림픽공원 말랑 지도</h1>
-  <p>공원에선 눈으로만 👀 여기선 손으로 마음껏 🤲<br><b><span class="hand">식물 구역</span> 을 눌러 보세요.</b></p>
+  <p><span class="hand-line">공원에선 눈으로만 👀 여기선 손으로 마음껏 🤲</span><br><b><span class="hand">식물 구역</span> 을 눌러 보세요.</b></p>
 </header>
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 390 844" preserveAspectRatio="xMidYMid meet" font-family="'Jua','Apple SD Gothic Neo','Noto Sans KR',sans-serif">
   <!--
@@ -92,8 +94,9 @@
     <path d="M38 428 C 22 398, 20 350, 22 300 C 23 270, 28 255, 28 245 C 28 180, 36 150, 85 143 C 130 138, 165 160, 220 160 C 250 160, 265 160, 280 150 C 296 138, 348 132, 348 175 L348 215 C 348 248, 366 252, 366 282 C 366 305, 357 318, 359 340 C 361 365, 371 372, 371 398 C 371 420, 362 428, 364 450 C 366 478, 368 496, 355 509" stroke="#c6e2aa" stroke-width="28"/>
   </g>
 
-  <!-- 몽촌토성 언덕: 공원 가운데~서쪽의 큰 토성 (지형 배경, 누를 수 없음. 산책로 구역은 아래 '구역들'에 따로) -->
-  <g aria-hidden="true">
+  <!-- 몽촌토성 언덕: 공원 가운데~서쪽의 큰 토성 (지형 배경. 누르는 자리는 아래 '구역들'의 몽촌토성 산책로가 맡음.
+       산책로를 누르면 이 언덕도 함께 출렁임 → 아래 script의 data-jelly-with 참고) -->
+  <g id="tosung-hill" aria-hidden="true">
     <path d="M60 330 C 55 230, 140 175, 220 182 C 290 188, 305 260, 300 340 C 296 430, 290 520, 230 572 C 175 610, 85 590, 68 510 C 55 450, 62 390, 60 330 Z"
           fill="url(#clayHill)" filter="url(#soft)"/>
     <path d="M86 300 C 92 240, 150 205, 205 210" fill="none" stroke="#ffffff" stroke-opacity=".45" stroke-width="7" stroke-linecap="round"/>
@@ -300,10 +303,19 @@
 
   <!-- ============ 구역들 (누를 수 있음) ============ -->
 
-  <!-- 몽촌토성 산책로 (5경): 구역은 언덕 남서쪽 자락의 이름표 자리만. 누르면 카드만 뜨고 출렁이지 않음(data-jelly="false") -->
-  <g class="zone" id="zone-tosung" data-zone="tosung" data-name="몽촌토성 산책로" data-active="false" data-jelly="false" tabindex="0" role="button" aria-label="몽촌토성 산책로">
-    <rect class="zone-hit" x="63" y="518" width="150" height="48" rx="24" fill="#fff" opacity="0.001"/>
-    <text class="zone-label small" x="138" y="552" text-anchor="middle" transform="rotate(-2 138 552)">몽촌토성 산책로</text>
+  <!-- 몽촌토성 산책로 (5경): 가운데 초록 언덕(몽촌토성) 전체가 산책로 구역 (2026-11-18 사용자 요청으로 이름표 대신)
+       - 누르는 자리 = 언덕 모양 그대로(투명). 나홀로나무·야생화학습장은 이 묶음보다 뒤(위)에 그려져서 그쪽을 누르면 그 구역이 먼저 잡힘
+       - 흰 길은 [임시]: 언덕을 한 바퀴 도는 길 + 나무와 야생화 사이를 가로지르는 길. 나중에 안내도를 보고 다시 그릴 것
+       - 누르면 언덕 전체가 출렁인 뒤 카드가 뜸 (언덕 위 나무·야생화도 같이 출렁임) -->
+  <!-- 언덕 위 구역 묶음: 몽촌토성 산책로를 누르면 이 묶음(산책로 + 나홀로나무 + 야생화학습장)이 언덕과 함께 출렁임.
+       나무·야생화를 누르면 그 구역만 따로 출렁임 (묶음 안에서 각자 움직임이 더해짐) -->
+  <g id="hill-zones">
+  <g class="zone" id="zone-tosung" data-zone="tosung" data-name="몽촌토성 산책로" data-active="false" data-jelly-target="hill-zones" data-jelly-with="tosung-hill" tabindex="0" role="button" aria-label="몽촌토성 산책로">
+    <path class="zone-hit" d="M60 330 C 55 230, 140 175, 220 182 C 290 188, 305 260, 300 340 C 296 430, 290 520, 230 572 C 175 610, 85 590, 68 510 C 55 450, 62 390, 60 330 Z" fill="#fff" opacity="0.001"/>
+    <g class="tosung-path" fill="none" stroke="#ffffff" stroke-opacity=".85" stroke-width="6" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M96 340 C 100 280, 150 248, 205 244 C 250 240, 272 270, 274 320 C 276 380, 272 470, 255 520 C 240 560, 190 572, 140 562 C 100 554, 84 510, 86 450 C 87 405, 92 370, 96 340 Z"/>
+      <path d="M87 430 C 140 422, 220 438, 273 428"/>
+    </g>
   </g>
 
   <!-- 나홀로나무 (6경): 토성 위 서쪽 — 점토 공 나무 -->
@@ -331,6 +343,8 @@
     </g>
     <text class="zone-label small" x="184" y="516" text-anchor="middle" transform="rotate(3 184 516)">야생화학습장</text>
   </g>
+
+  </g><!-- /hill-zones -->
 
   <!-- 성내천: 언덕 서쪽에서 시작해 북쪽을 돌아 동쪽으로 흐르며 언덕을 감싸는 물길.
        2026-11-18 사용자가 그린 선을 따라 다시 그림: 언덕 꼭대기를 따라 살짝 내려앉고, 88호수 위로 넘어간 뒤
@@ -392,7 +406,6 @@
     #zone-lonetree   .zone-label { fill: #2b5e27; }  /* 나홀로나무: 잎 색을 진하게 (초록 언덕 위라 더 어둡게) */
     #zone-wildlab    .zone-label { fill: #6a4fa0; }  /* 야생화학습장: 라벤더 꽃 색을 진하게 */
     #zone-wildflower .zone-label { fill: #b8661a; }  /* 들꽃마루: 주황 들꽃 색을 진하게 */
-    #zone-tosung     .zone-label { fill: #7a4c2e; }  /* 몽촌토성 산책로: 흙(나무 줄기) 갈색 */
     .landmark, .bg-buildings { pointer-events: none; }
     .landmark-label { font-family: 'Jua', sans-serif; font-size: 11px; fill: #4f6f85; stroke: #e6f4ea; stroke-width: 3px; paint-order: stroke; stroke-linejoin: round; }
     .zone[data-active="false"] { opacity: .9; transition: opacity .25s; }
@@ -484,7 +497,9 @@ document.addEventListener('pointerdown', e => {
 const jellies = [];
 function makeJelly(el) {
   const box = el.getBBox();
-  const j = { el, cx: box.x + box.width / 2, cy: box.y + box.height, a: 0, v: 0, target: 0 }; // 바닥 가운데를 기준으로 찌그러짐
+  // data-jelly-target="id": 구역 자신 대신 그 묶음을 출렁이게 (몽촌토성 산책로 → 언덕 위 구역 묶음 전체)
+  const target = el.dataset.jellyTarget ? document.getElementById(el.dataset.jellyTarget) : el;
+  const j = { el: target, cx: box.x + box.width / 2, cy: box.y + box.height, a: 0, v: 0, target: 0 }; // 바닥 가운데를 기준으로 찌그러짐
   // data-jelly-with="id": 구역 밖에 따로 그린 짝꿍(예: 성내천 풀길)도 같은 모양으로 함께 출렁이게
   j.buddy = el.dataset.jellyWith ? document.getElementById(el.dataset.jellyWith) : null;
   jellies.push(j);

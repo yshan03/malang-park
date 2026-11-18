@@ -33,6 +33,8 @@
 //   reflex  바깥 꽃잎 양옆이 뒤로 말리는 정도 (0 기본 … 1 끝이 뾰족하게 뒤로 젖혀진 하이센터 꽃잎)
 //   tip     맨 바깥 꽃잎 끝을 좁혀 뾰족하게 모으는 정도 (0 기본 … 1 끝이 한 점으로 모임)
 //   rimOpen 맨 바깥 겹만 더 눕히는 정도 (0 기본 … 1 바깥 겹이 낮게 벌어져 안쪽 겹들이 옆에서도 보임, 컵)
+//   centerSpread 가운데 색이 꽃잎 위쪽까지 퍼지는 정도 (0: 금방 바깥 색으로 … 1 꽃잎 중간까지 가운데 색. 기본 0.7)
+//   layerShade   겹 그늘 (0 … 1 안쪽 겹·꽃잎 밑동일수록 어둡게 → 겹이 포개진 깊이가 보임. 기본 0.7)
 //   colors  { center 가운데, outer 바깥, edge 꽃잎 끝(선택), stamen 수술(선택) }
 //   stem / leaf  줄기·잎 색
 //   stemLength   줄기 길이 (없으면 STEM_LENGTH)
@@ -41,7 +43,7 @@
 
 (function () {
   const DEFAULTS = {
-    petals: 9, rings: 4, open: 0.5, spread: 0.8, flare: 0.4, pointy: 0.3, height: 0, ruffle: 0, spiral: 0.6, core: 1, innerOpen: 0, petalWidth: 1, bud: 0, budReach: 1, dense: 0, threads: 0, seams: 0, reflex: 0, tip: 0, rimOpen: 0,
+    petals: 9, rings: 4, open: 0.5, spread: 0.8, flare: 0.4, pointy: 0.3, height: 0, ruffle: 0, spiral: 0.6, core: 1, innerOpen: 0, petalWidth: 1, bud: 0, budReach: 1, dense: 0, threads: 0, seams: 0, reflex: 0, tip: 0, rimOpen: 0, centerSpread: 0.7, layerShade: 0.7,   // 칠하기 (2026-11-18 비교 페이지에서 사용자 확정)
     colors: { center: '#E86B86', outer: '#F7A9B8', edge: null, stamen: null },
     stem: '#5F8F4A', leaf: '#6FAE5A'
   };
@@ -118,8 +120,12 @@
             rad -= roll * 0.14;                                            // 양옆이 안쪽으로 → 위에서 보면 끝이 뾰족한 윤곽
             y -= roll * 0.3;                                               // 양옆이 뒤(아래)로 말림
             // 색: 꽃잎 아래쪽·안쪽 고리 = 가운데 색, 꽃잎 끝·바깥 고리 = 바깥 색
-            c.copy(cCenter).lerp(cOuter, smooth(0, 1, 0.35 * outer + 0.75 * ve));
+            //   centerSpread만큼 바깥 색으로 바뀌기 시작하는 곳을 꽃잎 위쪽으로 미룸 (가운데 색이 넓게)
+            const cs = P.centerSpread;
+            c.copy(cCenter).lerp(cOuter, smooth(0.3 * cs, 1, (0.35 - 0.2 * cs) * outer + 0.75 * ve));
             c.multiplyScalar(0.82 + 0.18 * smooth(0, 0.5, ve));            // 꽃잎 밑동은 살짝 그늘
+            // 겹 그늘: 안쪽 겹일수록(inner), 꽃잎 밑동일수록(1 - ve) 어둡게 → 바깥 겹 꽃잎 끝은 밝기 그대로
+            if (P.layerShade > 0) c.multiplyScalar(1 - P.layerShade * (0.3 * inner * (1 - 0.5 * ve) + 0.18 * Math.pow(1 - ve, 2)));
             if (cEdge) c.lerp(cEdge, smooth(0.55, 1, ve) * (0.35 + 0.65 * outer));
             // 꽃잎 경계선: 꽃잎 양옆 가장자리(u가 0이나 1에 가까운 곳)를 살짝 어둡게 → 옆 꽃잎과 겹치는 곳에 자연스러운 선
             if (P.seams > 0) c.multiplyScalar(1 - P.seams * 0.22 * smooth(0.55, 1, w2) * smooth(0.1, 0.5, ve));
@@ -238,7 +244,8 @@
     stemBottom(settings = {}) { return STEM_TOP - (settings.stemLength || STEM_LENGTH); },
     // 모든 꽃송이가 함께 쓰는 재질 (꽃잎은 얇은 면이라 양쪽 다 그림)
     material: new THREE.MeshPhysicalMaterial({
-      vertexColors: true, roughness: 0.45, metalness: 0, clearcoat: 0.4, clearcoatRoughness: 0.35,
+      // 유광(clearcoat) 0.4 → 0.15, 표면 0.45 → 0.51: 하얀 반짝임이 꽃 색을 덜 날리게 (2026-11-18)
+      vertexColors: true, roughness: 0.51, metalness: 0, clearcoat: 0.15, clearcoatRoughness: 0.35,
       side: THREE.DoubleSide
     })
   };

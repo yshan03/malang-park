@@ -34,7 +34,13 @@
   // ----- 더미 물리 -----
   const GRAVITY = 18;      // 떨어지는 힘
   const BOUNCE = 0.35;     // 부딪힐 때 튕기는 정도 (0~1)
-  const PILE_FILL = 0.64;  // 꽃들이 화면 넓이의 몇 %를 차지할지 (꽃 크기 결정). 겹치지 않고 쌓여도 화면 안에 다 들어가는 값
+  const PILE_FILL = 0.72;  // 꽃들이 병 몸통 넓이의 몇 %를 차지할지 (꽃 크기 결정). 쌓이면 병 어깨(높이의 약 88%)까지 가득 참
+  // ----- 종이학 유리병 (2026-11-18: 유리 돔 → 둥근 배 병) -----
+  //   몸통 = "슈퍼타원": |x/a|^n + |y/b|^n = 1. n=2면 그냥 타원, 클수록 네모에 가까워짐.
+  //   n=2.6 = 통통하게 둥글면서 바닥은 살짝 평평 → 장미가 바닥에 안정적으로 쌓이고, 타원보다 넓이도 넓음
+  const JAR_N = 2.6;
+  const JAR_CORK_PX = 56, JAR_NECK_PX = 46; // 코르크·병목 높이(px). 몸통은 그 아래부터 (2026-11-18: 코르크 30 → 56, 병목 22 → 46으로 키움)
+  const JAR_NECK_W = 0.36;                  // 병목 폭 = 몸통 폭의 몇 배
   const MAX_RADIUS = 1.15; // 공이 적을 때 너무 커지지 않게
   // ----- 조작 -----
   const DRAG_THRESHOLD = 6;// 이만큼(px) 움직이면 '누르기'가 아니라 '끌기'
@@ -51,7 +57,7 @@
   //   시트 열림: 위쪽 58%만 꽃 자리 (아래는 설명 시트)
   const DETAIL_SPLIT = 0.58;
   const HEADER_PX = 64;
-  const LIST_TOP_PX = 84;      // 목록: 유리 돔 꼭대기 높이 (손잡이가 제목 아래 안내 문구와 겹치지 않게)
+  const LIST_TOP_PX = 84;      // 목록: 유리병 코르크 꼭대기 높이 (제목 아래 안내 문구와 겹치지 않게)
   const BUTTON_ZONE_PX = 110; // 아래 TMI 버튼이 차지하는 높이
   const CAMERA_Z = 12;
 
@@ -66,11 +72,12 @@
     const camera = new THREE.PerspectiveCamera(35, 1, 0.1, 100);
     camera.position.set(0, 0, CAMERA_Z);
 
-    scene.add(new THREE.HemisphereLight(0xffffff, 0xd8cdb8, 0.85));
-    const key = new THREE.DirectionalLight(0xffffff, 0.75);
+    // 조명: 전체 밝기를 85%로 낮춤 → 꽃 색이 하얗게 뜨지 않게 (2026-11-18, 예전 0.85 / 0.75 / 0.35)
+    scene.add(new THREE.HemisphereLight(0xffffff, 0xd8cdb8, 0.72));
+    const key = new THREE.DirectionalLight(0xffffff, 0.64);
     key.position.set(-3, 5, 6);
     scene.add(key);
-    const rim = new THREE.DirectionalLight(0xfff1e0, 0.35);
+    const rim = new THREE.DirectionalLight(0xfff1e0, 0.3);
     rim.position.set(4, -2, -3);
     scene.add(rim);
 
@@ -387,9 +394,9 @@
     let selected = -1;     // 상세 모드에서 보여주는 도형 번호
     let sheetOpen = false; // 상세 모드: 설명 시트가 열려 있나
     const view = { w: 1, h: 1, W: 1, H: 1, wpp: 1 };            // 화면 크기(px)와 3D 크기, 1px당 3D 길이
-    const walls = { left: -1, right: 1, bottom: -1, top: 1 };  // 더미를 가두는 벽 (top = 유리 돔 꼭대기)
-    // 유리 돔: 옆벽은 곧게, 윗부분은 둥근 천장(타원). cx·cy = 타원 중심, ax·ay = 가로·세로 반지름
-    const dome = { cx: 0, cy: 0, ax: 1, ay: 1 };
+    const walls = { left: -1, right: 1, bottom: -1, top: 1 };  // 병 몸통을 감싸는 네모 (처음 줄 세울 때·화면 크기 바뀔 때 씀)
+    // 병 몸통(슈퍼타원): cx·cy = 가운데, ax·ay = 가로·세로 반지름. 실제 벽은 이 곡면
+    const jar = { cx: 0, cy: 0, ax: 1, ay: 1, neckTop: 1 };
     const detailFull = { pos: new THREE.Vector3(), scale: 1 }; // 상세: 시트 닫힘 (가운데, 크게)
     const detailSplit = { pos: new THREE.Vector3(), scale: 1 };// 상세: 시트 열림 (위쪽)
     const detailNow = () => (sheetOpen ? detailSplit : detailFull);
@@ -446,27 +453,84 @@
     glass.setAttribute('class', 'glass-dome');
     glass.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;pointer-events:none;transition:opacity .4s';
     container.appendChild(glass);
-    function drawDome() {
+    // ---------- 종이학 유리병 그림 (목록 모드에서만 보임, 꽃밭 위에 겹쳐 그리지만 터치는 통과) ----------
+    //   몸통(슈퍼타원) + 병목 + 코르크(꽂힌 부분·머리) + 와인색 병목 리본 + 손글씨 이름 태그 + 유리 반사광 + 바닥 그림자
+    function jarPoint(t, inset) {              // 몸통 둘레의 한 점 (t = 각도, inset = 안쪽으로 줄이는 3D 길이)
+      const c = Math.cos(t), sn = Math.sin(t), e = 2 / JAR_N;
+      return [jar.cx + Math.sign(c) * Math.pow(Math.abs(c), e) * (jar.ax - inset),
+              jar.cy + Math.sign(sn) * Math.pow(Math.abs(sn), e) * (jar.ay - inset)];
+    }
+    function drawJar() {
       const w = view.w, h = view.h, k = 1 / view.wpp;              // 3D 길이 → px
       const X = x => (x + view.W / 2) * k, Y = y => (view.H / 2 - y) * k;
-      const L = X(walls.left), R = X(walls.right), B = Y(walls.bottom), C = Y(dome.cy), T = Y(walls.top);
-      const ax = dome.ax * k, ay = dome.ay * k, mid = X(dome.cx);
-      // 안쪽 반사광: 돔 왼쪽 위 곡면을 따라 짧게
-      const arcPt = (ang, inset) => [mid + (ax - inset) * Math.cos(ang), C - (ay - inset) * Math.sin(ang)];
-      const [h1x, h1y] = arcPt(Math.PI * 0.86, 9), [h2x, h2y] = arcPt(Math.PI * 0.62, 9);
+      const P = (pt) => `${X(pt[0]).toFixed(1)} ${Y(pt[1]).toFixed(1)}`;
+      const neckHalf = jar.ax * JAR_NECK_W / 2;
+      // 몸통이 병목과 만나는 각도: 슈퍼타원 위쪽에서 x = 병목 반폭이 되는 곳
+      const t0 = Math.acos(Math.pow(neckHalf / jar.ax, JAR_N / 2));
+      // 몸통 윤곽: 오른쪽 어깨(t0) → 오른쪽 → 바닥 → 왼쪽 → 왼쪽 어깨(π - t0) 를 촘촘히 이어 그림
+      let body = '';
+      for (let i = 0, N = 96; i <= N; i++) {
+        const t = t0 - i / N * (Math.PI + 2 * t0);     // 오른쪽 어깨(t0)에서 시계 방향으로 왼쪽 어깨(-π - t0)까지
+        body += (i ? ' L' : 'M') + P(jarPoint(t, 0));
+      }
+      const nL = X(jar.cx - neckHalf), nR = X(jar.cx + neckHalf), nT = Y(jar.neckTop);
+      const shoulderY = Y(jarPoint(t0, 0)[1]);
+      // 코르크 = 두 부분 (2026-11-18: 병 입구에 자연스럽게 꽂혀 보이도록)
+      //   ① 꽂힌 부분(plug): 병목 안쪽 폭에 딱 맞는 직사각형. 유리보다 "뒤"에 그려서 유리 너머로 비쳐 보임
+      //   ② 머리 부분(top): 병 입구 위로 나온 부분. 위가 넓고 아래(입구)가 좁은 사다리꼴, 입구 테두리 바로 위에 얹힘
+      //   그리는 순서: 꽂힌 부분 → 유리 병 → 코르크 머리 → 입구 테두리(코르크가 테두리 안으로 들어가는 것처럼)
+      const corkTopW = (nR - nL) + 36, corkRimW = (nR - nL) + 8, corkH = JAR_CORK_PX;
+      const corkY = nT - corkH * 0.6, corkX = X(jar.cx) - corkTopW / 2, cxp = X(jar.cx);
+      const plugW = (nR - nL) - 4, plugH = corkH * 0.45;
+      const cork = `M${cxp - corkRimW / 2} ${nT + 1} L${cxp - corkTopW / 2} ${corkY + 6} Q${cxp - corkTopW / 2} ${corkY} ${cxp - corkTopW / 2 + 6} ${corkY}`
+                 + ` L${cxp + corkTopW / 2 - 6} ${corkY} Q${cxp + corkTopW / 2} ${corkY} ${cxp + corkTopW / 2} ${corkY + 6} L${cxp + corkRimW / 2} ${nT + 1} Z`;
+      const corkHeadH = nT - corkY;
+      // 반사광: 왼쪽 어깨에 유리 가장자리를 따라 가는 줄 + 오른쪽 위 짧은 줄
+      //   (예전엔 왼쪽 배를 따라 안쪽으로 길게 그렸는데 장미를 가려서, 2026-11-18 가장자리 가까이·짧게·가늘게 바꿈)
+      let hl = '', hr = '';
+      for (let i = 0; i <= 14; i++) { const t = Math.PI * (0.58 + i / 14 * 0.24); hl += (i ? ' L' : 'M') + P(jarPoint(t, 4 * view.wpp)); }
+      for (let i = 0; i <= 8; i++) { const t = Math.PI * (0.22 + i / 8 * 0.14); hr += (i ? ' L' : 'M') + P(jarPoint(t, 12 * view.wpp)); }
+      // 바닥 유리 두께: 바닥을 따라 안쪽에 옅은 곡선
+      let bt = '';
+      for (let i = 0; i <= 16; i++) { const t = -Math.PI * (0.3 + i / 16 * 0.4); bt += (i ? ' L' : 'M') + P(jarPoint(t, 9 * view.wpp)); }
+      const bottomY = Y(jar.cy - jar.ay), midX = X(jar.cx);
+      // 리본: 병목 가운데를 두르고 오른쪽에 나비 리본 + 늘어진 두 끈. 태그는 리본 끝에 매달림
+      const rY = nT + JAR_NECK_PX * 0.72, bx = nR - 2;      // 리본: 병목 아래쪽을 두름
+      // 태그: 매듭에서 나온 와인색 끈 고리가 태그 구멍(쇠고리)을 지나 걸림 → 태그가 구멍을 축으로 비스듬히 대롱대롱 (선물 태그처럼)
+      const hx = bx + 12, hy = rY + 36;                      // 태그 구멍 자리 (끈이 넉넉히 늘어지도록 매듭보다 꽤 아래)
       glass.setAttribute('viewBox', `0 0 ${w} ${h}`);
       glass.innerHTML = `
-        <path d="M${L} ${B} L${L} ${C} A${ax} ${ay} 0 0 1 ${R} ${C} L${R} ${B}"
-              fill="rgba(205,228,240,0.10)" stroke="rgba(120,165,200,0.55)" stroke-width="2.5" stroke-linejoin="round"/>
-        <path d="M${h1x} ${h1y} A${ax - 9} ${ay - 9} 0 0 1 ${h2x} ${h2y}"
-              fill="none" stroke="rgba(255,255,255,0.75)" stroke-width="4" stroke-linecap="round"/>
-        <line x1="${L + 9}" y1="${C + 12}" x2="${L + 9}" y2="${C + (B - C) * 0.45}"
-              stroke="rgba(255,255,255,0.6)" stroke-width="4" stroke-linecap="round"/>
-        <line x1="${R - 8}" y1="${C + 24}" x2="${R - 8}" y2="${C + (B - C) * 0.22}"
-              stroke="rgba(255,255,255,0.45)" stroke-width="2.5" stroke-linecap="round"/>
-        <circle cx="${mid}" cy="${T - 7}" r="7" fill="rgba(205,228,240,0.7)" stroke="rgba(120,165,200,0.6)" stroke-width="2"/>
-        <rect x="${L - 10}" y="${B + 1}" width="${R - L + 20}" height="11" rx="5.5"
-              fill="#DCCBAE" stroke="rgba(150,120,80,0.35)" stroke-width="1"/>`;
+        <ellipse cx="${midX}" cy="${bottomY + 4}" rx="${(jar.ax * k * 0.8).toFixed(1)}" ry="8" fill="rgba(120,100,70,0.12)"/>
+        <rect x="${cxp - plugW / 2}" y="${nT - 2}" width="${plugW}" height="${plugH}" rx="3" fill="#C49A62"/>
+        <rect x="${cxp - plugW / 2}" y="${nT + plugH - 6}" width="${plugW}" height="4" rx="2" fill="rgba(110,80,40,0.25)"/>
+        <path d="${body} L${nL} ${shoulderY} L${nL} ${nT} L${nR} ${nT} L${nR} ${shoulderY} Z"
+              fill="rgba(205,228,240,0.13)" stroke="rgba(120,165,200,0.55)" stroke-width="2.5" stroke-linejoin="round"/>
+        <path d="${hl}" fill="none" stroke="rgba(255,255,255,0.75)" stroke-width="3" stroke-linecap="round"/>
+        <path d="${hr}" fill="none" stroke="rgba(255,255,255,0.5)" stroke-width="3" stroke-linecap="round"/>
+        <path d="${bt}" fill="none" stroke="rgba(255,255,255,0.45)" stroke-width="3" stroke-linecap="round"/>
+        <line x1="${nL + 7}" y1="${nT + 8}" x2="${nL + 7}" y2="${shoulderY - 4}" stroke="rgba(255,255,255,0.6)" stroke-width="3" stroke-linecap="round"/>
+        <path d="${cork}" fill="#CFA56C" stroke="rgba(130,95,50,0.4)" stroke-width="1.2" stroke-linejoin="round"/>
+        <path d="M${cxp + corkTopW * 0.18} ${corkY + 2} L${cxp + corkTopW / 2 - 3} ${corkY + 4} L${cxp + corkRimW / 2 - 1} ${nT} L${cxp + corkRimW * 0.2} ${nT} Z" fill="rgba(140,100,50,0.18)"/>
+        <ellipse cx="${cxp}" cy="${corkY + 4}" rx="${corkTopW / 2 - 4}" ry="3.5" fill="#DDBA84"/>
+        ${[[0.22, 0.3], [0.4, 0.62], [0.6, 0.28], [0.78, 0.55], [0.3, 0.82], [0.55, 0.85], [0.7, 0.15], [0.18, 0.6], [0.48, 0.2], [0.66, 0.78]].map(([u, v]) =>
+          `<circle cx="${(cxp + corkTopW * (u - 0.5) * (1 - 0.6 * v)).toFixed(1)}" cy="${(corkY + 7 + (corkHeadH - 10) * v).toFixed(1)}" r="1.9" fill="#A9824F"/>`).join('')}
+        <ellipse cx="${cxp}" cy="${nT + 1}" rx="${corkRimW / 2 + 2}" ry="2.5" fill="rgba(90,65,35,0.22)"/>
+        <rect x="${nL - 4}" y="${nT - 1}" width="${nR - nL + 8}" height="7" rx="3.5" fill="rgba(205,228,240,0.55)" stroke="rgba(120,165,200,0.6)" stroke-width="2"/>
+        <path d="M${nL - 1} ${rY} Q ${midX} ${rY + 5} ${nR + 1} ${rY}" fill="none" stroke="#7E2440" stroke-width="5" stroke-linecap="round"/>
+        <path d="M${bx} ${rY} C ${bx + 14} ${rY - 14}, ${bx + 24} ${rY - 2}, ${bx + 4} ${rY + 2} C ${bx + 22} ${rY + 6}, ${bx + 14} ${rY + 18}, ${bx} ${rY + 2}"
+              fill="#9C3350" stroke="#6A1D35" stroke-width="1.5" stroke-linejoin="round"/>
+        <path d="M${bx + 1} ${rY + 3} Q ${bx - 2} ${rY + 14} ${bx - 6} ${rY + 20}" fill="none" stroke="#7E2440" stroke-width="3" stroke-linecap="round"/>
+        <defs><mask id="jar-tag-hole"><rect x="-20" y="-25" width="120" height="50" fill="#fff"/><circle cx="0" cy="0" r="2.8" fill="#000"/></mask></defs>
+        <g transform="translate(${hx} ${hy}) rotate(30)">
+          <path d="M-26 -25 C -24 -10, -12 4, 0 0" fill="none" stroke="#5E1A2E" stroke-width="1.8" stroke-linecap="round"/>
+          <path d="M-12 0 L-2 -17 L88 -17 Q94 -17 94 -11 L94 11 Q94 17 88 17 L-2 17 Z" mask="url(#jar-tag-hole)"
+                fill="#FFF8E8" stroke="#D9C6A5" stroke-width="1.3" stroke-linejoin="round"/>
+          <circle cx="0" cy="0" r="4.4" fill="none" stroke="#C9A77A" stroke-width="2"/>
+          <path d="M0 0 C 4 9, -10 12, -14 3 C -17 -6, -16 -18, -26 -25" fill="none" stroke="#7E2440" stroke-width="1.8" stroke-linecap="round"/>   
+          <text x="47" y="7.5" text-anchor="middle" font-family="Gaegu, 'Apple SD Gothic Neo', sans-serif" font-weight="700" font-size="22" fill="#A82340"
+                rotate="-9 7 -6 9" dy="1.5 -3.5 4 -3.5" dx="0 -1 1.5 -1">장미광장</text>
+        </g>
+        <circle cx="${bx + 2}" cy="${rY + 1}" r="3.2" fill="#6A1D35"/>`;
     }
 
     // ---------- 상세에 들어갈 때만: 촘촘한 꽃송이 + 줄기 ----------
@@ -506,20 +570,24 @@
       view.W = view.H * camera.aspect;
       view.wpp = view.H / h;
 
-      // 더미: 벽은 화면 양옆과 바닥. 공 크기는 공 개수에 맞춰 화면을 적당히 채우도록
-      const usableH = view.H - LIST_TOP_PX * view.wpp;
+      // 병 몸통 자리: 코르크 꼭대기는 제목·안내 문구 아래, 몸통은 코르크·병목 아래부터 화면 바닥까지
+      //   (원근 때문에 가장자리 공이 조금 커 보여서, 화면 끝보다 살짝 안쪽에 둔다)
+      const margin = 16 * view.wpp;
+      const corkTop = view.H / 2 - LIST_TOP_PX * view.wpp;
+      jar.neckTop = corkTop - JAR_CORK_PX * 0.6 * view.wpp;              // 코르크가 병목에 반쯤 꽂힘
+      const bodyTop = jar.neckTop - JAR_NECK_PX * view.wpp;
+      const bodyBottom = -view.H / 2 + margin + 10 * view.wpp;            // 아래 그림자 자리 조금
+      jar.ay = (bodyTop - bodyBottom) / 2;
+      jar.cy = (bodyTop + bodyBottom) / 2;
+      jar.ax = Math.min(view.W / 2 - margin, jar.ay * 0.85);              // 가로로 넓은 화면에서도 너무 납작해지지 않게
+      jar.cx = 0;
+      walls.left = jar.cx - jar.ax; walls.right = jar.cx + jar.ax; walls.bottom = bodyBottom; walls.top = bodyTop;
+      // 공 크기: 공 개수에 맞춰 병 몸통 넓이의 PILE_FILL만큼 채우도록
+      //   슈퍼타원 넓이 = 4·a·b × Γ(1+1/n)² / Γ(1+2/n)  → n=2.6이면 약 0.853 × 4ab
       const sumJ2 = blobs.reduce((s, b) => s + b.sizeJitter * b.sizeJitter, 0);
-      const base = Math.min(MAX_RADIUS, Math.sqrt(PILE_FILL * view.W * usableH / (Math.PI * sumJ2)), view.W / 5);
-      // 원근 때문에 가장자리 공이 조금 커 보여서, 벽을 화면 끝보다 살짝 안쪽에 둔다
-      const margin = 14 * view.wpp + base * 0.18;
-      walls.left = -view.W / 2 + margin; walls.right = view.W / 2 - margin; walls.bottom = -view.H / 2 + margin;
-      walls.top = view.H / 2 - LIST_TOP_PX * view.wpp; // 돔 꼭대기: 제목·안내 문구 아래
-      // 돔 모양: 세로 화면이면 반원, 가로로 넓은 화면이면 낮고 넓은 타원 (화면 밖으로 넘치지 않게)
-      dome.ax = (walls.right - walls.left) / 2;
-      dome.cx = (walls.right + walls.left) / 2;
-      dome.ay = Math.min(dome.ax, (walls.top - walls.bottom) * 0.35);
-      dome.cy = walls.top - dome.ay;
-      drawDome();
+      const bodyArea = 4 * jar.ax * jar.ay * 0.853;
+      const base = Math.min(MAX_RADIUS, Math.sqrt(PILE_FILL * bodyArea / (Math.PI * sumJ2)), jar.ax / 2.5);
+      drawJar();
       blobs.forEach(b => {
         b.r = base * b.sizeJitter;
         b.p.x = THREE.MathUtils.clamp(b.p.x, walls.left + b.r, walls.right - b.r);
@@ -576,7 +644,7 @@
       const gap = maxR * 2.06;                                    // 한 칸 (지름보다 조금 넓게)
       const perRow = Math.max(1, Math.floor((walls.right - walls.left) / gap));
       const rows = Math.ceil(blobs.length / perRow);
-      const spawnTop = dome.cy;                                   // 돔 둥근 부분 아래부터 줄 세움
+      const spawnTop = jar.cy + jar.ay * 0.6;                     // 병 어깨 아래부터 줄 세움 (병 밖으로 나간 꽃은 첫 계산에서 병 안으로 들어옴)
       const rowGap = Math.min(gap, (spawnTop - walls.bottom - 2 * maxR) / Math.max(1, rows - 1));
       const order = blobs.map((b, i) => i).sort(() => Math.random() - 0.5); // 대표 꽃이 한쪽에 몰리지 않게 섞음
       order.forEach((bi, k) => {
@@ -754,10 +822,37 @@
     // 받침이 어느 쪽에 있는지 기록 (sx: 받침이 있는 쪽의 가로 방향, -1 왼쪽 … +1 오른쪽)
     function markSupport(b, sx) { if (sx < -0.25) b.supL = true; else if (sx > 0.25) b.supR = true; else b.supC = true; }
     // 굴러떨어지지 않고 버틸 수 있나: 바닥 위, 바로 아래 받침, 양쪽 받침, 또는 한쪽 받침 + 반대쪽 벽
+    // 안정한가: 병 바닥에 닿았거나, 바로 아래 받침이 있거나, 양쪽(꽃 또는 병 옆벽)에 걸쳐 있으면 안정
     function stable(b) {
-      const nearL = b.p.x - b.r < walls.left + 0.03 * b.r, nearR = b.p.x + b.r > walls.right - 0.03 * b.r;
-      const onFloor = b.p.y - b.r < walls.bottom + 0.03 * b.r;
+      const t = jarTouch(b);
+      const onFloor = t && t.ny < -0.5, nearL = t && t.nx < -0.4, nearR = t && t.nx > 0.4;
       return onFloor || b.supC || ((b.supL || nearL) && (b.supR || nearR));
+    }
+    // 병 벽: 꽃 가운데가 "꽃 반지름만큼 줄인 슈퍼타원" 안에 있어야 함
+    //   f = |dx/A|^n + |dy/B|^n - 1  (0보다 크면 벽 밖),  g = f를 미분한 방향 = 벽의 바깥 방향
+    //   벽까지 거리 ≈ f / |g|  → 벽에 수직으로 그만큼 되돌림 (가운데 쪽으로 당기면 둥근 바닥에서 꽃이 옆으로 밀려 밭이 계속 움직였음)
+    const jarN = new THREE.Vector2();
+    function jarMeasure(b) {
+      const A = jar.ax - b.r, B = jar.ay - b.r, dx = b.p.x - jar.cx, dy = b.p.y - jar.cy;
+      const ux = Math.abs(dx) / A, uy = Math.abs(dy) / B;
+      const f = Math.pow(ux, JAR_N) + Math.pow(uy, JAR_N) - 1;
+      const gx = JAR_N * Math.sign(dx) * Math.pow(ux, JAR_N - 1) / A, gy = JAR_N * Math.sign(dy) * Math.pow(uy, JAR_N - 1) / B;
+      const g = Math.hypot(gx, gy) || 1;
+      jarN.set(gx / g, gy / g);
+      return f / g;                               // 벽까지 거리 (+면 벽 밖으로 나간 만큼)
+    }
+    function jarPush(b) {                         // 벽 밖이면 벽에 수직으로 되돌림 (두세 번 다듬어 곡면에 딱 맞춤). 되돌렸으면 true
+      let hit = false;
+      for (let k = 0; k < 3; k++) {
+        const d = jarMeasure(b);
+        if (d <= 0) break;
+        b.p.x -= jarN.x * d; b.p.y -= jarN.y * d;
+        hit = true;
+      }
+      return hit;
+    }
+    function jarTouch(b) {                      // 벽에 닿아 있으면 벽의 바깥 방향, 아니면 null (꽃 반지름의 3%까지는 닿은 걸로)
+      return jarMeasure(b) > -0.03 * b.r ? { nx: jarN.x, ny: jarN.y } : null;
     }
     const prevP = new THREE.Vector2();
     function physics(dt) {
@@ -832,25 +927,14 @@
             }
           }
         }
-        // 벽·바닥·천장
+        // 병 벽 (옆·바닥·어깨가 모두 한 곡면): 벽 밖으로 나간 꽃을 곡면 위로 되돌림
         blobs.forEach(b => {
-          if (b.p.x - b.r < walls.left) { b.p.x = walls.left + b.r; b.wallHitX = 1; }
-          if (b.p.x + b.r > walls.right) { b.p.x = walls.right - b.r; b.wallHitX = -1; }
-          // 유리 돔 둥근 천장: 타원 안쪽(꽃 반지름만큼 줄인 타원)을 벗어나면 곡면 위로 되돌림
-          if (!b.entered && b.p.y + b.r <= walls.top) b.entered = true;
-          if (b.entered && b.p.y > dome.cy) {
-            const A = dome.ax - b.r, B = dome.ay - b.r, dx = b.p.x - dome.cx, dy = b.p.y - dome.cy;
-            const e = (dx * dx) / (A * A) + (dy * dy) / (B * B);
-            if (e > 1) {
-              const k = 1 / Math.sqrt(e);
-              b.p.x = dome.cx + dx * k; b.p.y = dome.cy + dy * k;
-              const nx = dx / (A * A), ny = dy / (B * B), L = Math.hypot(nx, ny) || 1;
-              b.domeN = b.domeN || new THREE.Vector2();
-              b.domeN.set(nx / L, ny / L);                 // 돔 곡면의 바깥 방향
-              b.domeHit = true;
-            }
+          if (jarPush(b)) {
+            b.domeN = b.domeN || new THREE.Vector2();
+            b.domeN.copy(jarN);                             // 벽의 바깥 방향 (튕길 때 씀)
+            b.domeHit = true;
+            if (jarN.y < -0.5) { b.wallHitY = 1; b.contacts++; b.supported = true; }   // 아래쪽 벽 = 바닥 (받침·마찰)
           }
-          if (b.p.y - b.r < walls.bottom) { b.p.y = walls.bottom + b.r; b.wallHitY = 1; b.contacts++; b.supported = true; }
         });
       }
       // ③ 실제로 움직인 거리로 속도 다시 정하기 + 자리 잡기
@@ -860,11 +944,11 @@
         prevP.copy(b.prev);
         b.vel.copy(b.p).sub(prevP).divideScalar(h);
         // 벽·천장·바닥에 세게 부딪혔으면 살짝 튕겨 나옴 (던지기 손맛)
-        if (b.wallHitX && Math.abs(vx0) > 1.5) b.vel.x = -vx0 * BOUNCE;
-        if (b.wallHitY && Math.abs(vy0) > 2.5) b.vel.y = -vy0 * BOUNCE;
-        if (b.domeHit) {                                    // 돔 곡면에 세게 부딪히면 곡면 방향으로 튕김
+        if (b.domeHit) {                                    // 병 벽에 세게 부딪히면 벽 방향으로 튕김
           const vn = vx0 * b.domeN.x + vy0 * b.domeN.y;
-          if (vn > 2) { b.vel.set(vx0 - (1 + BOUNCE) * vn * b.domeN.x, vy0 - (1 + BOUNCE) * vn * b.domeN.y); }
+          // 던졌을 때처럼 세게 부딪힐 때만 (3.5 이상). 가만히 쌓인 꽃이 이웃에 밀려 벽에 닿는 정도로는 튕기지 않음
+          //   (2였을 때: 둥근 바닥 모서리에서 쌓인 꽃이 계속 위로 튕겨 밭 전체가 끓듯이 움직였음)
+          if (vn > 3.5 && b.contacts <= 1) { b.vel.set(vx0 - (1 + BOUNCE) * vn * b.domeN.x, vy0 - (1 + BOUNCE) * vn * b.domeN.y); }
         }
         if (b.asleep && !stable(b)) wake(b);                // 받쳐 주던 꽃이 빠지면 깨어나서 떨어지거나 굴러감
         if (b.wallHitY > 0) b.vel.x *= Math.pow(0.2, h);    // 바닥 마찰
