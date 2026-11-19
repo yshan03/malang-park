@@ -208,14 +208,19 @@
     const len = P.stemLength || STEM_LENGTH;
     const stemPivot = new THREE.Group();     // 꽃송이 아래 붙는 점 = 휘청거리는 중심
     stemPivot.position.set(0, STEM_TOP, 0);
+    // 줄기는 흔들리는 중심(꽃송이 아래 한 점)에서 정확히 시작 → 기울어도 윗끝이 옆으로 비켜 나가지 않음
+    //   (예전엔 중심보다 0.15 위에서 시작해서, 흔들릴 때 꽃과 이어진 부분이 어긋나 보였음 — 2026-11-19)
     const curve = new THREE.CatmullRomCurve3([
-      new THREE.Vector3(0, 0.15, 0),
+      new THREE.Vector3(0, 0, 0),
       new THREE.Vector3(0.05, -len * 0.33, 0.02),
       new THREE.Vector3(-0.05, -len * 0.66, -0.01),
       new THREE.Vector3(0.04, -len, 0.02)
     ]);
     const stemMat = new THREE.MeshPhysicalMaterial({ color: lin(P.stem), roughness: 0.5, clearcoat: 0.3 });
     stemPivot.add(new THREE.Mesh(new THREE.TubeGeometry(curve, 32, 0.11, 12, false), stemMat));
+    // 꽃받침(초록 구슬): 흔들리는 중심에 둔 공. 공은 제자리에서 돌아도 모양이 같아서 볼 관절처럼 이음새를 늘 덮어 줌
+    const calyxMat = new THREE.MeshPhysicalMaterial({ color: lin(P.stem).lerp(lin(P.leaf), 0.5), roughness: 0.5, clearcoat: 0.3 });
+    stemPivot.add(new THREE.Mesh(new THREE.SphereGeometry(0.17, 20, 14), calyxMat));
 
     const leafMat = new THREE.MeshPhysicalMaterial({ color: lin(P.leaf), roughness: 0.45, clearcoat: 0.45 });
     const leafGeo = new THREE.SphereGeometry(1, 28, 14);

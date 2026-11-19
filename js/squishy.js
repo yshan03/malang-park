@@ -52,8 +52,12 @@
   const DRAG_THRESHOLD = 6;// 이만큼(px) 움직이면 '누르기'가 아니라 '끌기'
   const MOVE_SPEED = 7;    // 모드 전환 때 움직이는 빠르기
   // ----- 줄기 -----
-  const SWAY_K = 45, SWAY_C = 2.2;   // 줄기 휘청임 용수철 (세기, 감쇠) — 감쇠를 낮춰 오래 출렁이게
-  const SWAY_AMP = 0.75;             // 휘청임 크기 (클수록 크게 휨)
+  // 줄기는 "킹받게": 한 번 치면 쓸데없이 오래 띠용띠용, 연타하면 점점 미쳐 감 (2026-11-19)
+  const SWAY_K = 60, SWAY_C = 1.0;  // 복원력(클수록 빨리 흔들림) · 감쇠(작을수록 오래 출렁임. 1.9 → 1.0)
+  const SWAY_AMP = 1.1;              // sway를 실제 기울기 각도로 바꾸는 배율 (0.72 → 1.1: 좌우로 더 크게)
+  const SWAY_MAX = 1.15;             // 아무리 연타해도 이 이상은 안 휨 (1.15 × 1.1 ≈ 72°) → 꽃송이·화면 밖으로 넘어가지 않게
+  const ANNOY_STEP = 0.35;           // 연타 한 번에 쌓이는 "짜증" (0~1). 쌓일수록 다음 휘청이 세짐
+  const ANNOY_FADE = 0.6;            // 1초에 줄어드는 짜증 (가만두면 1.5초쯤 지나 원래대로)
   const UPRIGHT = new THREE.Quaternion().setFromEuler(new THREE.Euler(0.62, 0, -0.08)); // 상세: 꽃 얼굴이 살짝 보이게 선 자세
   const FACE = new THREE.Quaternion().setFromEuler(new THREE.Euler(Math.PI / 2 - 0.25, 0, 0)); // 목록: 꽃 얼굴이 화면을 향함
   const SHOW_LIST_LABELS = false; // 목록에서 이름표 보이기 (지금은 숨김)
@@ -834,9 +838,13 @@
           hit.blob.awake = true;
           scentPress(hit.blob);
         } else {                                   // 줄기·잎: 누른 쪽 반대로 휘청
-          const side = Math.sign(pWorld.x - hit.blob.cur.x) || 1;
-          hit.blob.swayV.x += -side * 5.5;
-          hit.blob.swayV.y += 2.4;
+          const b = hit.blob, side = Math.sign(pWorld.x - b.cur.x) || 1;
+          // 연타: 흔들리는 중에 또 치면 "짜증"이 쌓여 힘이 최대 2.5배까지 커짐
+          b.annoy = Math.min(1, (b.annoy || 0) + ANNOY_STEP);
+          // 이미 크게 흔들리는 중이면 지금 움직이는 방향으로 밀어 줌 → 치는 박자와 상관없이 늘 더 커짐 (반대로 밀어 멈추는 일 없게)
+          const dir = Math.abs(b.swayV.x) > 1.5 ? Math.sign(b.swayV.x) : -side;
+          b.swayV.x += dir * 10 * (1 + 1.5 * b.annoy);
+          b.swayV.y += 1.2;
         }
       }
       canvas.style.cursor = 'grabbing';
@@ -1230,6 +1238,10 @@
           b.swayV.x += (-SWAY_K * b.sway.x - SWAY_C * b.swayV.x) * dt;
           b.swayV.y += (-SWAY_K * b.sway.y - SWAY_C * b.swayV.y) * dt;
           b.sway.addScaledVector(b.swayV, dt);
+          // 한계: 너무 휘면 그 자리에서 살짝 튕겨 돌아옴
+          if (Math.abs(b.sway.x) > SWAY_MAX) { b.sway.x = Math.sign(b.sway.x) * SWAY_MAX; b.swayV.x *= -0.4; }
+          if (Math.abs(b.sway.y) > SWAY_MAX * 0.5) { b.sway.y = Math.sign(b.sway.y) * SWAY_MAX * 0.5; b.swayV.y *= -0.4; }
+          if (b.annoy) b.annoy = Math.max(0, b.annoy - ANNOY_FADE * dt);   // 짜증은 시간이 지나면 가라앉음
           b.stemPivot.rotation.set(b.sway.y * SWAY_AMP, 0, b.sway.x * SWAY_AMP);
           // 상세에서 빠져나와 줄기가 다 들어가면 다시 가벼운 버전으로
           if (i !== selected && b.stemGrow < 0.01) releaseFull(b);
