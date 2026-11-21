@@ -1,0 +1,853 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>나홀로나무 · 올림픽공원</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Gaegu:wght@700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #e8ebde; color: #294838; font: 15px/1.55 system-ui, sans-serif; }
+  .scene {
+    position: relative; isolation: isolate; width: min(100%, 470px); min-height: 550px;
+    height: 100svh; margin: auto; overflow: hidden;
+    background: linear-gradient(#b3d3e4, #e7eddf 65%);
+  }
+  .landscape, .tree, canvas { position: absolute; display: block; width: 100%; height: 100%; inset: 0; }
+  .tree, canvas { pointer-events: none; }
+  canvas[data-touch] { pointer-events: auto; touch-action: none; cursor: pointer; }
+  canvas[data-touch]:focus-visible { outline: 2px solid #294838; outline-offset: -4px; }
+  @media (prefers-reduced-motion: no-preference) { #fallback-tree { transition: scale .18s ease-out; } }
+  .scene[data-rendered] .tree { visibility: hidden; }
+  #fallback-tree { transform-box: fill-box; transform-origin: center bottom; }
+  header, .controls { position: absolute; z-index: 1; left: 0; right: 0; text-align: center; }
+  header { top: max(13px, env(safe-area-inset-top)); padding: 4px 15px; }
+  h1 { margin: 29px 0 1px; font: 700 clamp(35px, 9vw, 50px)/1.08 Gaegu, system-ui, sans-serif; letter-spacing: -.07em; }
+  p { margin: 0; }
+  .back {
+    position: absolute; left: 12px; top: 0; display: inline-grid; place-content: center;
+    min-width: 44px; min-height: 44px; color: inherit; text-decoration: none;
+    border-radius: 50%; background: #f7f8ed9c;
+  }
+  .back svg { display: block; width: 16px; height: 16px; }
+  .controls { bottom: max(26px, calc(env(safe-area-inset-bottom) + 16px)); padding: 0 20px; }
+  .prompt { font: 700 25px/1.1 Gaegu, system-ui, sans-serif; margin: 0 0 12px; }
+  .mic {
+    display: inline-flex; align-items: center; gap: 8px; min-height: 48px; width: 51px; justify-content: center; padding: 0; border: 0; cursor: pointer;
+    background: #305d47; color: #fffcf0; text-decoration: none; border-radius: 100px;
+    font-weight: 700; box-shadow: 0 3px 0 #244b38;
+    touch-action: none; user-select: none; -webkit-touch-callout: none;
+  }
+  .mic:active { transform: translateY(2px); box-shadow: 0 1px 0 #244b38; }
+  .mic[aria-pressed="true"] { background: #447c59; box-shadow: 0 0 0 4px #deebbc; }
+  .mic svg { width: 18px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; }
+  .privacy { margin-top: 13px; font-size: 12px; }
+  .privacy[data-seen] { visibility: hidden; }
+  :is(a, button):focus-visible { outline: 2px solid #294838; outline-offset: 3px; }
+  @media (min-width: 560px) {
+    body { display: grid; place-items: center; min-height: 100svh; }
+    .scene { height: min(calc(100svh - 24px), 860px); width: min(100vw - 24px, 420px); border-radius: 22px; box-shadow: 0 6px 28px #33442d22; }
+  }
+  @media (max-height: 650px) {
+    h1 { margin-top: 18px; }
+    .controls { bottom: max(16px, env(safe-area-inset-bottom)); }
+  }
+</style>
+</head>
+<body>
+<main class="scene">
+  <svg class="landscape" viewBox="0 0 390 844" preserveAspectRatio="none" aria-hidden="true">
+    <path fill="#f6f7e8" opacity=".66" transform="translate(0 -38)" d="M37 226c-11-6-5-17 9-16 3-13 23-18 34-7 14-4 28 4 22 14 15 0 20 7 13 11-9 6-68 5-78-2Z"/>
+    <path fill="#f6f7e8" opacity=".48" transform="translate(0 -22)" d="M284 173c-12-4-11-14 4-15 4-12 23-13 29-2 12-1 20 4 18 11-4 8-41 10-51 6Z"/>
+    <defs>
+      <linearGradient id="hill-meadow" x1="0" y1="0" x2=".22" y2="1">
+        <stop stop-color="#a5bf78"/>
+        <stop offset=".52" stop-color="#a9bf81"/>
+        <stop offset="1" stop-color="#859f66"/>
+      </linearGradient>
+      <linearGradient id="hill-light" x1="0" y1="0" x2="1" y2=".6">
+        <stop stop-color="#dbe39b" stop-opacity=".62"/>
+        <stop offset="1" stop-color="#dbe39b" stop-opacity="0"/>
+      </linearGradient>
+      <path id="hill-shape" d="M0 461 C75 454 135 433 212 431 C299 428 354 447 390 453 V844 H0Z"/>
+      <clipPath id="hill-clip"><use href="#hill-shape"/></clipPath>
+    </defs>
+    <use href="#hill-shape" fill="url(#hill-meadow)"/>
+    <g clip-path="url(#hill-clip)">
+      <path d="M-20 475 C80 455 180 455 242 442 C297 431 360 443 416 458
+        C320 465 280 474 212 493 C115 522 57 511-20 531Z" fill="url(#hill-light)"/>
+      <path d="M-12 529 C71 512 129 520 203 496 C274 476 342 483 411 469
+        L411 513 C351 506 277 529 201 539 C122 546 61 570-12 558Z" fill="#7d9b57" opacity=".25"/>
+      <path d="M-18 592 C58 594 142 572 219 563 C282 556 340 558 406 540
+        L406 591 C308 597 266 602 198 614 C114 630 59 625-18 645Z" fill="#cfda93" opacity=".23"/>
+      <path d="M-18 676 C84 643 149 663 235 648 C318 633 360 655 405 629
+        L405 844 H-18Z" fill="#6f8f54" opacity=".21"/>
+      <path d="M-18 702 C121 663 192 699 298 686 C344 679 371 679 407 662
+        L407 844 H-18Z" fill="#b7ca8d" opacity=".23"/>
+      <g fill="none" stroke="#6d9256" stroke-opacity=".68" stroke-width="2" stroke-linecap="round">
+        <path d="M39 573q-1-5-6-9m6 9q2-7 6-9 M324 551q-1-4-5-7m5 7 5-8
+          M76 643q-2-7-7-11m7 11q2-9 8-13 M327 639q-2-6-7-10m7 10q1-8 7-12
+          M294 599l-2-5m2 5 4-6 M130 607l-4-4m4 4 2-6 M26 707q-1-9-7-14m7 14q2-9 8-14
+          M353 701q-3-9-9-14m9 14q1-9 8-15"/>
+      </g>
+      <g fill="#e5d48a" opacity=".66">
+        <circle cx="58" cy="539" r="1.6"/><circle cx="65" cy="545" r="1.1"/>
+        <circle cx="285" cy="494" r="1.25"/><circle cx="302" cy="499" r="1.55"/>
+        <circle cx="104" cy="593" r="1.5"/><circle cx="115" cy="601" r="1.35"/>
+        <circle cx="347" cy="586" r="1.5"/><circle cx="359" cy="593" r="1.2"/>
+      </g>
+    </g>
+  </svg>
+  <svg class="tree" viewBox="0 0 390 844" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
+    <ellipse cx="197" cy="475" rx="73" ry="15" fill="#577445" opacity=".28"/>
+    <g id="fallback-tree">
+      <path d="M184 471Q187 450 177 421L205 413Q199 442 208 470Q197 477 184 471Z" fill="#846549"/>
+      <g fill="#56834e">
+        <ellipse cx="193" cy="350" rx="87" ry="79"/>
+        <ellipse cx="134" cy="371" rx="49" ry="51"/>
+        <ellipse cx="260" cy="377" rx="48" ry="56"/>
+        <ellipse cx="194" cy="400" rx="63" ry="43" fill="#456e46"/>
+      </g>
+      <g fill="#709c5c">
+        <ellipse cx="168" cy="313" rx="46" ry="45"/>
+        <ellipse cx="214" cy="309" rx="45" ry="41"/>
+        <ellipse cx="241" cy="353" rx="47" ry="43"/>
+        <ellipse cx="173" cy="365" rx="54" ry="47" fill="#669454"/>
+        <ellipse cx="202" cy="276" rx="38" ry="27" fill="#82a96a"/>
+        <ellipse cx="203" cy="392" rx="48" ry="34" fill="#5b8950"/>
+      </g>
+    </g>
+  </svg>
+  <canvas id="tree" role="img" aria-label="초록 언덕에 홀로 서 있는 나무"></canvas>
+  <header>
+    <a class="back" href="index.html?mobile=1" aria-label="지도로 돌아가기">
+      <svg viewBox="0 0 16 16" aria-hidden="true">
+        <path d="M10.5 3.5 6 8l4.5 4.5" fill="none" stroke="currentColor"
+              stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </a>
+    <h1>나홀로나무</h1>
+  </header>
+  <div class="controls">
+    <p class="prompt" id="wind-status" role="status">마이크를 꾹 누르고</p>
+    <button class="mic" id="mic" type="button" aria-label="마이크 꾹 눌러 말하거나 불기" aria-pressed="false">
+      <svg viewBox="0 0 18 20" aria-hidden="true"><rect x="6" y="2" width="6" height="10" rx="3"/><path d="M3 9v1a6 6 0 0 0 12 0V9M9 16v3"/></svg>
+    </button>
+    <p class="privacy" id="privacy-note">소리는 기기 안에서만 분석해요.</p>
+  </div>
+</main>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="js/lonetree-mic.js?v=cedar-wind"></script>
+<script>
+function drawTree() {
+  const lin = h => new THREE.Color(h).convertSRGBToLinear();
+  const dark = lin('#243825'), middle = lin('#465e30'), light = lin('#789449');
+  const facing = .35;
+  const depthX = Math.sin(facing), depthZ = -Math.cos(facing);
+  let seed = 7;
+  function random() {
+    seed = (seed * 16807) % 2147483647;
+    return (seed - 1) / 2147483646;
+  }
+
+  // 사진의 밑단, 넓은 중하단, 좁아지는 어깨와 둥근 꼭대기를 차례로 잡는다.
+  const crownWidths = [0, .59, .83, .98, 1.01, .91, .82, .71, .69, .60, 0];
+
+  function crownProfile(height) {
+    const sample = THREE.MathUtils.clamp(height * (crownWidths.length - 1), 0, crownWidths.length - 1);
+    const index = Math.min(Math.floor(sample), crownWidths.length - 2);
+    return THREE.MathUtils.lerp(crownWidths[index], crownWidths[index + 1], sample - index);
+  }
+
+  function foliageGeometry(phase, widthSegments = 28, heightSegments = 18) {
+    const geometry = new THREE.SphereGeometry(1, widthSegments, heightSegments);
+    const positions = geometry.attributes.position;
+    for (let i = 0; i < positions.count; i++) {
+      const x = positions.getX(i), y = positions.getY(i), z = positions.getZ(i);
+      const lobes = .11 * Math.sin(x * 9 + phase) * Math.sin(y * 8 + z * 5)
+        + .055 * Math.cos(z * 17 - y * 9 + phase) * Math.cos(x * 13 + z * 6);
+      positions.setXYZ(i, x * (1 + lobes), y * (1 + lobes), z * (1 + lobes));
+    }
+    geometry.computeVertexNormals();
+    return geometry;
+  }
+
+  function cedarTextures() {
+    const branches = [
+      "M0 4Q4 -18 -1 -42Q-4 -50 -1 -58",
+      "M0 -5Q-12 -14 -31 -17",
+      "M1 -7Q15 -13 31 -23",
+      "M0 -16Q-11 -23 -24 -31",
+      "M1 -17Q13 -25 24 -35",
+      "M0 -27Q-10 -34 -18 -43",
+      "M0 -30Q10 -37 15 -46"
+].map(path => new Path2D(path));
+    const twigs = [
+      "M-9 -11Q-16 -19 -18 -24M-17 -14Q-25 -13 -31 -12M-22 -16Q-26 -22 -30 -24",
+      "M10 -12Q14 -19 17 -24M17 -16Q23 -15 27 -16M23 -18Q28 -25 33 -27",
+      "M-8 -22Q-10 -30 -15 -35M-15 -26Q-23 -25 -28 -26",
+      "M9 -23Q12 -29 13 -35M16 -29Q22 -27 27 -29",
+      "M-8 -34Q-8 -40 -11 -45M-12 -38Q-19 -37 -22 -38",
+      "M8 -36Q9 -42 10 -47M10 -40Q16 -40 19 -43",
+      "M-2 -43Q-9 -46 -10 -51M-2 -49Q5 -52 7 -56"
+].map(path => new Path2D(path));
+    let textureSeed = 1207;
+    function next() {
+      textureSeed = (textureSeed * 16807) % 2147483647;
+      return textureSeed / 2147483647;
+    }
+
+    function paintSprig(ctx, x, y, angle, scale, tone, showScales = false) {
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate(angle);
+      ctx.scale(scale, scale);
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      ctx.strokeStyle = ["rgb(", tone, ",", tone, ",", tone, ")"].join("");
+      ctx.lineWidth = 5.6;
+      branches.forEach(path => ctx.stroke(path));
+      ctx.lineWidth = 4.8;
+      twigs.forEach(path => ctx.stroke(path));
+      if (showScales) {
+        ctx.strokeStyle = 'rgba(255, 255, 234, .15)';
+        ctx.lineWidth = 1.2;
+        ctx.setLineDash([1.3, 2]);
+        [...branches, ...twigs].forEach(path => ctx.stroke(path));
+      }
+      ctx.restore();
+    }
+
+    function texture(canvas) {
+      const map = new THREE.CanvasTexture(canvas);
+      map.anisotropy = 4;
+      return map;
+    }
+
+    const spray = document.createElement('canvas');
+    spray.width = spray.height = 96;
+    paintSprig(spray.getContext('2d'), 48, 74, 0, 1.03, 204);
+
+    const atlas = document.createElement('canvas');
+    atlas.width = 512;
+    atlas.height = 256;
+    const ctx = atlas.getContext('2d');
+    // 잎가지를 엇갈려 찍어 잎 사이로 드러나는 안쪽 면에도 잎결이 보이게 한다.
+    ctx.fillStyle = 'rgba(115, 115, 115, .82)';
+    ctx.fillRect(0, 0, atlas.width, atlas.height);
+    for (let layer = 0; layer < 3; layer++) {
+      for (let row = 0; row < 7; row++) {
+        for (let column = 0; column < 10; column++) {
+          const x = (column + .5 * (row % 2)) * (atlas.width / 10) + 23 * next();
+          const y = (row + .65) * (atlas.height / 7) + 19 * next();
+          const angle = (next() - .5) * 1.5 + .22 * Math.sin(column);
+          const scale = (layer === 0 ? 1.42 : .85) + .48 * next();
+          const tone = Math.round((layer === 0 ? 105 : 133) + (layer === 0 ? 53 : 78) * next());
+          for (const shift of [-atlas.width, 0, atlas.width]) {
+            paintSprig(ctx, x + shift, y, angle, scale, tone);
+          }
+        }
+      }
+    }
+    const canopy = texture(atlas);
+    canopy.wrapS = THREE.RepeatWrapping;
+    return { canopy, spray: texture(spray) };
+  }
+
+  function crownClusters() {
+    const crown = new THREE.Group();
+    const { canopy, spray } = cedarTextures();
+    const geometries = [0, 1.7, 3.4].map(phase => foliageGeometry(phase, 18, 12));
+    const materials = Array.from({ length: 11 }, (_, i) => {
+      const shade = i / 10;
+      const color = shade < .58 ? dark.clone().lerp(middle, shade / .58)
+        : middle.clone().lerp(light, (shade - .58) / .42);
+      return new THREE.MeshStandardMaterial({
+        color: color.lerp(middle, .49).multiplyScalar(1.32), map: canopy, alphaTest: .27, roughness: .96,
+        side: THREE.DoubleSide,
+      });
+    });
+    const rows = [
+      { height: .12, count: 8 }, { height: .25, count: 11 },
+      { height: .4, count: 12 }, { height: .55, count: 11 },
+      { height: .70, count: 10 }, { height: .84, count: 8 },
+      { height: .95, count: 6 },
+    ];
+    const spraysPerCluster = 10;
+    const surfaceBands = 5;
+    const spraysPerBand = 7;
+    const surfaceSprays = surfaceBands * spraysPerBand;
+    const touchups = [
+      { x: .43, y: 1.06, width: .24, height: .25, count: 27, minDepth: .88, shade: 4 },
+      { x: -.14, y: 2.46, width: .28, height: .18, count: 32, minDepth: .53, shade: 5 },
+      { x: -.14, y: 2.45, width: .24, height: .17, count: 30, minDepth: .54, shade: 4, inner: true },
+    ];
+    const regularLeaves = rows.reduce((sum, row) => sum + row.count * (spraysPerCluster + surfaceSprays), 0);
+    const patchLeaves = touchups.reduce((sum, area) => sum + area.count, 0);
+    const leafCount = regularLeaves + patchLeaves;
+    const fineLeaves = new THREE.InstancedMesh(new THREE.PlaneGeometry(2, 2),
+      new THREE.MeshStandardMaterial({ map: spray, alphaTest: .4, side: THREE.DoubleSide, roughness: 1, alphaToCoverage: true }),
+      leafCount);
+    fineLeaves.frustumCulled = false;
+    const detail = new THREE.Object3D();
+    const fineLayout = [];
+    rows.forEach(({ height, count }, row) => {
+      for (let i = 0; i < count; i++) {
+        const h = height + (random() - .5) * .095;
+        const angle = 2 * Math.PI * i / count + row * 1.13 + (random() - .5) * .22;
+        const radius = crownProfile(h) * (.79 + .13 * random());
+        const screenX = Math.cos(angle - facing);
+        const lowerEdge = 1 - THREE.MathUtils.smoothstep(h, .10, .30);
+        const center = .08 * h - .075 * lowerEdge + .055 * Math.sin(Math.PI * h);
+        // 왼쪽 아래 잎만 길게 늘어지고 오른쪽 밑단은 줄기 쪽으로 일찍 말린다.
+        const hem = lowerEdge * (.10 * screenX - .09 * Math.max(0, -screenX) ** 3);
+        const lowerRadius = radius * (1 - .17 * lowerEdge * Math.max(0, screenX));
+        const size = .19 + .13 * random() + .04 * Math.sin(Math.PI * h);
+        const shade = Math.round(Math.max(0, Math.min(10, 2 + 4 * h + Math.max(0, -Math.cos(angle)) + (random() - .46) * 4)));
+        const puff = new THREE.Mesh(geometries[(row + i) % geometries.length], materials[shade]);
+        puff.position.set(center + Math.cos(angle) * lowerRadius, .46 + h * 2.22 + hem,
+          Math.sin(angle) * lowerRadius);
+        puff.scale.set(size * (1 + .2 * random()), size * (1.03 + .24 * random()), size);
+        puff.rotation.y = angle;
+        puff.userData = { h, rest: puff.position.clone(), restScale: puff.scale.clone(), squeeze: 0 };
+        crown.add(puff);
+
+        // 잔잎 송이를 큰 덩어리의 표면에 얹어 수관 안쪽과 가장자리에 결을 만든다.
+        for (let j = 0; j < spraysPerCluster; j++) {
+          const spread = angle + (random() - .5) * 2.65;
+          const rise = (j + random()) / spraysPerCluster * 1.65 - .88;
+          const offset = Math.sqrt(1 - rise * rise) * size * (.93 + .23 * random());
+          const index = fineLayout.length;
+          fineLayout.push({
+            puff, x: Math.cos(spread) * offset, z: Math.sin(spread) * offset,
+            y: rise * puff.scale.y, size: size * (.115 + .19 * random()),
+            spread,
+            stretch: 1.2 + .65 * random(), tilt: (random() - .5) * .85,
+          });
+          const leafShade = THREE.MathUtils.clamp(shade + Math.floor(random() * 7) - 3, 0, 10);
+          fineLeaves.setColorAt(index, materials[leafShade].color);
+        }
+      }
+    });
+    const puffs = [...crown.children];
+
+    // 윤곽을 잡는 덩어리에서 실제 표면을 찾아 잎가지가 안으로 묻히지 않게 한다.
+    crown.updateMatrixWorld(true);
+    const surfaceRay = new THREE.Raycaster();
+    const outward = new THREE.Vector3();
+    const origin = new THREE.Vector3();
+    const inward = new THREE.Vector3();
+    puffs.forEach(puff => {
+      const direction = puff.rotation.y;
+      const height = puff.userData.h;
+      for (let j = 0; j < surfaceSprays; j++) {
+        const band = Math.floor(j / spraysPerBand);
+        const spread = direction + (j % spraysPerBand - 3) * .39 + .24 * (random() - .5);
+        const rise = -.84 + band * .39 + .14 * (random() - .5);
+        const ring = Math.sqrt(1 - rise * rise);
+        outward.set(Math.cos(spread) * puff.scale.x * ring, rise * puff.scale.y,
+          Math.sin(spread) * puff.scale.z * ring).normalize();
+        origin.copy(puff.position).addScaledVector(outward, 1);
+        surfaceRay.set(origin, inward.copy(outward).negate());
+        const hit = surfaceRay.intersectObject(puff, false)[0];
+        if (!hit) continue;
+        const offset = hit.point.sub(puff.position).addScaledVector(outward, .014);
+        const size = puff.scale.z * (.24 + random() * .18);
+        const shade = THREE.MathUtils.clamp(Math.round(2 + height * 2 + random() * 4), 0, 10);
+        fineLeaves.setColorAt(fineLayout.length, materials[shade].color);
+        fineLayout.push({
+          puff, spread, x: offset.x, y: offset.y, z: offset.z,
+          size, stretch: 1 + random() * .34, tilt: (random() - .5) * 1.12, rise,
+        });
+      }
+    });
+    const coreProfile = Array.from({ length: 23 }, (_, i) => {
+      const h = i / 22;
+      return new THREE.Vector2(crownProfile(h) * .87, .51 + h * 2.33);
+    });
+    const core = new THREE.Mesh(new THREE.LatheGeometry(coreProfile, 36),
+      new THREE.MeshStandardMaterial({ color: dark, map: canopy, alphaTest: .24, roughness: 1 }));
+    core.scale.z = .95;
+    crown.add(core);
+    // 주석이 표시된 두 곳은 인접한 잎 높이까지 작은 잎을 겹쳐 틈의 경계를 흐린다.
+    crown.updateMatrixWorld(true);
+    const front = new THREE.Vector3(-Math.sin(facing), .18, Math.cos(facing)).normalize();
+    const right = new THREE.Vector3(Math.cos(facing), 0, Math.sin(facing));
+    const up = new THREE.Vector3().crossVectors(front, right);
+    const towardTree = front.clone().negate();
+    const surfaceMeshes = [...puffs, core];
+    touchups.forEach(({ x, y, width, height, count, minDepth, shade, inner = false }) => {
+      for (let i = 0; i < count; i++) {
+        const angle = i * Math.PI * (3 - Math.sqrt(5)) + .34 * random();
+        const radius = Math.sqrt((i + .5) / count);
+        origin.copy(right).multiplyScalar(x + Math.cos(angle) * width * radius)
+          .addScaledVector(up, y + Math.sin(angle) * height * radius).addScaledVector(front, 4);
+        surfaceRay.set(origin, towardTree);
+        const hit = surfaceRay.intersectObjects(surfaceMeshes, false)[0];
+        if (!hit) continue;
+        const depth = hit.point.dot(front);
+        const lift = inner
+          ? Math.max(.018, minDepth - depth - .045 * radius)
+          : Math.max(.02, (minDepth - depth) * (1 - .36 * radius));
+        hit.point.addScaledVector(front, lift + .022 * random());
+        const puff = hit.object === core ? puffs.reduce((closest, candidate) => (
+          candidate.position.distanceToSquared(hit.point) < closest.position.distanceToSquared(hit.point)
+            ? candidate : closest
+        )) : hit.object;
+        const offset = hit.point.sub(puff.position);
+        const variation = Math.round((random() - .5) * 2.8);
+        fineLeaves.setColorAt(fineLayout.length, materials[shade + variation].color);
+        fineLayout.push({
+          puff, x: offset.x, y: offset.y, z: offset.z, inner,
+          size: .074 + random() * .026, stretch: .97 + random() * .31,
+          spread: Math.PI / 2 + facing + (random() - .5) * 1.22,
+          tilt: (random() - .5) * 1.24, rise: .19,
+        });
+      }
+    });
+    fineLeaves.count = fineLayout.length;
+    function placeFineLeaves() {
+      fineLayout.forEach(({ puff, x, y, z, size, stretch, tilt, spread, rise = 0, inner = false }, i) => {
+        // 아랫단에서는 잎줄기가 위로 향하게 돌려 잎 사이에 묻힌다.
+        const rest = puff.userData.rest;
+        const restHeight = (rest.y + y) * up.y + (rest.x + x) * up.x + (rest.z + z) * up.z;
+        const onLowerEdge = restHeight < .45;
+        const tuck = onLowerEdge ? size * .52 : 0;
+        const stretchOut = 1 + puff.userData.squeeze * .12;
+        const stay = inner ? puff.userData.squeeze * .82 : 0;
+        detail.position.set(puff.position.x + x * stretchOut - depthX * stay * .24,
+          puff.position.y + (y + tuck) / stretchOut + stay * .13,
+          puff.position.z + z * stretchOut - depthZ * stay * .24);
+        detail.scale.set(size * 1.30, size * stretch * 1.22, size * .82);
+        const roll = tilt * 1.7 + (onLowerEdge ? Math.PI : 0);
+        detail.rotation.set(-rise * .7 + tilt * .7, Math.PI / 2 - spread, roll, 'YXZ');
+        detail.updateMatrix();
+        fineLeaves.setMatrixAt(i, detail.matrix);
+      });
+      fineLeaves.instanceMatrix.needsUpdate = true;
+    }
+    placeFineLeaves();
+    fineLeaves.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+    crown.add(fineLeaves);
+    return { crown, core, puffs, placeFineLeaves };
+  }
+
+  function cylinderBetween(from, to, startRadius, endRadius, material) {
+    const start = new THREE.Vector3(...from), end = new THREE.Vector3(...to);
+    const direction = end.clone().sub(start);
+    const mesh = new THREE.Mesh(
+      new THREE.CylinderGeometry(endRadius, startRadius, direction.length(), 10, 5), material);
+    mesh.position.copy(start).lerp(end, .5);
+    mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), direction.normalize());
+    return mesh;
+  }
+
+  function trunk() {
+    const group = new THREE.Group();
+    const bark = new THREE.MeshStandardMaterial({ color: lin('#584431'), roughness: 1 });
+    const grain = new THREE.MeshStandardMaterial({ color: lin('#765d43'), roughness: 1 });
+    const crease = new THREE.MeshStandardMaterial({ color: lin('#3c3026'), roughness: 1 });
+    group.add(
+      cylinderBetween([.01, 0, 0], [-.045, .52, .015], .14, .085, bark),
+      cylinderBetween([-.045, .43, 0], [-.28, .94, .07], .081, .035, bark),
+      cylinderBetween([-.015, .34, .01], [.21, .92, .04], .064, .026, bark),
+      cylinderBetween([.08, .005, .03], [-.015, .23, .018], .073, .055, bark),
+      cylinderBetween([-.25, .84, .07], [-.46, 1.64, .43], .045, .016, bark),
+      cylinderBetween([.17, .83, .06], [.38, 1.48, .60], .038, .013, bark),
+      cylinderBetween([-.43, 1.48, .39], [-.55, 1.92, .37], .024, .009, bark),
+      cylinderBetween([-.07, .03, .105], [-.11, .39, .084], .015, .006, grain),
+      cylinderBetween([.059, .025, .125], [.015, .30, .112], .011, .005, crease),
+      cylinderBetween([-.022, .12, .132], [-.04, .30, .106], .009, .004, grain),
+    );
+    return group;
+  }
+
+  function supports() {
+    const group = new THREE.Group();
+    const wood = new THREE.MeshStandardMaterial({ color: lin('#a79d78'), roughness: 1 });
+    const weatheredWood = new THREE.MeshStandardMaterial({ color: lin('#766c50'), roughness: 1 });
+    const front = cylinderBetween([-.21, 0, .32], [-.10, .51, .13], .013, .01, wood);
+    front.userData.liftsInWind = true;
+    const left = cylinderBetween([-.56, 0, .04], [-.20, .66, .01], .015, .012, weatheredWood);
+    const right = cylinderBetween([.55, 0, .15], [.19, .58, .055], .015, .012, wood);
+    left.userData.footPlanted = true;
+    right.userData.footPlanted = true;
+    group.add(left, right, front);
+    return group;
+  }
+  const canvas = document.getElementById('tree');
+  const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
+  renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+  renderer.outputEncoding = THREE.sRGBEncoding;
+  const scene = new THREE.Scene();
+  scene.add(new THREE.HemisphereLight(0xffffed, 0x718a53, .9));
+  const sun = new THREE.DirectionalLight(0xffefd5, .95);
+  sun.position.set(-4, 7, 4);
+  scene.add(sun);
+  const tree = new THREE.Group();
+  const { crown, core, puffs, placeFineLeaves } = crownClusters();
+  const wood = trunk();
+  // Puffs and branches still follow the existing bending rig.
+  tree.add(wood, crown);
+  tree.scale.setScalar(1.14);
+  tree.rotation.set(0, facing, 0, 'ZXY');
+  const point = new THREE.Vector3();
+  const stakes = supports();
+  stakes.scale.setScalar(1.14);
+  stakes.rotation.y = facing;
+  const surfaceMeshes = [...wood.children, core, ...stakes.children].map(mesh => {
+    mesh.updateMatrix();
+    const positions = mesh.geometry.attributes.position;
+    const rest = new Float32Array(positions.count * 3);
+    for (let i = 0; i < positions.count; i++) {
+      point.fromBufferAttribute(positions, i).applyMatrix4(mesh.matrix).toArray(rest, i * 3);
+    }
+    mesh.frustumCulled = false;
+    return { mesh, positions, rest, inverse: mesh.matrix.clone().invert() };
+  });
+
+  // 밑동은 지면을 조금 밀고, 위쪽은 같은 호를 따라 더 크게 휜다.
+  const trunkFollow = .48;
+  function bendPoint(target, x, y, z, angle, baseShift, lift, footPlanted = false) {
+    const height = Math.max(0, y);
+    const turn = angle * height / 2.7;
+    const upper = footPlanted ? 0 : THREE.MathUtils.smoothstep(height, .54, 2.36);
+    const lower = footPlanted ? 0 : 1 - THREE.MathUtils.smoothstep(height, .20, 1.45);
+    const arcBack = turn < .0001 ? 0 : 1.28 * height * (1 - Math.cos(turn)) / turn;
+    // 밑동과 앞 지지대는 더 따라가고, 수관 위로 갈수록 젖혀지는 폭을 줄인다.
+    const back = (baseShift + arcBack) * (1 - .24 * upper) + trunkFollow * baseShift * lower;
+    const arcDrop = (turn < .0001 ? 0 : height * (1 - Math.sin(turn) / turn)) * (1 - .17 * upper);
+    // 뒤로 밀리면 내려다보는 카메라에서는 위로 보이므로, 수관에 아래쪽 기울기를 더한다.
+    const drop = arcDrop + .46 * back * THREE.MathUtils.smoothstep(height, .3, 2.32);
+    return target.set(x + depthX * back, y + lift - drop, z + depthZ * back);
+  }
+
+  let previousAngle = 0, previousShift = 0, previousLift = 0;
+  function bendSurfaces(angle, baseShift, rootLift) {
+    if (angle === previousAngle && baseShift === previousShift && rootLift === previousLift) return;
+    previousAngle = angle;
+    previousShift = baseShift;
+    previousLift = rootLift;
+    surfaceMeshes.forEach(({ mesh, positions, rest, inverse }) => {
+      for (let i = 0; i < positions.count; i++) {
+        const offset = i * 3;
+        const y = rest[offset + 1];
+        // 받치는 두 지지대는 발을 고정하고 위쪽만 줄기와 함께 밀린다.
+        const follow = mesh.userData.footPlanted
+          ? THREE.MathUtils.clamp((y - .025) / .47, 0, 1)
+          : 1;
+        bendPoint(point, rest[offset], y, rest[offset + 2], angle,
+          baseShift * follow, rootLift * follow, mesh.userData.footPlanted);
+        // 앞 지지대는 발이 더 크게 들리고, 줄기에 닿는 쪽은 같은 곡선을 따른다.
+        if (mesh.userData.liftsInWind) point.y += .88 * rootLift * Math.max(0, 1 - y / .48);
+        point.applyMatrix4(inverse);
+        positions.setXYZ(i, point.x, point.y, point.z);
+      }
+      positions.needsUpdate = true;
+      mesh.geometry.computeVertexNormals();
+    });
+  }
+  scene.add(tree, stakes);
+
+  const shadow = new THREE.Mesh(new THREE.CircleGeometry(1, 36),
+    new THREE.MeshBasicMaterial({ color: lin('#607c51'), transparent: true, opacity: .25 }));
+  shadow.rotation.x = -Math.PI / 2;
+  shadow.position.x = -.18;
+  shadow.scale.set(1.21, .53, 1);
+  scene.add(shadow);
+
+  const camera = new THREE.OrthographicCamera(-2, 2, 4, -4, .1, 30);
+  camera.position.set(0, 2.75, 8.5);
+  camera.lookAt(0, 1.22, 0);
+  function render() {
+    const width = canvas.clientWidth, height = canvas.clientHeight;
+    if (!width || !height) return;
+    const halfWidth = Math.max(1.96, 3.65 * width / height);
+    const halfHeight = halfWidth * height / width;
+    camera.left = -halfWidth;
+    camera.right = halfWidth;
+    camera.top = halfHeight;
+    camera.bottom = -halfHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(width, height, false);
+    renderer.render(scene, camera);
+    canvas.parentElement.dataset.rendered = '';
+  }
+  new ResizeObserver(render).observe(canvas);
+  render();
+
+  // 입력이 끊기면 송이들이 서서히 원래 자리로 돌아간다.
+  let frame = 0, wind = 0, targetWind = 0, previousTime = 0;
+  let replyStart = 0, replyDuration = 0;
+  let touch = null;
+  const touchRay = new THREE.Raycaster();
+  const touchScreen = new THREE.Vector2();
+
+  function pressAt(clientX, clientY) {
+    const bounds = canvas.getBoundingClientRect();
+    touchScreen.set((clientX - bounds.left) / bounds.width * 2 - 1,
+      1 - (clientY - bounds.top) / bounds.height * 2);
+    touchRay.setFromCamera(touchScreen, camera);
+    const hit = touchRay.intersectObjects(puffs, false)[0];
+    if (!hit) return false;
+    const center = hit.object.userData.rest;
+    const weights = puffs.map(puff => 1 - THREE.MathUtils.smoothstep(
+      puff.userData.rest.distanceTo(center), .03, .69));
+    touch = { weights, releaseAt: null, startAt: performance.now(), releaseDepth: 0 };
+    wake();
+    return true;
+  }
+
+  function releaseTouch(cancelled) {
+    if (!touch || touch.releaseAt !== null) return;
+    touch.releaseAt = performance.now();
+    const held = touch.releaseAt - touch.startAt;
+    touch.releaseDepth = Math.max(cancelled ? 0 : .50, 1 - Math.exp(-held / 92));
+    touch.cancelled = cancelled;
+    wake();
+  }
+
+  function touchAmount(now) {
+    if (!touch) return 0;
+    if (touch.releaseAt === null) return 1 - Math.exp(-Math.max(0, now - touch.startAt) / 92);
+    const time = Math.max(0, now - touch.releaseAt);
+    if (time >= 620) {
+      touch = null;
+      return 0;
+    }
+    const bounce = touch.cancelled ? 1 : Math.cos(time / 51);
+    return touch.releaseDepth * Math.exp(-time / 157) * bounce;
+  }
+  function sway(now) {
+    const elapsed = Math.min(50, now - previousTime);
+    previousTime = now;
+    wind += (targetWind - wind) * (1 - Math.exp(-elapsed / 100));
+    if (targetWind === 0 && wind < .006) wind = 0;
+    const replyProgress = replyDuration ? Math.max(0, (now - replyStart) / replyDuration) : 1;
+    const flutter = replyProgress < 1 ? Math.sin(replyProgress * Math.PI) ** 1.4 : 0;
+    const strong = THREE.MathUtils.smoothstep(wind, .40, .91);
+    const gust = strong * (.87 + .13 * Math.sin(now / 85));
+    const angle = (1.26 + .91 * wind + .08 * Math.sin(now / 155)) * wind + .24 * gust;
+    const baseShift = .36 * wind + .35 * gust;
+    const rootLift = .065 * wind ** 1.5 + .14 * gust;
+    bendSurfaces(angle, baseShift, rootLift);
+    shadow.position.z = -baseShift * (1 + trunkFollow) * 1.14;
+    shadow.scale.y = .53 + .24 * wind + .15 * gust;
+    shadow.material.opacity = .25 - .06 * gust;
+    const press = touchAmount(now);
+    puffs.forEach((puff, index) => {
+      const { h, rest, restScale } = puff.userData;
+      bendPoint(puff.position, rest.x, rest.y, rest.z, angle, baseShift, rootLift);
+      const flutterDepth = wind * .09 * h * Math.sin(now / 115 + index);
+      puff.position.x += flutterDepth * depthX + flutter * .055 * Math.sin(now / 43 + index);
+      puff.position.z += flutterDepth * depthZ;
+      puff.position.y += wind * .021 * Math.sin(now / 92 + index * 1.7)
+        + flutter * .035 * Math.sin(now / 37 + index);
+      const squeeze = reduceMotion.matches ? 0 : press * (touch?.weights[index] || 0);
+      const spread = 1 + squeeze * .12;
+      puff.userData.squeeze = squeeze;
+      puff.position.x += depthX * squeeze * .24;
+      puff.position.z += depthZ * squeeze * .24;
+      puff.position.y -= squeeze * .13;
+      puff.scale.set(restScale.x * spread, restScale.y / spread, restScale.z * spread);
+    });
+    placeFineLeaves();
+    renderer.render(scene, camera);
+    frame = wind || targetWind || replyProgress < 1 || touch ? requestAnimationFrame(sway) : 0;
+  }
+  function wake() {
+    if (frame) return;
+    previousTime = performance.now();
+    frame = requestAnimationFrame(sway);
+  }
+  canvas.dataset.touch = '';
+  canvas.tabIndex = 0;
+  canvas.setAttribute('role', 'button');
+  canvas.setAttribute('aria-label', '나뭇잎 누르기');
+  return {
+    pressAt,
+    releaseTouch,
+    wind(strength) {
+      const softScale = .35 + .65 * THREE.MathUtils.smoothstep(strength, .10, .55);
+      targetWind = reduceMotion.matches ? 0 : strength ** .69 * softScale;
+      if (targetWind) wake();
+    },
+    reply(duration) {
+      replyStart = performance.now();
+      replyDuration = reduceMotion.matches ? 0 : duration;
+      if (replyDuration) wake();
+    },
+  };
+}
+const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)');
+const fallbackTree = document.getElementById('fallback-tree');
+let treeMotion = {
+  wind(strength) { fallbackTree.style.scale = reduceMotion.matches ? '1' : `1 ${1 - (.25 + .08 * strength) * strength}`; },
+  reply() {},
+};
+try {
+  if (window.THREE) treeMotion = drawTree();
+} catch {
+  // WebGL을 쓸 수 없을 때는 나무 그림과 바람 감지 안내를 보여 준다.
+}
+
+const micButton = document.getElementById('mic');
+const windStatus = document.getElementById('wind-status');
+const privacy = document.getElementById('privacy-note');
+let voiceStart = null, lastVoice = 0;
+function showWindStatus(text) {
+  if (windStatus.textContent !== text) windStatus.textContent = text;
+}
+
+const instructions = {
+  off: '마이크를 꾹 누르고',
+  starting: '마이크 사용을 허용해 주세요',
+  calibrating: '누른 채 2초만 조용히 기다려 줘',
+  listening: '후~ 불거나 말을 걸어봐',
+  ended: '마이크가 끊겼어요 · 다시 켜 주세요',
+  unavailable: '이 브라우저에서는 마이크를 사용할 수 없어요',
+  error: '마이크를 켤 수 없어요 · 권한을 확인해 주세요',
+};
+
+const input = createLonetreeMic({
+  reuseCalibration: true,
+  windSound: true,
+  onState(state) {
+    const running = state === 'calibrating' || state === 'listening';
+    micButton.setAttribute('aria-pressed', String(running));
+    showWindStatus(instructions[state]);
+    if (state !== 'listening') {
+      voiceStart = null;
+      lastVoice = 0;
+      treeMotion.wind(0);
+      if (state !== 'off') treeMotion.reply(0);
+    }
+  },
+  onSample({ kind, strength, time, calibrationRemaining }) {
+    if (kind === 'calibration') {
+      if (calibrationRemaining > 0) {
+        showWindStatus(`누른 채 ${Math.ceil(calibrationRemaining / 1000)}초만 조용히 기다려 줘`);
+      }
+      return;
+    }
+    treeMotion.wind(strength);
+    if (kind === 'wind') {
+      privacy.dataset.seen = '';
+      voiceStart = null;
+      return;
+    }
+    if (kind === 'waiting') {
+      voiceStart = null;
+    } else if (kind === 'voice') {
+      voiceStart ??= time;
+      lastVoice = time;
+    } else if (voiceStart !== null && time - lastVoice >= 380) {
+      const shouldReply = lastVoice - voiceStart >= 95;
+      voiceStart = null;
+      if (shouldReply) {
+        const duration = input.rustle();
+        if (duration) treeMotion.reply(duration);
+      }
+    }
+  },
+});
+const touchCanvas = document.getElementById('tree');
+let treePointer = null, treeKey = null;
+touchCanvas.addEventListener('pointerdown', event => {
+  if (event.button !== 0 || treePointer !== null || treeKey !== null
+      || !treeMotion.pressAt?.(event.clientX, event.clientY)) return;
+  event.preventDefault();
+  treePointer = event.pointerId;
+  touchCanvas.setPointerCapture(treePointer);
+});
+function finishTreePointer(event) {
+  if (event.pointerId !== treePointer) return;
+  treePointer = null;
+  const cancelled = event.type !== 'pointerup';
+  treeMotion.releaseTouch(cancelled);
+  if (!cancelled) input.touchRustle();
+}
+for (const type of ['pointerup', 'pointercancel', 'lostpointercapture']) {
+  touchCanvas.addEventListener(type, finishTreePointer);
+}
+touchCanvas.addEventListener('contextmenu', event => {
+  if (treePointer !== null) event.preventDefault();
+});
+touchCanvas.addEventListener('keydown', event => {
+  if ((event.key !== ' ' && event.key !== 'Enter') || treePointer !== null) return;
+  event.preventDefault();
+  if (event.repeat || treeKey !== null) return;
+  const bounds = touchCanvas.getBoundingClientRect();
+  if (treeMotion.pressAt?.(bounds.left + bounds.width / 2, bounds.top + bounds.height * .45)) {
+    treeKey = event.key;
+  }
+});
+touchCanvas.addEventListener('keyup', event => {
+  if (event.key !== treeKey) return;
+  event.preventDefault();
+  treeKey = null;
+  treeMotion.releaseTouch(false);
+  input.touchRustle();
+});
+touchCanvas.addEventListener('blur', () => {
+  if (treeKey === null) return;
+  treeKey = null;
+  treeMotion.releaseTouch(true);
+});
+let pointer = null, heldKey = null;
+function beginHold() {
+  input.start();
+}
+function endHold(allowReply) {
+  const shouldReply = allowReply && voiceStart !== null && lastVoice - voiceStart >= 95;
+  const remaining = input.release(shouldReply);
+  if (shouldReply && remaining > 0) treeMotion.reply(remaining);
+}
+micButton.addEventListener('pointerdown', event => {
+  if (event.button !== 0 || pointer !== null || heldKey !== null) return;
+  event.preventDefault();
+  pointer = event.pointerId;
+  micButton.setPointerCapture(pointer);
+  beginHold();
+});
+function finishPointer(event) {
+  if (event.pointerId !== pointer) return;
+  pointer = null;
+  endHold(event.type === 'pointerup');
+}
+micButton.addEventListener('pointerup', finishPointer);
+micButton.addEventListener('pointercancel', finishPointer);
+micButton.addEventListener('lostpointercapture', finishPointer);
+micButton.addEventListener('contextmenu', event => event.preventDefault());
+micButton.addEventListener('keydown', event => {
+  if (event.key !== ' ' && event.key !== 'Enter') return;
+  event.preventDefault();
+  if (event.repeat || pointer !== null || heldKey !== null) return;
+  heldKey = event.key;
+  beginHold();
+});
+micButton.addEventListener('keyup', event => {
+  if (event.key !== heldKey) return;
+  event.preventDefault();
+  heldKey = null;
+  endHold(true);
+});
+micButton.addEventListener('blur', () => {
+  if (heldKey === null) return;
+  heldKey = null;
+  endHold(false);
+});
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden) return;
+  if (treePointer !== null || treeKey !== null) treeMotion.releaseTouch(true);
+  treePointer = null;
+  treeKey = null;
+  pointer = null;
+  heldKey = null;
+  input.release();
+});
+</script>
+</body>
+</html>

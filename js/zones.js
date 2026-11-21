@@ -16,7 +16,7 @@ window.ZONES = [
   { id: 'tosung',     name: '몽촌토성 산책로', source: null, icon: '🌳', scenic: '5경',       // 가운데~서쪽 큰 언덕
     intro: '백제 사람들이 흙으로 쌓은 성이에요. 지금은 부드러운 언덕을 따라 걷는 산책길이 되었어요.',
     soon: '백제 사람들이 흙성을 쌓듯, 말랑이를 한 겹 한 겹 쌓는 중이에요' },
-  { id: 'lonetree',   name: '나홀로나무',      source: null, icon: '🌲', scenic: '6경',       // 토성 위 서쪽
+  { id: 'lonetree',   name: '나홀로나무',      source: null, page: 'lonetree.html', icon: '🌲', scenic: '6경',       // 토성 위 서쪽
     intro: '넓은 잔디 언덕 위에 홀로 선 측백나무. 사진 찍으러 많이들 찾아오는 곳이에요.',
     soon: '혼자서도 씩씩한 말랑이로 빚는 중이에요' },
   { id: 'stream',     name: '성내천',          source: null, icon: '🌾', scenic: '',          // 북동쪽 가장자리 물길

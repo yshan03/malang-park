@@ -42,17 +42,112 @@
  #zone-card .soon{font-size:12px;color:#9a958c}
  #zone-card .close{position:absolute;top:8px;right:8px;width:32px;height:32px;border:0;border-radius:50%;background:none;font-size:20px;color:#9a958c;cursor:pointer}
 
+  /* 녹지 윤곽 검토용. SVG의 data-outline-preview를 지우면 숨긴 요소가 돌아옴. */
+  svg[data-outline-preview] :is(
+    #zone-lonetree, #zone-wildlab, #tosung-hill > path
+  ) {
+    display: none;
+  }
+
+  .landmark-label { display: none; }
+
   /* 공원·성내천·88호수의 위치 관계를 유지하며 함께 확대 */
   .map-core-scale { transform: translate(-19.5px, -48px) scale(1.19); }
 
+  html.mobile-preview body {
+    display: grid; place-items: center; background: #ece9e0;
+    height: var(--preview-visible-height, 100dvh);
+  }
+  html.mobile-preview .stage {
+    width: 390px;
+    height: 844px;
+    zoom: var(--preview-scale, 1);
+    border-radius: 14px;
+    box-shadow: 0 0 0 1px #66725e40, 0 8px 20px #26312020;
+  }
+
+  .label-color-review {
+    position: absolute; z-index: 3; left: 16px; bottom: 126px;
+    padding: 10px 12px; border-radius: 12px; background: #f7faef;
+    color: #3c5040; font-size: 13px;
+  }
+  .label-color-review .swatches { display: flex; gap: 7px; margin-bottom: 8px; }
+  .label-color-review button {
+    width: 29px; height: 29px; padding: 0; border: 2px solid #f7faef;
+    border-radius: 50%; background: var(--swatch); cursor: pointer;
+  }
+  .label-color-review button[aria-pressed="true"] { outline: 2px solid #556957; }
+  .label-color-review output { display: block; font-weight: 700; }
+
+  [data-trail-variant] { display: none; }
+  svg[data-trail-review] .tosung-path > :not([data-trail-variant]) { display: none; }
+  svg[data-trail-review="ribbon"] [data-trail-variant="ribbon"],
+  svg[data-trail-review="stitch"] [data-trail-variant="stitch"],
+  svg[data-trail-review="leaf"] [data-trail-variant="leaf"],
+  svg[data-trail-review="stones"] [data-trail-variant="stones"] { display: inline; }
+  svg[data-trail-review="current"] .tosung-path > :not([data-trail-variant]),
+  svg[data-trail-review][data-trail-plants] :is(#zone-lonetree, #zone-wildlab) { display: inline; }
+  .map-review {
+    position: absolute; z-index: 3; left: 14px; top: 586px; width: 234px;
+    padding: 10px; box-sizing: border-box; border-radius: 12px; background: #f7faef;
+    display: flex; flex-wrap: wrap; gap: 5px;
+  }
+  .map-review button {
+    background: #e5edd9; color: #455340; font: 700 14px system-ui, sans-serif;
+    border: 1px solid transparent; border-radius: 8px; padding: 7px 9px; cursor: pointer;
+  }
+  .map-review button[aria-pressed="true"] { background: #557052; color: #fff; }
+  .map-review button:focus-visible { outline: 2px solid #435841; outline-offset: 1px; }
+
+  [data-tree-variant] { display: none; }
+  svg[data-outline-preview]:not([data-trail-review]) #zone-lonetree { display: inline; }
+  svg:not([data-tree-review]) [data-tree-variant="paper"],
+  svg[data-tree-review="clay"] [data-tree-variant="clay"],
+  svg[data-tree-review="puffs"] [data-tree-variant="puffs"],
+  svg[data-tree-review="paper"] [data-tree-variant="paper"] { display: inline; }
+
+  [data-rose-jar] { display: none; }
+  svg:not([data-rose-review]) [data-rose-jar="open"] { display: inline; }
+  svg[data-rose-review="paper"] [data-rose-jar="paper"],
+  svg[data-rose-review="lean"] [data-rose-jar="lean"],
+  svg[data-rose-review="open"] [data-rose-jar="open"] { display: inline; }
+
+  [data-garden-art] { display: none; }
+  svg[data-outline-preview]:not([data-trail-review]) #zone-wildlab { display: inline; }
+  svg:not([data-gardens-review]) :is([data-garden-art="wind"], [data-garden-art="muhly"]),
+  svg[data-dulkkot="wind"] [data-garden-art="wind"],
+  svg[data-dulkkot="waves"] [data-garden-art="waves"],
+  svg[data-wildlab="plot"] [data-garden-art="plot"],
+  svg[data-wildlab="lens"] [data-garden-art="lens"],
+  svg[data-wildlab="muhly"] [data-garden-art="muhly"] { display: inline; }
+  .garden-review { display: grid; gap: 6px; }
+  .garden-review button { font-size: 12px; padding: 7px 6px; }
+  .garden-review [role="group"] { display: flex; flex-wrap: wrap; align-items: center; gap: 5px; }
+  .garden-review strong { flex-basis: 100%; color: #455340; font: 700 12px system-ui, sans-serif; }
 </style>
+<script>
+  if (new URLSearchParams(location.search).get('mobile') === '1') {
+    const root = document.documentElement;
+    root.classList.add('mobile-preview');
+    function fitMobilePreview() {
+      const width = window.visualViewport?.width ?? innerWidth;
+      const height = window.visualViewport?.height ?? innerHeight;
+      const scale = Math.min(1, (width - 16) / 390, (height - 16) / 844);
+      root.style.setProperty('--preview-visible-height', height + 'px');
+      root.style.setProperty('--preview-scale', scale);
+    }
+    fitMobilePreview();
+    addEventListener('resize', fitMobilePreview);
+    window.visualViewport?.addEventListener('resize', fitMobilePreview);
+  }
+</script>
 </head><body>
 <div class="stage">
 <header class="intro">
   <h1>올림픽공원 말랑 지도</h1>
   <p><span class="hand-line">공원에선 눈으로만 👀 여기선 손으로 마음껏 🤲</span><br><b><span class="hand">식물 구역</span> 을 눌러 보세요.</b></p>
 </header>
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 390 844" preserveAspectRatio="xMidYMid meet" font-family="'Jua','Apple SD Gothic Neo','Noto Sans KR',sans-serif">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 390 844" data-outline-preview preserveAspectRatio="xMidYMid meet" font-family="'Jua','Apple SD Gothic Neo','Noto Sans KR',sans-serif">
   <!--
     올림픽공원 일러스트 지도 v0.4 — 휴대폰 세로 한 장, 말랑 클레이 스타일 (2026-11-15)
     - 실제 지도를 따라 그린 것이 아니라, 구역의 대략적인 상대 위치(북쪽이 위)만 참고한 일러스트입니다.
@@ -239,6 +334,108 @@
     </g>
   </g>
 
+  <!-- ============ 배경 건물들 (장식, 누를 수 없음, 이름표 없음) ============
+       ⚠️ 전부 프로토타입용 임시 건물. 실제 올림픽공원 건물·위치와 맞춘 게 아님 (이름도 "배경 건물 N" 번호만).
+       빈 공간을 공원 분위기로 채우려고 흰 건물 + 연한 지붕 + 하늘색 유리로 모양만 다양하게 둠.
+       공모전 이후 안내도를 보고 디테일화할 때 바꾸거나 지울 것 (data-temp="true"로 한 번에 찾을 수 있음).
+       랜드마크·구역보다 뒤에 그려서 항상 아래에 깔림 -->
+  <g class="bg-buildings" aria-hidden="true" opacity=".9" display="none">
+    <!-- 건물마다 작은 묶음(g) 하나. 안의 도형 숫자는 그 건물 가운데(0,0) 기준이고,
+         지도 위 자리는 translate(x y) 숫자 하나로 정함 → 건물을 옮길 땐 이 숫자만 바꾸면 됨 -->
+    <!-- 배경 건물 1: 키 큰 층층 건물 -->
+    <g data-name="배경 건물 1" data-temp="true" transform="translate(28 553)">
+      <rect x="-9" y="-20" width="18" height="40" rx="4" fill="#e8d8bf"/>
+      <path d="M -6 -10 h 12 M -6 -2 h 12 M -6 6 h 12" stroke="#8da9b3" stroke-width="2.5" stroke-linecap="round"/>
+    </g>
+    <!-- 배경 건물 2: 둥근 탑 둘 -->
+    <g data-name="배경 건물 2" data-temp="true" transform="translate(54 565)">
+      <rect x="-12" y="-14" width="12" height="28" rx="6" fill="#bfad94"/>
+      <rect x="2" y="-6" width="11" height="20" rx="5.5" fill="#e8d8bf"/>
+    </g>
+    <!-- 배경 건물 3: 깃대 줄 + 깃대 밑 작은 타원 광장 (자리가 좁아 광장을 깃대 바로 밑으로 붙여 줄임) -->
+    <g data-name="배경 건물 3" data-temp="true" transform="translate(36 661)" display="none">
+      <ellipse cx="2" cy="-4" rx="27" ry="7" fill="#bfad94"/>
+      <path d="M -20 -4 v -12 M -10 -4 v -12 M 0 -4 v -12 M 10 -4 v -12 M 20 -4 v -12" stroke="#e8d8bf" stroke-width="2.5" stroke-linecap="round"/>
+      <path d="M -20 -16 h 5 M -10 -16 h 5 M 0 -16 h 5 M 10 -16 h 5 M 20 -16 h 5" stroke="#8da9b3" stroke-width="3" stroke-linecap="round"/>
+    </g>
+    <!-- 배경 건물 4: 작은 조각 기둥 셋 -->
+    <g data-name="배경 건물 4" data-temp="true" transform="translate(82 676)" display="none">
+      <rect x="-16" y="-8" width="8" height="20" rx="4" fill="#e8d8bf"/>
+      <circle cx="2" cy="4" r="7" fill="#bfad94"/>
+      <rect x="10" y="-12" width="7" height="24" rx="3.5" fill="#e8d8bf"/>
+    </g>
+    <!-- 배경 건물 5: 네모 건물 셋이 모인 단지 -->
+    <g data-name="배경 건물 5" data-temp="true" transform="translate(44 610)">
+      <rect x="-22" y="-16" width="22" height="18" rx="4" fill="#e8d8bf"/>
+      <rect x="2" y="-10" width="20" height="24" rx="4" fill="#bfad94"/>
+      <rect x="-18" y="4" width="18" height="12" rx="3" fill="#e8d8bf"/>
+    </g>
+    <!-- 배경 건물 6: 납작한 직사각형 -->
+    <g data-name="배경 건물 6" data-temp="true" transform="translate(252 576) scale(.74)">
+      <rect x="-20" y="-10" width="40" height="20" rx="5" fill="#e8d8bf"/>
+      <rect x="-16" y="-6" width="32" height="5" rx="2.5" fill="#8da9b3"/>
+    </g>
+    <!-- 배경 건물 7: 반달 아치 지붕 -->
+    <g data-name="배경 건물 7" data-temp="true" transform="translate(171 644)">
+      <path d="M -20 6 L -20 -6 A 20 16 0 0 1 20 -6 L 20 6 Z" fill="#e8d8bf"/>
+      <path d="M -12 6 L -12 -2 A 12 9 0 0 1 12 -2 L 12 6 Z" fill="#bfad94"/>
+    </g>
+    <!-- 배경 건물 8: 둥글게 휜 곡선 건물 -->
+    <g data-name="배경 건물 8" data-temp="true" transform="translate(28 695) scale(.57)">
+      <path d="M -25 18 C -27 -4 -9 -18 17 -16 C 25 -15 27 -8 19 -6 C 1 -6 -9 4 -9 18 Z" fill="#e8d8bf"/>
+    </g>
+    <!-- 배경 건물 9: 낮은 네모 둘 -->
+    <g data-name="배경 건물 9" data-temp="true" transform="translate(304 544)" display="none">
+      <rect x="-117" y="17" width="44" height="16" rx="5" fill="#e8d8bf"/>
+      <rect x="10" y="-11" width="30" height="22" rx="5" fill="#bfad94"/>
+    </g>
+    <!-- 배경 건물 10: 길고 낮은 네모 + 유리창 띠 -->
+    <g data-name="배경 건물 10" data-temp="true" transform="translate(116 624)">
+      <rect x="-26" y="-9" width="52" height="18" rx="5" fill="#e8d8bf"/>
+      <rect x="-21" y="-4" width="42" height="5" rx="2.5" fill="#8da9b3"/>
+    </g>
+    <!-- 배경 건물 11: 키 큰 네모 + 층 줄 -->
+    <g data-name="배경 건물 11" data-temp="true" transform="translate(370 388) scale(.85)">
+      <rect x="-11" y="-18" width="22" height="36" rx="4" fill="#bfad94"/>
+      <path d="M -7 -10 h 14 M -7 -2 h 14 M -7 6 h 14" stroke="#8da9b3" stroke-width="2.5" stroke-linecap="round"/>
+    </g>
+    <!-- 배경 건물 12: 작은 둥근 지붕 -->
+    <g data-name="배경 건물 12" data-temp="true" transform="translate(351 608) scale(.77)">
+      <circle cx="0" cy="0" r="13" fill="#e8d8bf"/>
+      <circle cx="0" cy="0" r="6" fill="#bfad94"/>
+    </g>
+    <!-- 배경 건물 13: ㄱ자로 붙은 네모 둘 -->
+    <g data-name="배경 건물 13" data-temp="true" transform="translate(75 516) scale(.74)">
+      <rect x="-14" y="-10" width="28" height="18" rx="4" fill="#e8d8bf"/>
+      <rect x="4" y="-2" width="18" height="16" rx="4" fill="#bfad94"/>
+    </g>
+    <!-- 배경 건물 14: 작은 아치 지붕 -->
+    <g data-name="배경 건물 14" data-temp="true" transform="translate(149 589) scale(.72)">
+      <path d="M -14 8 L -14 -1 A 14 11 0 0 1 14 -1 L 14 8 Z" fill="#e8d8bf"/>
+      <path d="M -7 8 L -7 3 A 7 5 0 0 1 7 3 L 7 8 Z" fill="#bfad94"/>
+    </g>
+    <!-- 배경 건물 15: 흰 돔 -->
+    <g data-name="배경 건물 15" data-temp="true" transform="translate(369 494) scale(.59)">
+      <path d="M -20 -1 A 20 18 0 0 1 20 -1 Z" fill="#e8d8bf"/>
+      <rect x="-22" y="-3" width="44" height="6" rx="3" fill="#bfad94"/>
+    </g>
+    <!-- 배경 건물 16: 네모 상자 -->
+    <g data-name="배경 건물 16" data-temp="true" transform="translate(365 429) scale(.78)">
+      <rect x="-18" y="-10" width="36" height="20" rx="4" fill="#e8d8bf"/>
+      <rect x="-18" y="-10" width="36" height="6" rx="3" fill="#bfad94"/>
+    </g>
+    <!-- 배경 건물 17: 납작한 코트 -->
+    <g data-name="배경 건물 17" data-temp="true" transform="translate(235 625) scale(.78)">
+      <rect x="-16" y="-8" width="32" height="16" rx="4" fill="#bfad94"/>
+      <rect x="-10" y="-4" width="20" height="8" rx="2" fill="#8da9b3"/>
+    </g>
+    <!-- 배경 건물 18: 둥근 지붕 -->
+    <g data-name="배경 건물 18" data-temp="true" transform="translate(365 614)" display="none">
+      <circle cx="0" cy="0" r="15" fill="#e8d8bf"/>
+      <circle cx="0" cy="0" r="8" fill="#bfad94"/>
+    </g>
+  </g>
+
   <!-- 배경 소품: 종이 구름, 벤치와 디딤돌, 풀잎과 씨앗 -->
   <g aria-hidden="true" pointer-events="none">
     <g fill="#f5f4e7">
@@ -360,6 +557,18 @@
       <circle cx="17.5" cy="-6.5" r="2.2" fill="#f2a3b5"/><circle cx="18.8" cy="-2.2" r="2.2" fill="#f6d77a"/>
       <circle cx="18.8" cy="2.2" r="2.2" fill="#f2a3b5"/><circle cx="17.5" cy="6.5" r="2.2" fill="#f6d77a"/>
     </g>
+    <!-- 랜드마크 이름표 (작게, 구역 이름표보다 연한 색). 빼고 싶으면 이 묶음만 지우면 됨 -->
+    <g class="landmark-label" aria-hidden="true">
+      <text x="42" y="475" text-anchor="middle">세계평화의 문</text>
+      <g class="map-core-scale">
+        <text x="309" y="375" text-anchor="middle">88호수</text>
+      </g>
+      <text x="244" y="569" text-anchor="middle">티켓링크</text>
+      <text x="244" y="581" text-anchor="middle">라이브 아레나</text>
+      <text x="341" y="570" text-anchor="middle">엄지손가락</text>
+      <text x="341" y="582" text-anchor="middle">조각</text>
+      <text x="175" y="608" text-anchor="middle">벨로드롬</text>
+    </g>
   </g>
 
   <!-- ============ 구역들 (누를 수 있음) ============ -->
@@ -367,39 +576,134 @@
   <!-- 몽촌토성 산책로 (5경): 가운데 초록 언덕(몽촌토성) 전체가 산책로 구역 (2026-11-18 사용자 요청으로 이름표 대신)
        - 누르는 자리 = 언덕 모양 그대로(투명). 나홀로나무·야생화학습장은 이 묶음보다 뒤(위)에 그려져서 그쪽을 누르면 그 구역이 먼저 잡힘
        - 아이보리 길은 나무와 꽃밭의 그림·이름표가 들어갈 자리를 피해 배치
-       - 누르면 언덕 전체가 출렁인 뒤 카드가 뜸 (언덕 위 나무·야생화도 같이 출렁임) -->
+       - 누르면 언덕 전체가 출렁임 (언덕 위 나무·야생화도 같이 출렁임) -->
   <!-- 언덕 위 구역 묶음: 몽촌토성 산책로를 누르면 이 묶음(산책로 + 나홀로나무 + 야생화학습장)이 언덕과 함께 출렁임.
        나무·야생화를 누르면 그 구역만 따로 출렁임 (묶음 안에서 각자 움직임이 더해짐) -->
   <g class="map-core-scale">
     <g id="hill-zones">
-    <g class="zone" id="zone-tosung" data-zone="tosung" data-name="몽촌토성 산책로" data-active="false" data-jelly-target="hill-zones" data-jelly-with="tosung-hill" tabindex="0" role="button" aria-label="몽촌토성 산책로">
+    <g class="zone" id="zone-tosung" data-zone="tosung" data-no-card data-name="몽촌토성 산책로" data-active="false" data-jelly-target="hill-zones" data-jelly-with="tosung-hill" tabindex="0" role="button" aria-label="몽촌토성 산책로">
       <use class="zone-hit" href="#park-outline" fill="#fff" opacity="0.001"/>
       <g class="tosung-path" clip-path="url(#park-trail-clip)" mask="url(#stream-bank-gap)"
          fill="none" stroke="#fff5da" stroke-opacity=".89" stroke-linecap="round" stroke-linejoin="round">
-        <!-- 나무 윗쪽을 돌아 88마당 가장자리까지 내려오는 큰길 -->
-        <path stroke-width="4.6" d="M 93.0 332.0
-          C 73.0 327.0 66.0 314.0 72.9 295.7
-          C 70.0 258.6 74.6 224.6 112.9 215.1
-          C 151.3 206.9 173.1 222.7 206.3 225.6
-          C 235.3 227.9 280.0 246.0 277.0 267.0
-          C 274.0 286.0 245.0 299.0 246.0 326.0
-          C 247.0 347.0 262.0 367.0 269.0 388.0
-          C 277.0 411.0 313.0 423.0 303.0 447.0
-          C 296.0 467.0 276.0 468.0 261.0 454.0"/>
-        <!-- 위아래 구역 사이를 가로지르는 길과 꽃밭 옆 샛길 -->
-        <path stroke-width="3.7" d="M 93.0 332.0
-          C 107.0 340.0 106.0 371.0 139.0 376.0
-          C 166.0 380.0 190.0 357.0 218.0 366.0
-          C 239.0 373.0 251.0 389.0 269.0 388.0"/>
-        <path stroke-width="3.1" d="M 269.0 388.0 C 269.0 410.0 258.0 427.0 246.0 429.0"/>
+        <!-- 나홀로나무에서 야생화학습장까지 이어지는 길 -->
+        <path stroke-width="4.6" d="M 148 286
+          C 171 286 191 298 193 319
+          C 196 337 185 346 183 358
+          C 181 373 186 386 194 396
+          M 193 319 C 202 314 207 305 213 296 C 223 282 240 273 256 264
+          M 213 296 C 223 295 229 303 244 306
+          M 183 358 C 159 363 138 356 127 340
+          M 183 358 C 213 351 240 363 249 382 C 253 390 259 395 266 397"/>
+        <!-- 새 길 시안은 비교 화면에서만 표시 -->
+        <g data-trail-variant="ribbon" stroke-opacity="1">
+          <defs><path id="ribbon-main" d="M 105 235
+            C 131 211 177 224 205 243 C 235 264 224 296 215 319
+            C 205 344 210 354 214 365 C 225 388 252 383 273 409
+            C 294 427 291 447 275 454"/></defs>
+          <use href="#ribbon-main" stroke="#91ac74" stroke-width="10" transform="translate(0 2)"/>
+          <use href="#ribbon-main" stroke="#f5e9c8" stroke-width="8"/>
+          <path d="M 78 311 C 107 312 96 356 124 362 C 151 371 184 350 214 365
+            M 214 365 C 185 377 158 368 144 388 C 128 409 137 425 129 442
+            M 223 284 C 244 280 260 264 277 263" stroke="#f5e9c8" stroke-width="5"/>
+        </g>
+        <g data-trail-variant="stitch" stroke="#fff3d5" stroke-opacity=".94">
+          <path d="M 82 279 C 103 239 135 227 168 231 C 200 235 224 250 227 277
+            C 230 303 208 318 208 343 C 207 356 211 360 219 371
+            C 241 390 266 393 278 415 C 289 434 286 451 269 456"
+            stroke-width="4.4" stroke-dasharray="10 7"/>
+          <path d="M 82 279 C 74 303 91 320 102 337 C 113 356 118 368 143 370
+            C 166 372 198 352 219 371
+            M 219 371 C 192 383 176 364 153 382 C 140 392 137 414 132 431
+            M 227 277 C 241 273 256 270 269 257" stroke-width="3.5" stroke-dasharray="5 6"/>
+        </g>
+        <g data-trail-variant="leaf" stroke="#f4eccf" stroke-opacity=".95">
+          <path d="M 181 222 C 226 239 233 272 219 306 C 209 333 212 353 228 371
+            C 242 386 258 397 263 416 C 270 435 281 447 295 448"
+            stroke-width="5.5"/>
+          <path d="M 215 255 C 195 240 165 220 133 229 C 103 237 86 256 78 285
+            M 219 306 C 233 289 251 275 270 270
+            M 228 371 C 202 353 176 374 146 375 C 120 374 104 355 95 342
+            M 228 371 C 209 384 192 367 167 375 C 146 382 140 399 135 413
+            M 263 416 C 275 410 286 417 294 430
+            M 268 432 C 261 438 252 440 244 439" stroke-width="3.4"/>
+        </g>
+        <g data-trail-variant="stones" stroke-opacity="1">
+          <defs><path id="stones-main" d="M 88 269 C 107 230 143 219 177 230
+            C 208 240 228 258 222 284 C 216 312 201 338 218 369
+            C 229 388 255 391 270 408 C 289 430 288 447 272 453"
+            /></defs>
+          <use href="#stones-main" stroke="#a7b687" stroke-width="8.4" stroke-dasharray="1 13" transform="translate(0 2)"/>
+          <use href="#stones-main" stroke="#f4e9ca" stroke-width="7.2" stroke-dasharray="1 13"/>
+          <path d="M 84 318 C 105 322 106 348 126 360 C 151 375 190 352 218 369
+            M 218 369 C 196 387 178 370 156 381 C 140 389 136 410 133 431
+            M 222 284 C 240 283 258 270 270 265"
+            stroke="#e9dabc" stroke-width="5.2" stroke-dasharray="1 10"/>
+        </g>
+
+      </g>
+    </g>
+
+    <!-- 산책로 옆 분홍 나무 -->
+    <g aria-hidden="true" pointer-events="none" clip-path="url(#park-trail-clip)" mask="url(#stream-bank-gap)">
+      <g transform="translate(257 260)">
+        <ellipse cx="1" cy="3" rx="13" ry="4" fill="#718e57" opacity=".25"/>
+        <path d="M-2 4 Q0-7-1-12 Q-3-19-7-22 M0-8 Q5-13 12-19 M0-15 Q1-20 5-26
+                 M-1-13 Q-7-17-16-15" fill="none" stroke="#947b60" stroke-width="2.4"
+              stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M-14-18 C-19-18-21-12-21-6 Q-21-2-19 0 Q-16-1-15-5
+                 C-12-10-9-16-14-18Z" fill="#f5cfdb"/>
+        <path d="M-8-24 C-13-25-16-16-15-9 Q-15-5-12-3 Q-10-4-9-8
+                 C-6-13-3-21-8-24Z" fill="#fae5e8"/>
+        <path d="M3-28 C-3-30-6-21-6-13 Q-7-7-4-5 Q-2-6-1-10
+                 C1-14 7-24 3-28Z" fill="#f8dce5"/>
+        <path d="M10-26 C7-26 5-20 5-16 Q4-11 5-9 Q8-9 9-13
+                 C12-18 15-24 10-26Z" fill="#ecc1d0"/>
+        <path d="M15-20 C10-21 11-13 8-8 Q6-4 8-1 Q11-1 13-5
+                 C16-10 20-18 15-20Z" fill="#f4d2de"/>
+        <path d="M-13-15 Q-16-11-16-7 M-7-21 Q-10-17-10-13 M1-25 Q-1-23-2-19"
+              fill="none" stroke="#fff3ef" stroke-opacity=".8" stroke-width="1.6" stroke-linecap="round"/>
+      </g>
+      <g transform="translate(253 298) scale(.82)">
+        <ellipse cx="-2" cy="9" rx="17" ry="6.4" fill="#60764f" opacity=".25"/>
+        <path d="M-14 3 Q0-6 14 3 L14 8 Q9 13 0 13 Q-10 13-14 8Z" fill="#c1b49d"/>
+        <path d="M-14 3 Q0-5 14 3 Q11 9 0 9 Q-10 9-14 3Z" fill="#eee5d0"/>
+        <path d="M-10-4 V3 M-5-1 V6 M8-2 V5 M12-5 V2" fill="none"
+              stroke="#b28c66" stroke-width="2.3" stroke-linecap="round"/>
+        <path d="M-15-9 L-10-14 L0-17 L10-14 L15-9 L13-4 L5-1 L-6-1 L-14-4Z" fill="#879aa2"/>
+        <path d="M0-17 L-6-3 L-14-6 L-15-9 L-10-14Z" fill="#9caeb3"/>
+        <path d="M0-17 L10-14 L15-9 L5-3 L-6-3Z" fill="#b8c7c8"/>
+        <path d="M0-17 L10-14 L15-9 L5-3Z" fill="#a9bdc1"/>
+        <path d="M-14-5 Q-5 0 5-2 L13-5" fill="none" stroke="#738e99" stroke-width="1.3" stroke-linecap="round"/>
       </g>
     </g>
 
     <!-- 나홀로나무 (6경): 토성 위 서쪽 — 점토 공 나무 -->
-    <g transform="translate(-4.81 -10.02)">
+    <g transform="translate(-24.81 -32.02)">
     <g class="zone" id="zone-lonetree" data-zone="lonetree" data-name="나홀로나무" data-active="false" tabindex="0" role="button" aria-label="나홀로나무">
       <circle class="zone-hit" cx="149" cy="295" r="38" fill="#fff" opacity="0.001"/>
 
+      <g data-tree-variant="clay" transform="translate(149 318)">
+        <ellipse cx="1" cy="4" rx="24" ry="5" fill="#527c44" opacity=".19"/>
+        <path d="M-4 2 Q-3 -10 -8 -18 L2 -19 Q6 -10 5 2 Q0 5 -4 2Z" fill="url(#clayTrunk)"/>
+        <path d="M-11 -13 C-25 -14 -32 -27 -28 -42 C-26 -50 -22 -54 -21 -59
+          C-15 -68 -3 -70 8 -66 C20 -63 22 -52 26 -44 C32 -34 29 -22 22 -16
+          C16 -10 8 -11 2 -14 C-2 -11 -7 -11 -11 -13Z" fill="url(#tree-clay-crown)"/>
+        <path d="M-25 -29 C-14 -18 -6 -24 1 -19 C8 -15 19 -18 26 -25
+          C23 -15 14 -12 4 -14 C-8 -10 -19 -15 -25 -29Z" fill="#3c7044" opacity=".45"/>
+        <ellipse cx="-9" cy="-57" rx="10" ry="4.1" fill="#d0e6ae" opacity=".48" transform="rotate(-18 -9 -57)"/>
+        <path d="M7 -50 Q13 -47 15 -42" fill="none" stroke="#b2d38b" stroke-width="3.5" stroke-linecap="round" opacity=".45"/>
+      </g>
+      <g data-tree-variant="puffs" transform="translate(149 318)">
+        <ellipse cx="1" cy="4" rx="23" ry="5" fill="#527c44" opacity=".19"/>
+        <path d="M-4 3 Q-2 -13 -6 -20 L4 -20 Q6 -7 5 2 Q0 5 -4 3Z" fill="url(#clayTrunk)"/>
+        <path d="M-14 -15 C-32 -17 -32 -39 -23 -49 C-18 -65 -1 -71 12 -64 C27 -56 30 -35 26 -23 C20 -11 7 -10 0 -15 C-5 -12 -9 -13 -14 -15Z" fill="#53864a"/>
+        <ellipse cx="-3" cy="-50" rx="19" ry="17" fill="url(#tree-puff-crown)"/>
+        <ellipse cx="12" cy="-42" rx="15" ry="17" fill="url(#clayLeaf)"/>
+        <ellipse cx="-15" cy="-38" rx="15" ry="16" fill="url(#tree-puff-crown)"/>
+        <ellipse cx="-5" cy="-29" rx="17" ry="16" fill="url(#tree-puff-crown)"/>
+        <ellipse cx="15" cy="-28" rx="13" ry="14" fill="url(#clayLeaf)"/>
+        <ellipse cx="-7" cy="-56" rx="6" ry="3" fill="#dfedbc" opacity=".52" transform="rotate(-15 -7 -56)"/>
+      </g>
       <g data-tree-variant="paper" transform="translate(149 318)">
         <ellipse cx="0" cy="4" rx="23" ry="4" fill="#64834c" opacity=".17"/>
         <path d="M-5 3 Q-5 -9 -9 -17 L2 -21 L7 2 Q1 5 -5 3Z" fill="#8f6849"/>
@@ -422,6 +726,36 @@
       <g transform="translate(10 -58)">
         <circle class="zone-hit" cx="184" cy="470" r="48" fill="#fff" opacity="0.001"/>
 
+        <g data-garden-art="plot" transform="translate(184 476)">
+          <path d="M-44 17 Q-31 7-22 10 Q3 2 14 10 Q26 7 38 15
+            Q46 18 36 23 Q0 29-40 23Z" fill="#bdc398"/>
+          <path d="M-31 16 Q-28 1-25-10 M-8 14 Q-13 1-10-30
+            M9 14 Q7 1 4-10 M25 16 Q23 4 33-18"
+            fill="none" stroke="#6c865a" stroke-width="2.8" stroke-linecap="round"/>
+          <path d="M-28 8 Q-37 6-39-2 Q-30-2-28 8 M-10-2 Q-21-7-18-15 Q-10-13-10-2
+            M8 6 Q14-5 21-2 Q18 5 8 6 M26 7 Q17 5 16-2 Q25-1 26 7"
+            fill="#849c69"/>
+          <use href="#map-paper-daisy" color="#ede2b8" transform="translate(-26 -12) scale(.66)"/>
+          <use href="#map-paper-poppy" color="#ad8cac" transform="translate(-10 -30) rotate(-10) scale(.72)"/>
+          <use href="#map-paper-daisy" color="#c9acc8" transform="translate(4 -10) scale(.58)"/>
+          <use href="#map-paper-daisy" color="#e9caa7" transform="translate(33 -18) rotate(13) scale(.69)"/>
+          <path d="M-25 18 L-25 11 L-14 11 L-14 18 L-19 21 Z" fill="#eadbb7"/>
+          <path d="M-22 14 h5" stroke="#9a805e" stroke-width="1.3" stroke-linecap="round"/>
+        </g>
+        <g data-garden-art="lens" transform="translate(184 475)">
+          <path d="M-44 15 Q-17 6 22 15 Q43 15 39 20 Q18 29-35 24 Q-46 22-44 15Z" fill="#b3c392"/>
+          <path d="M-31 17 Q-34 6-34-4 M24 16 Q18 3 25-7 M34 17 Q35 6 41 3"
+            fill="none" stroke="#6d895c" stroke-width="2.6" stroke-linecap="round"/>
+          <use href="#map-paper-poppy" color="#ad8fae" transform="translate(-35 -6) scale(.53)"/>
+          <use href="#map-paper-daisy" color="#e5c69f" transform="translate(25 -8) scale(.58)"/>
+          <path d="M31 15 Q31 7 42 4 Q40 13 31 15Z" fill="#7f9c63"/>
+          <path d="M8 3 Q17 8 24 19" stroke="#896b57" stroke-width="8" stroke-linecap="round"/>
+          <ellipse cx="-5" cy="-10" rx="25" ry="23" fill="#e5e8c3" stroke="#998063" stroke-width="4"/>
+          <path d="M-9 5 Q-12-2-6-13 M-9 2 Q-21-3-18-8 Q-11-5-9 2 M-9-2 Q-3-10 3-6 Q0-1-9-2"
+            stroke="#738b59" fill="#8ba36c" stroke-width="1.8"/>
+          <use href="#map-paper-daisy" color="#ba9cbd" transform="translate(-5 -13) scale(.86)"/>
+          <path d="M-23-14 Q-20-24-13-26" stroke="#f8f2d7" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+        </g>
 
         <g data-garden-art="muhly" transform="translate(184 478) scale(.88)">
           <path d="M-51-12 C-49-25-43-30-34-27 Q-30-35-21-30 Q-12-37-5-31
@@ -727,10 +1061,174 @@
           <use href="#map-cosmos-dot" color="#f0b644" transform="translate(29.4 26.8) rotate(18) scale(0.96)"/>
           <use href="#map-cosmos-dot" color="#efb44c" transform="translate(40.8 30.1) rotate(10) scale(0.71)"/>
           <use href="#map-cosmos-dot" color="#e28b34" transform="translate(58.4 27.7) rotate(-6) scale(0.91)"/>
+          <use href="#map-cosmos-dot" color="#f0b644" transform="translate(49.5 26.2) rotate(-23) scale(0.63)"/>
+          <use href="#map-cosmos-dot" color="#e28b34" transform="translate(-37.2 6.8) rotate(9) scale(0.53)"/>
+          <use href="#map-cosmos-dot" color="#c96f35" transform="translate(-51.8 6.1) rotate(-1) scale(0.76)"/>
+          <use href="#map-cosmos-dot" color="#e28b34" transform="translate(-36.1 20.3) rotate(-26) scale(0.63)"/>
+          <use href="#map-cosmos-dot" color="#e28b34" transform="translate(-21.0 -1.9) rotate(16) scale(0.68)"/>
+          <use href="#map-cosmos-dot" color="#c96f35" transform="translate(59.5 2.7) rotate(5) scale(0.70)"/>
+          <use href="#map-cosmos-dot" color="#c96f35" transform="translate(-63.5 -3.8) rotate(-12) scale(0.47)"/>
+          <use href="#map-cosmos-dot" color="#c96f35" transform="translate(25.1 6.9) rotate(18) scale(0.63)"/>
+          <use href="#map-cosmos-dot" color="#f0b644" transform="translate(26.7 -3.0) rotate(0) scale(0.54)"/>
+          <use href="#map-cosmos-dot" color="#e9a137" transform="translate(8.7 -2.2) rotate(23) scale(0.62)"/>
+          <use href="#map-cosmos-dot" color="#e28b34" transform="translate(35.2 14.4) rotate(25) scale(0.63)"/>
+          <use href="#map-cosmos-dot" color="#f0b644" transform="translate(-16.9 -9.1) rotate(17) scale(0.62)"/>
+          <use href="#map-cosmos-dot" color="#efb44c" transform="translate(-42.7 4.7) rotate(-29) scale(0.72)"/>
+          <use href="#map-cosmos-dot" color="#f0b644" transform="translate(47.4 -11.7) rotate(30) scale(0.51)"/>
+          <use href="#map-cosmos-dot" color="#e28b34" transform="translate(48.0 6.2) rotate(-13) scale(0.50)"/>
+          <use href="#map-cosmos-dot" color="#efb44c" transform="translate(53.5 21.3) rotate(-1) scale(0.59)"/>
+          <use href="#map-cosmos-dot" color="#efb44c" transform="translate(-62.9 4.7) rotate(-27) scale(0.66)"/>
+          <use href="#map-cosmos-dot" color="#f0b644" transform="translate(17.2 -2.7) rotate(-5) scale(0.48)"/>
+          <use href="#map-cosmos-dot" color="#e9a137" transform="translate(-40.2 -12.6) rotate(-18) scale(0.61)"/>
+          <use href="#map-cosmos-dot" color="#e9a137" transform="translate(-17.8 27.1) rotate(-7) scale(0.58)"/>
+          <use href="#map-cosmos-dot" color="#efb44c" transform="translate(-60.5 15.8) rotate(0) scale(0.55)"/>
+          <use href="#map-cosmos-dot" color="#e28b34" transform="translate(55.9 16.1) rotate(8) scale(0.78)"/>
+          <use href="#map-cosmos-dot" color="#e9a137" transform="translate(-31.9 4.9) rotate(-6) scale(0.54)"/>
+          <use href="#map-cosmos-dot" color="#e9a137" transform="translate(-34.1 -5.6) rotate(4) scale(0.67)"/>
+          <use href="#map-cosmos-dot" color="#efb44c" transform="translate(-15.8 -3.3) rotate(4) scale(0.71)"/>
+          <use href="#map-cosmos-dot" color="#e28b34" transform="translate(33.7 -18.9) rotate(-16) scale(0.61)"/>
+          <use href="#map-cosmos-dot" color="#e28b34" transform="translate(-37.6 25.5) rotate(17) scale(0.63)"/>
+          <use href="#map-cosmos-dot" color="#e28b34" transform="translate(54.5 5.7) rotate(18) scale(0.71)"/>
+          <use href="#map-cosmos-dot" color="#f0b644" transform="translate(34.3 -2.6) rotate(28) scale(0.65)"/>
+          <use href="#map-cosmos-dot" color="#e9a137" transform="translate(25.8 -20.9) rotate(25) scale(0.58)"/>
+          <use href="#map-cosmos-dot" color="#e28b34" transform="translate(16.6 -18.5) rotate(-25) scale(0.64)"/>
+          <use href="#map-cosmos-dot" color="#f0b644" transform="translate(-28.7 26.7) rotate(-25) scale(0.56)"/>
+          <use href="#map-cosmos-dot" color="#efb44c" transform="translate(-25.0 -12.5) rotate(-15) scale(0.47)"/>
+          <use href="#map-cosmos-dot" color="#e28b34" transform="translate(16.9 26.7) rotate(-29) scale(0.55)"/>
+          <use href="#map-cosmos-dot" color="#c96f35" transform="translate(-47.7 26.8) rotate(-10) scale(0.69)"/>
+          <use href="#map-cosmos-dot" color="#f0b644" transform="translate(-56.9 6.6) rotate(8) scale(0.55)"/>
+          <use href="#map-cosmos-dot" color="#f0b644" transform="translate(18.5 7.0) rotate(19) scale(0.68)"/>
+          <use href="#map-cosmos-dot" color="#f0b644" transform="translate(-8.1 -3.2) rotate(16) scale(0.60)"/>
+          <use href="#map-cosmos-dot" color="#e9a137" transform="translate(0.2 -26.6) rotate(2) scale(0.64)"/>
+          <use href="#map-cosmos-dot" color="#e28b34" transform="translate(-49.7 -6.9) rotate(-20) scale(0.61)"/>
+          <use href="#map-cosmos-dot" color="#efb44c" transform="translate(-4.7 18.7) rotate(-30) scale(0.81)"/>
+          <use href="#map-cosmos-dot" color="#e9a137" transform="translate(-45.1 -10.4) rotate(-28) scale(0.49)"/>
+          <use href="#map-cosmos-dot" color="#e28b34" transform="translate(-14.3 18.2) rotate(20) scale(0.73)"/>
+          <use href="#map-cosmos-dot" color="#e28b34" transform="translate(5.7 25.6) rotate(-17) scale(0.70)"/>
+          <use href="#map-cosmos-dot" color="#f0b644" transform="translate(-22.1 -18.3) rotate(22) scale(0.65)"/>
+          <use href="#map-cosmos-dot" color="#f0b644" transform="translate(58.0 11.6) rotate(-20) scale(0.63)"/>
+          <use href="#map-cosmos-dot" color="#f0b644" transform="translate(42.3 25.5) rotate(27) scale(0.67)"/>
           <path d="M-17-33 C-20-25-14-22-12-20 C-6-14-11-6-7-1
             C0 7 12 10 19 18 L25 34 L42 34 C37 21 31 14 20 9
             C7 3-1-1-3-7 C-4-12-4-18-9-22 Q-14-26-13-33Z" fill="#f6e4b7"/>
           <path d="M-11-21 Q-6-15-7-11 M8 6 Q17 12 22 16" fill="none" stroke="#d9bd8c" stroke-width="1.1" stroke-linecap="round"/>
+        </g>
+      </g>
+      <g data-garden-art="waves" transform="translate(98 763)">
+        <defs>
+          <path id="dulkkot-sloping-field" d="M-68-12 C-54-28-32-32-10-24 C10-17 27-15 46-6 C58-1 68 7 68 20 C60 33 23 36-11 33 C-39 32-68 26-69 15Z"/>
+          <clipPath id="dulkkot-slope-clip"><use href="#dulkkot-sloping-field"/></clipPath>
+        </defs>
+        <path d="M-63-12 Q-67-24-59-30 Q-58-39-49-39 Q-40-44-34-34
+          Q-27-37-23-29 Q-16-33-10-28 Q1-28 5-17Z" fill="#78905c"/>
+        <path d="M-55-26 Q-51-32-44-34 M-31-28 Q-27-31-22-28" fill="none" stroke="#9bad70" stroke-width="2.3" stroke-linecap="round"/>
+        <use href="#dulkkot-sloping-field" fill="#9fa568"/>
+        <g clip-path="url(#dulkkot-slope-clip)">
+          <path d="M-72-24 Q-44-40-10-25 Q27-10 55-5 L57 13 Q23 8-4-3 Q-37-16-72-1Z" fill="#e5a642"/>
+          <path d="M-72-1 Q-42-18-12-5 Q14 7 43 8 Q58 8 69 20 L73 28
+            Q46 18 19 20 Q-17 21-41 10 Q-55 6-72 20Z" fill="#ce8b39"/>
+          <path d="M-74 18 Q-52 3-28 15 Q7 32 38 22 Q55 15 74 25 L74 40 H-74Z" fill="#b98944"/>
+          <use href="#map-cosmos-dot" color="#e9a137" transform="translate(-63.8 -25.7) rotate(7) scale(0.57)"/>
+          <use href="#map-cosmos-dot" color="#e9a137" transform="translate(-56.3 -24.0) rotate(26) scale(0.58)"/>
+          <use href="#map-cosmos-dot" color="#f0b644" transform="translate(-49.1 -26.4) rotate(8) scale(0.39)"/>
+          <use href="#map-cosmos-dot" color="#d9772d" transform="translate(-39.5 -26.3) rotate(23) scale(0.58)"/>
+          <use href="#map-cosmos-dot" color="#efb44c" transform="translate(-31.8 -22.8) rotate(-26) scale(0.54)"/>
+          <use href="#map-cosmos-dot" color="#d9772d" transform="translate(-25.2 -24.6) rotate(-2) scale(0.40)"/>
+          <use href="#map-cosmos-dot" color="#e28b34" transform="translate(-16.7 -21.8) rotate(17) scale(0.38)"/>
+          <use href="#map-cosmos-dot" color="#d9772d" transform="translate(-9.0 -26.2) rotate(-26) scale(0.36)"/>
+          <use href="#map-cosmos-dot" color="#e28b34" transform="translate(1.3 -25.5) rotate(8) scale(0.37)"/>
+          <use href="#map-cosmos-dot" color="#e28b34" transform="translate(-63.4 -17.8) rotate(2) scale(0.55)"/>
+          <use href="#map-cosmos-dot" color="#c96f35" transform="translate(-57.2 -20.3) rotate(-21) scale(0.63)"/>
+          <use href="#map-cosmos-dot" color="#c96f35" transform="translate(-50.2 -15.6) rotate(9) scale(0.49)"/>
+          <use href="#map-cosmos-dot" color="#e28b34" transform="translate(-42.1 -18.8) rotate(1) scale(0.58)"/>
+          <use href="#map-cosmos-dot" color="#d9772d" transform="translate(-33.3 -17.2) rotate(21) scale(0.49)"/>
+          <use href="#map-cosmos-dot" color="#d9772d" transform="translate(-26.0 -18.0) rotate(21) scale(0.67)"/>
+          <use href="#map-cosmos-dot" color="#e9a137" transform="translate(-21.6 -18.8) rotate(-17) scale(0.47)"/>
+          <use href="#map-cosmos-dot" color="#e28b34" transform="translate(-12.4 -15.8) rotate(17) scale(0.50)"/>
+          <use href="#map-cosmos-dot" color="#e9a137" transform="translate(-4.3 -16.7) rotate(-24) scale(0.55)"/>
+          <use href="#map-cosmos-dot" color="#e28b34" transform="translate(2.3 -15.6) rotate(-27) scale(0.70)"/>
+          <use href="#map-cosmos-dot" color="#efb44c" transform="translate(9.7 -17.5) rotate(-6) scale(0.51)"/>
+          <use href="#map-cosmos-dot" color="#e9a137" transform="translate(13.8 -16.9) rotate(-32) scale(0.49)"/>
+          <use href="#map-cosmos-dot" color="#c4769d" transform="translate(22.6 -19.8) rotate(25) scale(0.52)"/>
+          <use href="#map-cosmos-dot" color="#e28b34" transform="translate(-66.0 -10.3) rotate(30) scale(0.78)"/>
+          <use href="#map-cosmos-dot" color="#c96f35" transform="translate(-62.1 -11.3) rotate(-30) scale(0.74)"/>
+          <use href="#map-cosmos-dot" color="#e9a137" transform="translate(-51.9 -9.0) rotate(-31) scale(0.57)"/>
+          <use href="#map-cosmos-dot" color="#e9a137" transform="translate(-47.8 -9.1) rotate(6) scale(0.51)"/>
+          <use href="#map-cosmos-dot" color="#e9a137" transform="translate(-37.6 -8.9) rotate(2) scale(0.62)"/>
+          <use href="#map-cosmos-dot" color="#f0b644" transform="translate(-33.9 -7.9) rotate(19) scale(0.73)"/>
+          <use href="#map-cosmos-dot" color="#f0b644" transform="translate(-24.0 -7.5) rotate(-18) scale(0.55)"/>
+          <use href="#map-cosmos-dot" color="#e28b34" transform="translate(-16.4 -10.8) rotate(-30) scale(0.71)"/>
+          <use href="#map-cosmos-dot" color="#f0b644" transform="translate(-8.9 -8.5) rotate(-11) scale(0.61)"/>
+          <use href="#map-cosmos-dot" color="#e9a137" transform="translate(-3.9 -7.4) rotate(-18) scale(0.59)"/>
+          <use href="#map-cosmos-dot" color="#efb44c" transform="translate(1.7 -7.5) rotate(-30) scale(0.66)"/>
+          <use href="#map-cosmos-dot" color="#c96f35" transform="translate(12.2 -12.1) rotate(-5) scale(0.53)"/>
+          <use href="#map-cosmos-dot" color="#e9a137" transform="translate(17.3 -11.5) rotate(-15) scale(0.76)"/>
+          <use href="#map-cosmos-dot" color="#f0b644" transform="translate(23.0 -11.9) rotate(4) scale(0.68)"/>
+          <use href="#map-cosmos-dot" color="#f0b644" transform="translate(28.9 -8.3) rotate(-22) scale(0.78)"/>
+          <use href="#map-cosmos-dot" color="#f0b644" transform="translate(36.3 -10.3) rotate(16) scale(0.69)"/>
+          <use href="#map-cosmos-dot" color="#e9a137" transform="translate(-64.7 -2.8) rotate(4) scale(0.81)"/>
+          <use href="#map-cosmos-dot" color="#e9a137" transform="translate(-56.0 -1.2) rotate(15) scale(0.61)"/>
+          <use href="#map-cosmos-dot" color="#e9a137" transform="translate(-50.6 -2.6) rotate(14) scale(0.57)"/>
+          <use href="#map-cosmos-dot" color="#e28b34" transform="translate(-43.4 -4.4) rotate(-3) scale(0.58)"/>
+          <use href="#map-cosmos-dot" color="#e28b34" transform="translate(-34.8 -1.0) rotate(1) scale(0.64)"/>
+          <use href="#map-cosmos-dot" color="#f0b644" transform="translate(-22.4 -0.8) rotate(11) scale(0.75)"/>
+          <use href="#map-cosmos-dot" color="#c4769d" transform="translate(-18.4 -3.5) rotate(-30) scale(0.85)"/>
+          <use href="#map-cosmos-dot" color="#e28b34" transform="translate(-10.5 -0.0) rotate(-26) scale(0.83)"/>
+          <use href="#map-cosmos-dot" color="#c4769d" transform="translate(1.2 -2.4) rotate(24) scale(0.83)"/>
+          <use href="#map-cosmos-dot" color="#e9a137" transform="translate(4.4 0.7) rotate(-3) scale(0.79)"/>
+          <use href="#map-cosmos-dot" color="#d9772d" transform="translate(13.3 -0.7) rotate(9) scale(0.81)"/>
+          <use href="#map-cosmos-dot" color="#e9a137" transform="translate(22.0 0.3) rotate(26) scale(0.68)"/>
+          <use href="#map-cosmos-dot" color="#efb44c" transform="translate(28.5 -2.7) rotate(3) scale(0.85)"/>
+          <use href="#map-cosmos-dot" color="#e28b34" transform="translate(40.9 -4.0) rotate(9) scale(0.58)"/>
+          <use href="#map-cosmos-dot" color="#e28b34" transform="translate(44.3 -1.8) rotate(22) scale(0.88)"/>
+          <use href="#map-cosmos-dot" color="#e9a137" transform="translate(54.8 0.2) rotate(9) scale(0.80)"/>
+          <use href="#map-cosmos-dot" color="#e9a137" transform="translate(-61.9 6.8) rotate(11) scale(0.92)"/>
+          <use href="#map-cosmos-dot" color="#e9a137" transform="translate(-55.7 10.1) rotate(-26) scale(0.71)"/>
+          <use href="#map-cosmos-dot" color="#efb44c" transform="translate(-49.6 7.3) rotate(9) scale(0.95)"/>
+          <use href="#map-cosmos-dot" color="#e9a137" transform="translate(-39.6 5.5) rotate(0) scale(1.01)"/>
+          <use href="#map-cosmos-dot" color="#c96f35" transform="translate(-32.0 7.3) rotate(30) scale(0.93)"/>
+          <use href="#map-cosmos-dot" color="#e28b34" transform="translate(-22.4 8.0) rotate(16) scale(0.91)"/>
+          <use href="#map-cosmos-dot" color="#e9a137" transform="translate(-17.9 7.6) rotate(9) scale(1.00)"/>
+          <use href="#map-cosmos-dot" color="#e9a137" transform="translate(-6.8 9.1) rotate(7) scale(0.89)"/>
+          <use href="#map-cosmos-dot" color="#e9a137" transform="translate(1.4 10.6) rotate(10) scale(0.65)"/>
+          <use href="#map-cosmos-dot" color="#d9772d" transform="translate(9.9 7.3) rotate(22) scale(0.91)"/>
+          <use href="#map-cosmos-dot" color="#e9a137" transform="translate(16.1 9.1) rotate(-32) scale(0.85)"/>
+          <use href="#map-cosmos-dot" color="#e9a137" transform="translate(25.6 8.1) rotate(3) scale(0.82)"/>
+          <use href="#map-cosmos-dot" color="#e28b34" transform="translate(32.2 6.7) rotate(-31) scale(0.95)"/>
+          <use href="#map-cosmos-dot" color="#e28b34" transform="translate(42.1 7.4) rotate(32) scale(0.84)"/>
+          <use href="#map-cosmos-dot" color="#e9a137" transform="translate(50.1 6.8) rotate(-15) scale(0.91)"/>
+          <use href="#map-cosmos-dot" color="#efb44c" transform="translate(54.3 9.0) rotate(-4) scale(1.01)"/>
+          <use href="#map-cosmos-dot" color="#e28b34" transform="translate(-62.4 20.4) rotate(17) scale(0.83)"/>
+          <use href="#map-cosmos-dot" color="#f0b644" transform="translate(-55.5 16.2) rotate(0) scale(0.91)"/>
+          <use href="#map-cosmos-dot" color="#efb44c" transform="translate(-44.9 18.0) rotate(30) scale(1.03)"/>
+          <use href="#map-cosmos-dot" color="#d9772d" transform="translate(-37.4 20.6) rotate(-25) scale(0.82)"/>
+          <use href="#map-cosmos-dot" color="#f0b644" transform="translate(-25.2 15.8) rotate(-19) scale(0.84)"/>
+          <use href="#map-cosmos-dot" color="#e28b34" transform="translate(-18.4 16.8) rotate(-10) scale(0.88)"/>
+          <use href="#map-cosmos-dot" color="#e28b34" transform="translate(-8.7 20.5) rotate(9) scale(0.72)"/>
+          <use href="#map-cosmos-dot" color="#e28b34" transform="translate(1.7 15.4) rotate(-6) scale(1.17)"/>
+          <use href="#map-cosmos-dot" color="#e9a137" transform="translate(9.9 18.2) rotate(27) scale(0.81)"/>
+          <use href="#map-cosmos-dot" color="#f0b644" transform="translate(15.6 15.8) rotate(21) scale(1.12)"/>
+          <use href="#map-cosmos-dot" color="#e28b34" transform="translate(28.7 16.9) rotate(-24) scale(1.04)"/>
+          <use href="#map-cosmos-dot" color="#e9a137" transform="translate(37.7 19.4) rotate(-8) scale(0.86)"/>
+          <use href="#map-cosmos-dot" color="#d9772d" transform="translate(46.1 18.5) rotate(2) scale(1.18)"/>
+          <use href="#map-cosmos-dot" color="#e9a137" transform="translate(50.6 20.1) rotate(1) scale(1.02)"/>
+          <use href="#map-cosmos-dot" color="#f0b644" transform="translate(63.5 16.9) rotate(-31) scale(1.15)"/>
+          <use href="#map-cosmos-dot" color="#c96f35" transform="translate(-63.0 29.8) rotate(-5) scale(0.96)"/>
+          <use href="#map-cosmos-dot" color="#f0b644" transform="translate(-51.8 30.2) rotate(-15) scale(1.13)"/>
+          <use href="#map-cosmos-dot" color="#e28b34" transform="translate(-44.2 28.0) rotate(-29) scale(1.13)"/>
+          <use href="#map-cosmos-dot" color="#f0b644" transform="translate(-33.7 25.6) rotate(11) scale(0.93)"/>
+          <use href="#map-cosmos-dot" color="#f0b644" transform="translate(-19.9 29.2) rotate(-16) scale(1.31)"/>
+          <use href="#map-cosmos-dot" color="#e9a137" transform="translate(-8.0 28.5) rotate(-20) scale(1.11)"/>
+          <use href="#map-cosmos-dot" color="#f0b644" transform="translate(-2.9 28.9) rotate(21) scale(0.90)"/>
+          <use href="#map-cosmos-dot" color="#d9772d" transform="translate(11.1 25.6) rotate(-21) scale(1.26)"/>
+          <use href="#map-cosmos-dot" color="#d9772d" transform="translate(18.0 28.2) rotate(21) scale(0.77)"/>
+          <use href="#map-cosmos-dot" color="#e9a137" transform="translate(25.9 28.4) rotate(8) scale(1.23)"/>
+          <use href="#map-cosmos-dot" color="#f0b644" transform="translate(41.0 29.9) rotate(21) scale(1.27)"/>
+          <use href="#map-cosmos-dot" color="#e28b34" transform="translate(50.7 27.1) rotate(-5) scale(1.20)"/>
+          <use href="#map-cosmos-dot" color="#f0b644" transform="translate(60.1 25.8) rotate(21) scale(1.17)"/>
+          <path d="M-35-33 C-20-29-13-21 0-16 C15-10 29-9 38-3 C48 3 48 11 59 14
+            L74 22 L74 16 L62 10 C52 7 53 0 42-6 C28-15 13-13 1-19 Q-15-26-29-34Z"
+            fill="#f2dfb1"/>
         </g>
       </g>
       <text class="zone-label" x="98" y="814" text-anchor="middle" transform="rotate(3 98 814)">들꽃마루</text>
@@ -744,6 +1242,48 @@
     <g transform="translate(292 814) scale(1.1) translate(-292 -814)">
       <circle class="zone-hit" cx="292" cy="745" r="64" fill="#fde2e4" opacity="0.001"/>
 
+      <g data-rose-jar="paper" transform="translate(292 740)">
+        <ellipse cy="42" rx="38" ry="6" fill="#7d8b5e" opacity=".17"/>
+        <use href="#map-jar-glass" fill="#d7e7d5" stroke="#f9f4dc" stroke-width="4"/>
+        <path d="M-36 11 Q-7-2 36 13 Q40 31 25 37 Q-3 43-30 35Z" fill="#aecdc0"/>
+        <g>
+          <use href="#map-jar-rose" color="#d78f9d" transform="translate(-12 1) rotate(-16)"/>
+          <use href="#map-jar-rose" color="#eac68d" transform="translate(11 0) scale(.77)"/>
+          <use href="#map-jar-rose" color="#b75b73" transform="translate(25 15) rotate(15)"/>
+          <use href="#map-jar-rose" color="#cf7286" transform="translate(-24 20) rotate(-17)"/>
+          <use href="#map-jar-rose" color="#f1d6b4" transform="translate(-5 27) rotate(10) scale(.92)"/>
+          <use href="#map-jar-rose" color="#d88da3" transform="translate(15 29) scale(.83)"/>
+          <path d="M4 19 Q10 9 18 12 Q16 20 4 19 M-23 9 Q-28 9-31 2 Q-23 1-20 7" fill="#7d9b72"/>
+          <use href="#map-jar-rose" color="#bf4e6c" transform="translate(3 14) rotate(-12)"/>
+        </g>
+        <use href="#map-jar-glass" fill="none" stroke="#f8f6e3" stroke-width="3.6"/>
+        <path d="M-25-13 Q-34-7-34 12 M31 23 Q31 30 24 33" fill="none" stroke="#f9fbeb" stroke-opacity=".8" stroke-width="3" stroke-linecap="round"/>
+        <use href="#map-jar-cork"/>
+        <use href="#map-jar-ribbon"/>
+        <path d="M19-22 l12 2 -1 15 -14-2 1-10Z" fill="#efdca9"/>
+        <path d="M17-25 Q23-24 22-19" fill="none" stroke="#8c5360" stroke-width="1.6"/>
+        <circle cx="22" cy="-18" r="1.5" fill="#a58b5e"/>
+      </g>
+      <g data-rose-jar="lean" transform="translate(291 741)">
+        <ellipse cy="46" rx="39" ry="5.5" fill="#7d8b5e" opacity=".17"/>
+        <g transform="rotate(-15) scale(.96)">
+          <use href="#map-jar-glass" fill="#d3e7df" stroke="#fcf4dd" stroke-width="4"/>
+          <path d="M-37 21 Q-12 18 5-1 Q17-10 35 6 L39 26 Q35 41 6 41 Q-27 41-35 32Z" fill="#b7d2c1"/>
+          <use href="#map-jar-rose" color="#d895a4" transform="translate(15 -4) scale(.88)"/>
+          <use href="#map-jar-rose" color="#b9536c" transform="translate(29 8) scale(.83)"/>
+          <use href="#map-jar-rose" color="#e6b4b0" transform="translate(-4 15) scale(.9)"/>
+          <use href="#map-jar-rose" color="#ecd2a6" transform="translate(-27 28) scale(.72)"/>
+          <use href="#map-jar-rose" color="#cc6a88" transform="translate(-10 31) rotate(23)"/>
+          <use href="#map-jar-rose" color="#b44c69" transform="translate(10 31) rotate(-17)"/>
+          <use href="#map-jar-rose" color="#edb4bf" transform="translate(28 24) scale(.78)"/>
+          <path d="M9 24 Q0 15 0 10 Q10 11 12 18Z" fill="#789d76"/>
+          <use href="#map-jar-rose" color="#eac189" transform="translate(15 14) scale(.92)"/>
+          <use href="#map-jar-glass" fill="none" stroke="#fff5e0" stroke-width="3" opacity=".9"/>
+          <path d="M-23-15 Q-34-8-34 6 M27 31 Q22 35 12 36" fill="none" stroke="#fff9e4" stroke-width="3" stroke-linecap="round"/>
+          <use href="#map-jar-cork"/>
+          <use href="#map-jar-ribbon"/>
+        </g>
+      </g>
       <g data-rose-jar="open" transform="translate(292 739) scale(1.12)">
         <ellipse cy="42" rx="41" ry="6" fill="#77855a" opacity=".17"/>
         <path d="M-17-29 L-18-22 C-24-14-34-16-40-1 C-48 15-41 35-26 39 Q0 46 29 38
@@ -788,15 +1328,16 @@
     .zone-label { filter: url(#labelShadow); }
     /* 구역마다 글자 색 = 그 구역 그림의 색을 진하게 (장미 상세 이름표의 "꽃 색을 진하게"와 같은 규칙) */
     #zone-rose       .zone-label { fill: #a82340; }  /* 장미: 점토 장미의 진한 줄 색 */
-    #zone-stream     .zone-label { fill: url(#clayWater); }  /* 성내천: 물길과 같은 색 */
+    #zone-stream     .zone-label { fill: var(--stream-label-ink, #356879); }
     #zone-lonetree   .zone-label { fill: #2b5e27; }  /* 나홀로나무: 잎 색을 진하게 (초록 언덕 위라 더 어둡게) */
     #zone-wildflower .zone-label { fill: #b8661a; }  /* 들꽃마루: 주황 들꽃 색을 진하게 */
-    .landmark { pointer-events: none; }
+    .landmark, .bg-buildings { pointer-events: none; }
     .landmark [role="button"] { outline: none; -webkit-tap-highlight-color: transparent; }
     .landmark [role="button"] > .landmark-hit { pointer-events: all; cursor: pointer; }
     .landmark [role="button"]:focus-visible > .landmark-hit {
       stroke: #557052; stroke-width: 2; stroke-dasharray: 3 3;
     }
+    .landmark-label { font-family: 'Jua', sans-serif; font-size: 11px; fill: #4f6f85; stroke: #e6f4ea; stroke-width: 3px; paint-order: stroke; stroke-linejoin: round; }
     .zone[data-active="false"]:not([data-feedback-only]) { opacity: .9; transition: opacity .25s; }
     .zone[data-active="false"]:hover { opacity: 1; }
     /* 대기 움직임은 그림에만 적용해 누르는 범위와 젤리 효과를 유지한다. */
@@ -832,7 +1373,7 @@
 </aside>
 </div>
 <!-- 구역 연결표는 js/zones.js 한 곳에서 관리 (인터랙션 페이지와 공유) -->
-<script src="js/zones.js"></script>
+<script src="js/zones.js?v=cedar-touch"></script>
 <script>
 const svg = document.querySelector('svg');
 // 지도를 길게 누를 때 브라우저 기본 동작(글자 선택, 메뉴) 막기
@@ -968,10 +1509,15 @@ window.addEventListener('pageshow', () => {
 });
 
 function openZone(zoneEl, j){
-  const id = zoneEl.dataset.zone, name = zoneEl.dataset.name, conf = findZone(id);
-  if (conf && conf.source && j) {
+  if (zoneEl.hasAttribute('data-no-card')) {
     hideCard();
-    zoomInto(j, () => { location.href = 'interaction.html?zone=' + encodeURIComponent(id); });
+    return;
+  }
+  const id = zoneEl.dataset.zone, name = zoneEl.dataset.name, conf = findZone(id);
+  const page = conf?.page || (conf?.source && 'interaction.html?zone=' + encodeURIComponent(id));
+  if (page && j) {
+    hideCard();
+    zoomInto(j, () => { location.href = page; });
   } else {
     showCard(conf, name); // 준비 중인 구역: 짧은 소개 카드
   }
@@ -1009,7 +1555,7 @@ function attachLandmarkFeedback(button, art) {
 document.querySelectorAll('.zone').forEach(z => {
   // 연결표 기준으로 활성 표시를 맞춤 (SVG의 data-active를 일일이 고치지 않아도 됨)
   const conf = findZone(z.dataset.zone);
-  z.dataset.active = String(!!(conf && conf.source));
+  z.dataset.active = String(Boolean(conf?.page || conf?.source));
   if (z.hasAttribute('data-feedback-only')) {
     attachLandmarkFeedback(z, document.getElementById(z.dataset.jellyTarget));
     return;
@@ -1032,6 +1578,173 @@ document.querySelectorAll('.zone').forEach(z => {
 
 </script>
 
+<script>
+{
+  const reviewQuery = new URLSearchParams(location.search);
+  if (reviewQuery.get('stream-color') === 'review') {
+    const colors = [
+      { name: '물빛 청회색', hex: '#4b6e75' },
+      { name: '옅은 청록', hex: '#3f6d69' },
+      { name: '이끼 초록', hex: '#4c694d' },
+      { name: '세이지 회녹색', hex: '#5c695b' },
+      { name: '먹빛 남색', hex: '#506777' },
+    ];
+    const panel = document.createElement('section');
+    panel.className = 'label-color-review';
+    panel.setAttribute('aria-label', '성내천 이름표 색 시안');
+    const swatches = document.createElement('div');
+    swatches.className = 'swatches';
+    const caption = document.createElement('output');
+    const buttons = colors.map(({ name, hex }, index) => {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.title = name;
+      button.setAttribute('aria-label', name);
+      button.style.setProperty('--swatch', hex);
+      button.addEventListener('click', () => selectColor(index));
+      swatches.appendChild(button);
+      return button;
+    });
+    function selectColor(index) {
+      const { name, hex } = colors[index];
+      document.documentElement.style.setProperty('--stream-label-ink', hex);
+      caption.textContent = name + '  ' + hex;
+      buttons.forEach((button, i) => button.setAttribute('aria-pressed', String(i === index)));
+    }
+    panel.append(swatches, caption);
+    document.querySelector('.stage').appendChild(panel);
+    selectColor(0);
+  }
+}
+</script>
+
+<script>
+  if (new URLSearchParams(location.search).get('trails') === 'review') {
+    const map = document.querySelector('.stage svg');
+    const panel = document.createElement('section');
+    panel.className = 'trail-review map-review';
+    panel.setAttribute('aria-label', '산책로 디자인 비교');
+
+    const choices = [
+      ['ribbon', '크림 리본'], ['stitch', '손바느질'], ['leaf', '잎맥 길'],
+      ['stones', '디딤돌'], ['current', '기존 길'],
+    ];
+    const buttons = new Map();
+    for (const [key, label] of choices) {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.textContent = label;
+      button.addEventListener('click', () => selectTrail(key));
+      buttons.set(key, button);
+      panel.appendChild(button);
+    }
+
+    function selectTrail(key) {
+      map.dataset.trailReview = key;
+      for (const [option, button] of buttons) {
+        button.setAttribute('aria-pressed', String(option === key));
+      }
+    }
+
+    const plants = document.createElement('button');
+    plants.type = 'button';
+    plants.textContent = '식물 구역 보기';
+    plants.setAttribute('aria-pressed', 'false');
+    plants.addEventListener('click', () => {
+      const shown = map.toggleAttribute('data-trail-plants');
+      plants.textContent = shown ? '식물 구역 숨기기' : '식물 구역 보기';
+      plants.setAttribute('aria-pressed', String(shown));
+    });
+    panel.appendChild(plants);
+    document.querySelector('.stage').appendChild(panel);
+    selectTrail('ribbon');
+  }
+</script>
+
+<script>
+  if (new URLSearchParams(location.search).get('tree') === 'review') {
+    const map = document.querySelector('.stage svg');
+    const panel = document.createElement('section');
+    panel.className = 'map-review';
+    panel.setAttribute('aria-label', '나홀로나무 그림 비교');
+    const variants = [['clay', '말랑 측백'], ['puffs', '잎송이'], ['paper', '종이 나무']];
+    const buttons = variants.map(([key, label]) => {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.textContent = label;
+      button.addEventListener('click', () => selectTree(key));
+      panel.appendChild(button);
+      return button;
+    });
+    function selectTree(key) {
+      map.dataset.treeReview = key;
+      buttons.forEach((button, index) => button.setAttribute('aria-pressed', String(variants[index][0] === key)));
+    }
+    document.querySelector('.stage').appendChild(panel);
+    selectTree('paper');
+  }
+</script>
+
+<script>
+  if (new URLSearchParams(location.search).get('rose-jar') === 'review') {
+    const map = document.querySelector('.stage svg');
+    const panel = document.createElement('section');
+    panel.className = 'map-review';
+    panel.setAttribute('aria-label', '장미광장 유리병 그림 비교');
+    const variants = [['paper', '종이 유리병'], ['lean', '기우뚱 병'], ['open', '열린 병']];
+    const buttons = variants.map(([key, name]) => {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.textContent = name;
+      button.addEventListener('click', () => selectJar(key));
+      panel.appendChild(button);
+      return button;
+    });
+    function selectJar(key) {
+      map.dataset.roseReview = key;
+      buttons.forEach((button, index) => button.setAttribute('aria-pressed', String(variants[index][0] === key)));
+    }
+    document.querySelector('.stage').appendChild(panel);
+    selectJar('open');
+  }
+</script>
+
+<script>
+  if (new URLSearchParams(location.search).get('gardens') === 'review') {
+    const map = document.querySelector('.stage svg');
+    map.setAttribute('data-gardens-review', '');
+    const panel = document.createElement('section');
+    panel.className = 'map-review garden-review';
+    panel.setAttribute('aria-label', '들꽃마루와 야생화학습장 그림 비교');
+    const groups = [
+      { name: '들꽃마루', key: 'dulkkot', options: [['wind', '오르는 꽃길'], ['waves', '코스모스 물결']] },
+      { name: '야생화학습장', key: 'wildlab', options: [['muhly', '색색 화단'], ['plot', '관찰 화단'], ['lens', '새싹 루페']] },
+    ];
+    for (const { name, key, options } of groups) {
+      const row = document.createElement('div');
+      row.setAttribute('role', 'group');
+      row.setAttribute('aria-label', name);
+      const heading = document.createElement('strong');
+      heading.textContent = name;
+      row.appendChild(heading);
+      const buttons = options.map(([value, label]) => {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.textContent = label;
+        button.addEventListener('click', () => selectArt(value));
+        row.appendChild(button);
+        return button;
+      });
+      function selectArt(value) {
+        map.dataset[key] = value;
+        buttons.forEach((button, index) => button.setAttribute('aria-pressed', String(options[index][0] === value)));
+      }
+      selectArt(options[0][0]);
+      panel.appendChild(row);
+    }
+    document.querySelector('.stage').appendChild(panel);
+  }
+</script>
 <script>
 document.querySelectorAll('.landmark [data-landmark]:not([data-static])').forEach(item => {
   const box = item.getBBox();
