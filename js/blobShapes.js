@@ -20,6 +20,20 @@
 //   open    바깥 꽃잎이 기울어진 정도 (0 오므림 … 1 활짝)
 //   spread  꽃잎이 벌어진 정도 (바깥 고리로 갈수록 더 벌어짐)
 //   flare   꽃잎 끝이 바깥으로 젖혀지는 정도   pointy  꽃잎 끝이 뾰족한 정도 (0 둥글게)
+//   outerPointy 바깥층 꽃잎 끝만 뾰족하게 (0 기본 … 1 뾰족). 안쪽층은 그대로 두고 바깥층 끝 모양으로만 장미를 구분할 때 씀
+//               (2026-11-23: "안쪽층은 다 비슷하고 바깥층 꽃잎 끝에서 차이가 난다"는 분류 결과에서 추가)
+//   layerEven   안쪽 겹을 바깥 겹과 비슷하게 (0 기본: 안쪽 꽃잎은 짧고 조금 위에 붙음 … 1 바깥보다 조금만 짧고 같은 높이에 붙어 포개짐, 반겹)
+//   evenRatio   layerEven일 때 가장 안쪽 겹 꽃잎 길이 ÷ 바깥 겹 꽃잎 길이 (0.88 기본 … 1이면 같은 크기)
+//   quarter     안쪽 꽃잎을 네 무리로 모음 (0 기본 … 1 안쪽이 4등분되어 네 덩어리, 무리 사이 골이 어둡게. 옛날 장미의 4등분 모양)
+//   messy       꽃잎마다 기울기·길이·자리를 조금씩 다르게 (0 기본: 고르게 … 1 날개처럼 흐트러지게)
+//   seed        messy의 '가짜 무작위' 씨앗 (장미마다 다른 수를 주면 흐트러진 모양도 장미마다 다름)
+//   stripes     줄무늬 양 (0 기본: 없음 … 1 줄무늬 색이 많이). colors.stripe가 있을 때만
+//   stripeScale 줄 굵기 (0 가는 줄·점 … 1 굵은 줄이 꽃잎을 반반 나눔). 줄은 꽃잎 밑동 → 끝 방향으로 흐르고, 꽃잎마다 위치가 다름
+//   stamenSpread 수술이 바깥으로 퍼지는 정도 (1 기본: 발산하듯 퍼짐 … 0.3 가운데에 조밀하게 모여 위로 솟음)
+//   stamenCount 수술 가닥 수 배율 (1 기본: 상세 28 · 밭 12) · stamenSize 꽃밥 크기 배율 (1 기본)
+//   centerEdge  가운데 색이 끝나는 곳 (0 기본: 꺼짐, centerSpread 방식 … 0.3 = 꽃잎 밑동부터 30%까지만 가운데 색, 그 뒤는 바깥 색)
+//   stripeMode  줄무늬 방식 (0 줄 · 1 꽃잎 끝에만 불규칙한 얼룩 · 2 꽃 전체를 큰 구역으로 나눈 얼룩)
+//   ringShade   겹 경계 그늘 (0 기본 … 1 꽃잎 밑동은 어둡게·끝은 살짝 밝게 → 위 겹의 밝은 끝이 아래 겹의 어두운 밑동 위에 놓여 층이 갈라져 보임)
 //   height  안쪽 꽃잎이 길게 솟은 정도 (하이브리드 티처럼 가운데가 높은 모양)
 //   ruffle  꽃잎 가장자리 물결              spiral  고리마다 엇갈리는 정도 (소용돌이)
 //   core    가운데 심(수술) 크기 (1 기본, 홑꽃처럼 수술이 크게 보이는 꽃은 더 크게)
@@ -28,7 +42,7 @@
 //   bud     가운데 봉오리를 꽉 말아 감싸는 정도 (0 기본 … 1 하이센터처럼 소용돌이 봉오리)
 //   budReach 봉오리처럼 서는 꽃잎이 바깥 겹까지 얼마나 이어지는지 (1 기본 … 작을수록 중간 겹도 봉오리를 감싸며 서서히 눕음)
 //   dense   안쪽을 짧은 꽃잎으로 빽빽하게 채우는 정도 (0 기본 … 1 컵 장미처럼 꽉 참)
-//   threads 수술을 실처럼 (0 기본: 둥근 심 하나 … 1 납작한 판 위에 작은 꽃밥 알갱이들, 홑꽃)
+//   threads 수술을 실처럼 (0 기본: 둥근 심 하나 … 1 가운데에서 수술대가 한 가닥씩 올라오고 끝에 꽃밥, 홑꽃)
 //   seams   꽃잎과 꽃잎 사이 경계선 (0 기본 … 1 꽃잎 양옆 가장자리가 살짝 어두워져 한 장씩 나뉘어 보임)
 //   reflex  바깥 꽃잎 양옆이 뒤로 말리는 정도 (0 기본 … 1 끝이 뾰족하게 뒤로 젖혀진 하이센터 꽃잎)
 //   tip     맨 바깥 꽃잎 끝을 좁혀 뾰족하게 모으는 정도 (0 기본 … 1 끝이 한 점으로 모임)
@@ -43,7 +57,7 @@
 
 (function () {
   const DEFAULTS = {
-    petals: 9, rings: 4, open: 0.5, spread: 0.8, flare: 0.4, pointy: 0.3, height: 0, ruffle: 0, spiral: 0.6, core: 1, innerOpen: 0, petalWidth: 1, bud: 0, budReach: 1, dense: 0, threads: 0, seams: 0, reflex: 0, tip: 0, rimOpen: 0, centerSpread: 0.7, layerShade: 0.7,   // 칠하기 (2026-11-18 비교 페이지에서 사용자 확정)
+    petals: 9, rings: 4, open: 0.5, spread: 0.8, flare: 0.4, pointy: 0.3, height: 0, ruffle: 0, spiral: 0.6, core: 1, innerOpen: 0, petalWidth: 1, bud: 0, budReach: 1, dense: 0, threads: 0, seams: 0, reflex: 0, tip: 0, rimOpen: 0, outerPointy: 0, layerEven: 0, evenRatio: 0.88, ringShade: 0, quarter: 0, messy: 0, seed: 0, stripes: 0, stripeScale: 0.5, stripeMode: 0, centerEdge: 0, stamenSpread: 1, stamenCount: 1, stamenSize: 1, centerSpread: 0.7, layerShade: 0.7,   // 칠하기 (2026-11-18 비교 페이지에서 사용자 확정)
     colors: { center: '#E86B86', outer: '#F7A9B8', edge: null, stamen: null },
     stem: '#5F8F4A', leaf: '#6FAE5A'
   };
@@ -57,6 +71,7 @@
 
   const smooth = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
   const lin = hex => new THREE.Color(hex).convertSRGBToLinear();
+  const WHITE = new THREE.Color(1, 1, 1);   // 겹 경계 그늘에서 꽃잎 끝을 살짝 밝힐 때 씀
 
   function buildHead(settings, quality) {
     const { U, V, steps } = QUALITY[quality];
@@ -65,7 +80,10 @@
     const cCenter = lin(P.colors.center), cOuter = lin(P.colors.outer);
     const cEdge = P.colors.edge ? lin(P.colors.edge) : null;
     const cStamen = P.colors.stamen ? lin(P.colors.stamen) : null;
+    const cStripe = P.colors.stripe && P.stripes > 0 ? lin(P.colors.stripe) : null;   // 줄무늬 색 (줄무늬 장미만)
     const cGreen = lin(P.stem).lerp(lin(P.leaf), 0.4);
+    // 바깥 색이 얼마나 하얀가 (0 보통 … 1 아주 하얌): 겹 경계 그늘(ringShade)을 하얀 꽃에 맞게 바꿀 때 씀
+    const lightK = smooth(0.55, 0.8, (cOuter.r + cOuter.g + cOuter.b) / 3);
 
     const positions = [], colors = [], indices = [];
     const c = new THREE.Color();
@@ -79,8 +97,11 @@
       const budK = P.bud * Math.pow(inner, P.budReach);              // 이 고리가 봉오리처럼 말리는 정도 (안 → 바깥으로 서서히 줄어듦)
       const denseK = P.dense * inner;                                // 이 고리가 짧은 꽃잎으로 빽빽한 정도
       const n = Math.max(3, Math.round(P.petals * (0.5 + 0.5 * outer) * (1 + denseK)));
-      const L = (0.62 + 0.5 * outer) * (1 + P.height * 0.55 * inner) * (1 - 0.25 * denseK); // 꽃잎 길이
-      const r0 = 0.04 + 0.16 * outer, y0 = -0.32 + 0.06 * inner + 0.18 * denseK;  // 꽃잎이 붙는 자리 (빽빽한 안쪽 꽃잎은 위로 올려 컵을 채움)
+      // 꽃잎 길이: 기본은 안쪽일수록 짧음 (0.62 … 1.12). layerEven만큼 '바깥보다 조금만 짧게'(안쪽 끝 0.88배) 쪽으로 당김
+      const baseLen = (0.62 + 0.5 * outer) * (1 - P.layerEven) + 1.12 * (1 - (1 - P.evenRatio) * inner) * P.layerEven;
+      const L = baseLen * (1 + P.height * 0.55 * inner) * (1 - 0.25 * denseK); // 꽃잎 길이
+      const r0 = 0.04 + 0.16 * outer;                                          // 꽃잎이 붙는 자리 (가운데에서 떨어진 거리)
+      const y0 = -0.32 + 0.06 * inner * (1 - P.layerEven) + 0.18 * denseK;     //   높이: 안쪽 겹은 조금 위 (layerEven이면 바깥과 같은 높이) · 빽빽한 안쪽은 위로 올려 컵을 채움
       const tilt0 = Math.min(1.45, 0.06 + 0.9 * P.open * Math.pow(outer, 1.2) + 0.5 * P.spread * outer
                              + P.innerOpen * 0.9 * inner) * (1 - 0.85 * budK)   // 기울기 (안쪽 고리: innerOpen만큼 벌어짐, bud만큼 곧게 섬)
                              + P.rimOpen * 0.45 * Math.pow(outer, 8);           //        (맨 바깥 고리: rimOpen만큼 더 눕힘)
@@ -90,11 +111,27 @@
       const span = (2 * Math.PI / n) * (2.1 - 0.5 * outer) * P.petalWidth * (1 + 0.9 * budK); // 꽃잎 폭 (봉오리는 넓게 감쌈)
       const cup = 0.5 * inner + 0.15 - P.flare * 0.45 * outer + 0.7 * budK  // 오목함 (+ 안쪽으로 감쌈, - 바깥으로 젖힘)
                 + 0.8 * denseK;                                             // 빽빽한 안쪽 꽃잎은 숟가락처럼 오목하게 → 겹마다 작은 컵
-      const pointy = P.pointy * (1 - budK);                                 // 봉오리 꽃잎은 둥글게 (뾰족함은 바깥 꽃잎만)
+      const pointy = Math.min(1, P.pointy * (1 - budK)                      // 봉오리 꽃잎은 둥글게 (뾰족함은 바깥 꽃잎만)
+                   + P.outerPointy * Math.pow(outer, 6));                   // 바깥층(바깥 1~2겹)만 끝을 더 뾰족하게 (outer^6: 안쪽 겹엔 거의 안 걸림)
       const off = k * (Math.PI / n) + P.spiral * k * 0.45;
 
+      // 4등분 (quarter): 안쪽 겹일수록 강하게. 꽃잎을 네 무리로 모으고, 무리 사이에 접힌 골을 만듦
+      const qK = P.quarter * smooth(0.2, 0.85, inner);
       for (let j = 0; j < n; j++) {
-        const az = off + j * 2 * Math.PI / n;
+        let az = off + j * 2 * Math.PI / n;
+        // 흐트러짐 (messy): 꽃잎마다 '가짜 무작위' 3개 → 기울기·길이·위치를 조금씩 다르게 (같은 장미는 늘 같은 모양)
+        const rnd = i => { const x = Math.sin((k * 31 + j) * 12.9898 + i * 78.233 + P.seed * 0.618) * 43758.5453; return x - Math.floor(x) - 0.5; };
+        const tiltJ = tilt0 + P.messy * 0.45 * rnd(1) * (0.3 + outer);
+        const LJ = L * (1 + P.messy * 0.3 * rnd(2));
+        az += P.messy * 0.3 * (2 * Math.PI / n) * rnd(3);
+        // 4등분: 가장 가까운 '4분의 1 중심선'(qc)으로 꽃잎 자리를 당김. qEdge = 무리 가장자리일수록 1 (골 그늘에 씀)
+        let qEdge = 0;
+        if (qK > 0) {
+          const QUAD = Math.PI / 2, qOff = Math.PI / 4;
+          const qc = qOff + Math.round((az - qOff) / QUAD) * QUAD;
+          qEdge = Math.min(1, Math.abs(az - qc) / (QUAD / 2));
+          az += (qc - az) * 0.8 * qK;
+        }
         const start = positions.length / 3;
         for (let iv = 0; iv <= V; iv++) {
           for (let iu = 0; iu <= U; iu++) {
@@ -104,9 +141,9 @@
             // 꽃잎 길이 방향 곡선: 아래에서 시작해 기울기 + 끝 젖힘만큼 휘며 뻗음
             let rad = r0, y = y0;
             for (let s = 1; s <= steps; s++) {
-              const vv = ve * s / steps, th = tilt0 + curl * vv * vv;
-              rad += Math.sin(th) * L * ve / steps;
-              y += Math.cos(th) * L * ve / steps;
+              const vv = ve * s / steps, th = tiltJ + curl * vv * vv;
+              rad += Math.sin(th) * LJ * ve / steps;
+              y += Math.cos(th) * LJ * ve / steps;
             }
             const width = Math.pow(Math.sin(Math.PI * (0.18 + 0.66 * ve)), 0.3);  // 둥글고 넓은 꽃잎
             // 맨 바깥 고리(pow 8)만: 몸통은 넓게 해서 옆 꽃잎과 겹치게 하고, 끝(v → 1) 가까이에서만 좁혀 한 점으로 모음 (tip)
@@ -122,13 +159,51 @@
             // 색: 꽃잎 아래쪽·안쪽 고리 = 가운데 색, 꽃잎 끝·바깥 고리 = 바깥 색
             //   centerSpread만큼 바깥 색으로 바뀌기 시작하는 곳을 꽃잎 위쪽으로 미룸 (가운데 색이 넓게)
             const cs = P.centerSpread;
-            c.copy(cCenter).lerp(cOuter, smooth(0.3 * cs, 1, (0.35 - 0.2 * cs) * outer + 0.75 * ve));
+            if (P.centerEdge > 0) c.copy(cCenter).lerp(cOuter, smooth(P.centerEdge - 0.07, P.centerEdge + 0.07, ve));   // 경계를 정해 칠함: 밑동~centerEdge까지만 가운데 색
+            else c.copy(cCenter).lerp(cOuter, smooth(0.3 * cs, 1, (0.35 - 0.2 * cs) * outer + 0.75 * ve));
+            // 줄무늬: 꽃잎 폭 방향(u)으로 물결 두 개를 겹쳐 '줄'을 만들고, 끝 방향(ve)으로 살짝 흔들어 자연스럽게
+            //   굵은 줄(stripeScale 1) = 꽃잎에 줄 1~2개 … 가는 줄(0) = 줄 여러 개가 끊어지며 점처럼
+            //   stripeMode: 0 줄 (밑동 → 끝으로 흐르는 줄) · 1 끝 얼룩 (꽃잎 끄트머리에만 불규칙하게) · 2 구역 (꽃 전체를 큰 구역으로 나눠 한쪽에 몰림)
+            //   (2026-11-23 피드백: 카렌·오렌지스플래쉬 "끄트머리만 불규칙하게", 퍼플타이거 "구역에 연분홍이 몰려 있음")
+            if (cStripe) {
+              const ph = rnd(4) * 7, ph2 = rnd(5) * 11;                           // 꽃잎마다 무늬 위치가 다르게
+              const thr = 1 - 1.6 * P.stripes;                                     // 줄무늬 양이 많을수록 문턱이 낮아짐
+              let m = 0;                                                           // 이 점이 줄무늬 색인 정도 (0 … 1)
+              if (P.stripeMode === 1) {
+                // 끝 얼룩: 꽃잎 폭 방향으로 불규칙한 물결 → 끝(ve 1) 쪽에서만, 끝에 가까울수록 더 넓게
+                const f = 0.55 * Math.sin((u * 3.1 + ph) * 2 * Math.PI) + 0.45 * Math.sin((u * 7.3 + ph2 + ve * 2) * 2 * Math.PI);
+                const reach = smooth(0.45, 1, ve);                                 // 끝 쪽 50%에서만
+                m = smooth(thr - 0.15, thr + 0.15, f + reach * 0.9 - 0.45) * reach;
+              } else if (P.stripeMode === 2) {
+                // 구역: 꽃잎 하나가 아니라 꽃 전체의 방향(phi)과 겹(k)으로 정하는 큰 얼룩 → 이웃 꽃잎이 같은 구역을 나눠 가짐
+                const g = Math.sin(phi * 1.0 + P.seed) + 0.6 * Math.sin(phi * 2.3 + k * 0.8 + P.seed * 1.7) + 0.35 * Math.sin(ve * 3 + ph);
+                m = smooth(thr - 0.25, thr + 0.25, g * 0.6);
+              } else {
+                // 줄: 꽃잎 폭 방향(u)으로 물결 두 개를 겹쳐 '줄'을 만들고, 끝 방향(ve)으로 살짝 흔듦
+                //   굵은 줄(stripeScale 1) = 꽃잎에 줄 1~2개 … 가는 줄(0) = 줄 여러 개가 끊어지며 점처럼
+                const freq = 1.2 + 5 * (1 - P.stripeScale);
+                let f = 0.6 * Math.sin((u * freq + ph + 0.25 * Math.sin(ve * 4 + ph2)) * 2 * Math.PI)
+                      + 0.4 * Math.sin((u * freq * 2.3 + ph2 + ve * 0.8) * 2 * Math.PI);
+                f *= 1 - (1 - P.stripeScale) * 0.6 * smooth(0.2, 0.9, Math.sin(ve * 11 + ph * 3)); // 가는 줄은 중간중간 끊어짐
+                m = smooth(thr - 0.1, thr + 0.1, f);
+              }
+              c.lerp(cStripe, m * smooth(0.05, 0.3, ve));                          // 꽃잎 맨 밑동은 바탕색
+            }
             c.multiplyScalar(0.82 + 0.18 * smooth(0, 0.5, ve));            // 꽃잎 밑동은 살짝 그늘
             // 겹 그늘: 안쪽 겹일수록(inner), 꽃잎 밑동일수록(1 - ve) 어둡게 → 바깥 겹 꽃잎 끝은 밝기 그대로
             if (P.layerShade > 0) c.multiplyScalar(1 - P.layerShade * (0.3 * inner * (1 - 0.5 * ve) + 0.18 * Math.pow(1 - ve, 2)));
+            // 겹 경계 그늘: 밑동(ve 0 근처, 다음 겹 아래로 들어가는 쪽)은 어둡게, 끝(ve 1 근처)은 살짝 밝게
+            //   아주 밝은(하얀) 꽃은 조명에 하얗게 날려서 그늘이 안 보임 → 그늘을 꽃잎 위쪽까지 넓히고, 끝 밝히기는 빼고, 전체를 살짝 낮춤
+            if (P.ringShade > 0) {
+              c.multiplyScalar(1 - P.ringShade * 0.4 * (1 - smooth(0, 0.55 + 0.3 * lightK, ve)));
+              c.lerp(WHITE, P.ringShade * 0.1 * (1 - lightK) * smooth(0.75, 1, ve));
+              c.multiplyScalar(1 - 0.12 * lightK);
+            }
             if (cEdge) c.lerp(cEdge, smooth(0.55, 1, ve) * (0.35 + 0.65 * outer));
             // 꽃잎 경계선: 꽃잎 양옆 가장자리(u가 0이나 1에 가까운 곳)를 살짝 어둡게 → 옆 꽃잎과 겹치는 곳에 자연스러운 선
             if (P.seams > 0) c.multiplyScalar(1 - P.seams * 0.22 * smooth(0.55, 1, w2) * smooth(0.1, 0.5, ve));
+            // 4등분 골: 네 무리 사이(무리 가장자리 꽃잎)를 어둡게 → 안쪽이 네 덩어리로 나뉜 게 보임
+            if (qK > 0) c.multiplyScalar(1 - 0.5 * qK * smooth(0.4, 1, qEdge));
             push(rad * Math.cos(phi), y, rad * Math.sin(phi), c);
           }
         }
@@ -159,20 +234,45 @@
     }
     const coreCol = cStamen || cCenter;
     if (cStamen && P.threads > 0) {
-      // 실 같은 수술: 납작한 판(조금 어두운 수술 색) 위에 작은 꽃밥 알갱이를 고리 모양으로 흩뿌림
+      // 수술 (2026-11-23 바꿈: 납작한 판 + 알갱이 → 실제 수술처럼)
+      //   꽃 가운데에서 가는 실(수술대)이 한 가닥씩 위·바깥으로 휘어 올라오고, 끝에 꽃밥(작은 구슬)이 달림
+      //
+      //        o   o  o        ← 꽃밥 (수술 색, 조금 진하게)
+      //         \  |  /
+      //          \ | /         ← 수술대 (수술 색을 밝게)
+      //      ─────●─────       ← 가운데 밑동
       const rr = 0.17 * P.core;
-      ball(0, -0.06, 0, rr * 0.75, 0.05, () => c.copy(coreCol).multiplyScalar(0.7));
-      const count = quality === 'full' ? 16 : 9;     // 꽃밥 알갱이 수 (상세 / 밭)
-      // 늘 같은 결과가 나오는 '가짜 무작위' (블롭을 다시 만들어도 알갱이 자리가 그대로)
+      ball(0, -0.07, 0, rr * 0.45, 0.035, () => c.copy(coreCol).multiplyScalar(0.6));   // 가운데 밑동 (작게)
+      const count = Math.max(4, Math.round((quality === 'full' ? 28 : 12) * P.stamenCount));   // 수술 가닥 수 (상세 / 밭) × stamenCount
+      const sides = quality === 'full' ? 5 : 3, segs = quality === 'full' ? 4 : 2;   // 실 단면 꼭짓점 수 · 마디 수
+      const cFil = coreCol.clone().lerp(WHITE, 0.35);                // 수술대 색: 수술 색을 밝게
+      // 늘 같은 결과가 나오는 '가짜 무작위' (블롭을 다시 만들어도 수술 자리가 그대로)
       const rand = i => { const x = Math.sin(i * 127.1 + 311.7) * 43758.5453; return x - Math.floor(x); };
       for (let i = 0; i < count; i++) {
-        // 해바라기 씨앗 배치: 한 알씩 황금각만큼 돌리고, 바깥으로 갈수록 sqrt만큼 벌림 → 판 전체에 균일하게 퍼짐
-        // (줄지어 보이지 않게 방향·거리에 아주 작은 흔들림을 더함)
-        const a = i * 2.39996 + (rand(i) - 0.5) * 0.5;
-        const d = rr * 0.92 * Math.sqrt((i + 0.5) / count) * (0.94 + 0.12 * rand(i + 50));
-        const h = 0.03 + 0.02 * rand(i + 100);                     // 높이는 거의 같게 (살짝만 다르게)
-        const size = (0.03 + 0.006 * rand(i + 150)) * P.core;     // 크기도 거의 같게
-        ball(d * Math.cos(a), -0.04 + h, d * Math.sin(a), size, size, () => c.copy(coreCol), 5, 3);
+        // 해바라기 씨앗 배치로 밑동 자리를 고르게 퍼뜨림 (황금각만큼 돌리고 바깥으로 sqrt만큼)
+        const a = i * 2.39996 + (rand(i) - 0.5) * 0.4;
+        const d0 = rr * 0.35 * Math.sqrt((i + 0.5) / count);        // 밑동: 가운데 가까이
+        const reachOut = rr * (0.45 + 0.5 * rand(i + 50)) * P.stamenSpread;   // 바깥으로 뻗는 거리 (stamenSpread가 작을수록 안으로 모임)
+        const rise = (0.1 + 0.08 * rand(i + 100)) * Math.sqrt(P.core) * (1 + 0.3 * (1 - P.stamenSpread)); // 위로 올라오는 높이 (모일수록 조금 더 높이)
+        const ca = Math.cos(a), sa = Math.sin(a);
+        // 실을 따라가는 점: t 0(밑동) … 1(끝). 위로 먼저 솟고 바깥으로 휘어짐
+        const at = tt => [ca * (d0 + reachOut * tt * tt), -0.06 + rise * Math.sin(tt * Math.PI / 2), sa * (d0 + reachOut * tt * tt)];
+        const rad = 0.007 * Math.sqrt(P.core);                       // 실 굵기
+        const start = positions.length / 3;
+        for (let s = 0; s <= segs; s++) {
+          const [px, py, pz] = at(s / segs);
+          for (let q = 0; q < sides; q++) {                          // 실 단면 = 작은 다각형 (옆 방향·바깥 방향으로 둘러쌈)
+            const th = 2 * Math.PI * q / sides, ox = Math.cos(th) * rad, oy = Math.sin(th) * rad;
+            push(px + (-sa) * ox + ca * oy * 0.5, py + oy, pz + ca * ox + sa * oy * 0.5, cFil);
+          }
+        }
+        for (let s = 0; s < segs; s++) for (let q = 0; q < sides; q++) {
+          const a0 = start + s * sides + q, a1 = start + s * sides + (q + 1) % sides, b0 = a0 + sides, b1 = a1 + sides;
+          indices.push(a0, b0, a1, a1, b0, b1);
+        }
+        const [tx, ty, tz] = at(1);
+        const size = (0.022 + 0.006 * rand(i + 150)) * P.core * P.stamenSize;   // 꽃밥 크기 × stamenSize
+        ball(tx, ty, tz, size, size * 0.8, () => c.copy(coreCol).multiplyScalar(0.9), 5, 3);
       }
     } else {
       ball(0, -0.05, 0, 0.17 * P.core, 0.2, (y, ph) => c.copy(coreCol).multiplyScalar(cStamen ? 0.85 + 0.15 * Math.sin(ph * 9) : 0.9));

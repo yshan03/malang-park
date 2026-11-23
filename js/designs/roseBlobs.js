@@ -69,8 +69,8 @@
     cup:        { petals: [9, 12, true], rings: [4, 8, true], petalWidth: [0.95, 1.4], open: [0.72, 0.95], flare: [-1.4, -0.75], ruffle: [0.05, 0.55], rimOpen: [0.2, 0.6], spiral: [0.9, 1.7] },
     open:       { petals: [7, 10, true], rings: [4, 8, true], petalWidth: [0.78, 1.22], open: [0.55, 0.85], spread: [0.62, 0.9], flare: [0.15, 0.65], ruffle: [0.1, 0.6], pointy: [0, 0.35], spiral: [0.6, 1.4] }
   };
-  function shapeVariant(type, name) {
-    const vary = SHAPE_VARY[type];
+  function shapeVariant(type, name, table) {
+    const vary = (table || SHAPE_VARY)[type];   // table: 어느 범위표를 쓸지 (없으면 예전 SHAPE_VARY)
     if (!vary) return {};
     const rand = seededRandom('shape:' + (name || ''));   // 줄기 무작위와 겹치지 않게 앞에 'shape:'를 붙임
     const out = {};
@@ -85,6 +85,107 @@
     });
     return out;
   }
+  // ---------- 새 분류로 만드는 틀 (2026-11-23, 1차: 평평 · 컵·하이센터) ----------
+  //   분류는 data/rose-forms.js (사진을 보며 사용자와 함께 정함)
+  //
+  //   장미 ─▶ 모양(form) + 꽃잎 겹 수(layers) ─▶ 가운데 틀 (FORM_TYPES)      ← 같은 분류는 가운데 패턴을 함께 씀
+  //        └▶ 바깥층 꽃잎 끝(tip)            ─▶ 바깥층만 바꾸는 값 (TIP_LAYER) ← 장미끼리 차이는 주로 여기서
+  //        └▶ 이름으로 정해지는 작은 흔들림     ─▶ FORM_VARY (범위를 좁게: 가운데 패턴이 흐트러지지 않게)
+  const FORM_TYPES = {
+    // 평평 — 꽃잎이 옆으로 펼쳐져 접시처럼 납작. 겹 수에 따라 틀이 셋
+    flat1: { petals: 5, rings: 1, open: 0.65, spread: 0.65, flare: 0.2,  pointy: 0,    height: 0, ruffle: 0.2,  spiral: 0.3, core: 2.2, petalWidth: 0.72, threads: 1, seams: 1 },   // 홑: 한 겹, 수술 크게
+    // 반겹: 두 겹, 수술 보임. 안쪽 겹이 뜨지 않고 바깥 겹과 포개지게 (layerEven), 안쪽도 바깥만큼 눕힘 (innerOpen) — 2026-11-23 사용자 피드백
+    //   (2차 피드백: 안쪽 겹을 더 크게(evenRatio 0.97) · 더 눕혀 바깥 겹에 더 포개지게(innerOpen 1.3) · 겹 경계 그늘 ringShade)
+    //   (3차 피드백: 라벤더 드림·안젤라 "녹아웃처럼 위층" → 가운데 색이 안쪽 겹을 덮어 뿌옇던 것을 centerSpread 0으로: 안쪽 겹도 꽃잎 색)
+    flat2: { petals: 6, rings: 2, open: 0.7,  spread: 0.75, flare: 0.25, pointy: 0.05, height: 0, ruffle: 0.25, spiral: 0.6, core: 1.5, petalWidth: 0.85, threads: 1, seams: 0.6, innerOpen: 1.3, layerEven: 1, evenRatio: 0.97, ringShade: 0.8, centerSpread: 0 },
+    flat3: { petals: 8, rings: 4, open: 0.75, spread: 0.85, flare: 0.3,  pointy: 0.1,  height: 0, ruffle: 0.3,  spiral: 1.0, petalWidth: 1.0, innerOpen: 0.6, ringShade: 0.8 },        // 겹: 여러 겹이 넓게 (겹 경계 그늘)
+    // 컵·하이센터 — 안쪽층은 모두 비슷: 가운데를 봉오리처럼 감싸고, 바깥 꽃잎이 위로 감싸 높이가 있음
+    //   (2026-11-23 사용자 피드백: 안쪽을 더 빽빽하게 여러 겹 감기게 → 겹 9·봉오리 0.9·dense, 꽃잎은 넓게, 꽃잎끼리 구분되게 seams)
+    cup:   { petals: 8, rings: 9, open: 0.6,  spread: 0.72, flare: 0.6,  pointy: 0,    height: 0.1, ruffle: 0.1, spiral: 1.3, petalWidth: 1.2, bud: 0.9, budReach: 0.7, dense: 0.5, rimOpen: 0.15, seams: 0.8, ringShade: 0.8 }   // ringShade: 층과 층이 갈라져 보이게 (2차 피드백)
+  };
+  // 둥근 · 이게뭐고 안의 패턴 (2026-11-23 사용자 분류, data/rose-forms.js 의 pattern)
+  //   quarter     패턴 1 "안이 4등분" — 바깥 꽃잎이 공처럼 감싸고, 안쪽 꽃잎이 네 무리로 나뉨
+  //   quarterOpen 패턴 2 "4등분되지만 더 펴짐" — 같은 4등분, 바깥 겹이 낮게 벌어져 납작
+  //   wing        패턴 4 "펼쳐진 날개형" — 크고 물결진 꽃잎이 장마다 다르게 흐트러져 펼쳐짐
+  FORM_TYPES.quarter     = { petals: 9, rings: 7, open: 0.5,  spread: 0.6,  flare: -0.6, pointy: 0,    height: 0, ruffle: 0.2, spiral: 0.9, petalWidth: 1.1,  dense: 0.8, innerOpen: 0.3, rimOpen: 0.2, quarter: 1, ringShade: 0.8, seams: 0.8 };
+  FORM_TYPES.quarterOpen = { petals: 9, rings: 6, open: 0.75, spread: 0.8,  flare: -0.1, pointy: 0,    height: 0, ruffle: 0.25, spiral: 0.9, petalWidth: 1.1, dense: 0.7, innerOpen: 0.5, rimOpen: 0.6, quarter: 1, ringShade: 0.8, seams: 0.8 };
+  FORM_TYPES.wing        = { petals: 7, rings: 4, open: 0.7,  spread: 0.85, flare: 0.45, pointy: 0.1,  height: 0, ruffle: 0.8, spiral: 1.0, petalWidth: 1.15, innerOpen: 0.5, messy: 0.8, ringShade: 0.6, seams: 0.5 };
+  //   stripeCup / stripeFlat  패턴 3 "색이 반반·섞임" = 줄무늬 장미 4송이. 모양은 컵·하이센터 / 평평 겹 틀을 그대로 쓰고 줄무늬만 더함
+  const PATTERN_TYPE = { quarter: 'quarter', quarterOpen: 'quarterOpen', wing: 'wing', stripeCup: 'cup', stripeFlat: 'flat3' };
+  // 줄무늬 장미마다 줄 모양 (사진 보고 정함): stripes 줄무늬 양 · stripeScale 굵기 (0 가는 줄·점 … 1 굵은 줄)
+  const STRIPE_STYLE = {
+    '맛쯔리':         { stripes: 0.55, stripeScale: 0.9, stripeMode: 0 },   // 굵은 크림색 줄이 꽃잎을 반반
+    '카렌':           { stripes: 0.45, stripeScale: 0.1, stripeMode: 1 },   // 꽃잎 끄트머리만 불규칙하게 흰색 (피드백)
+    '퍼플타이거':     { stripes: 0.5,  stripeScale: 0.5, stripeMode: 2 },   // 구역에 연분홍이 몰려 있고 나머지는 진분홍 (피드백)
+    '오렌지스플래쉬': { stripes: 0.45, stripeScale: 0.4, stripeMode: 1 }    // 카렌과 같은 방식 (피드백)
+  };
+  const STRIPE_DEFAULT = { stripes: 0.45, stripeScale: 0.5 };
+
+  // 바깥층 꽃잎 끝 (컵·하이센터): 안쪽층은 그대로, 바깥 1~2겹의 끝 모양만 바꿈
+  //   outerPointy 끝 뾰족함 · reflex 양옆이 뒤로 말림 · tip 끝을 한 점으로 모음 · flareAdd 끝 젖힘을 더하거나 뺌 · widthAdd 꽃잎 폭을 더함
+  const TIP_LAYER = {
+    // 뾰족 (더 뾰족하되 꽃잎은 넓게 — 2026-11-23 피드백). 꽃잎이 넓으면 옆 꽃잎에 끝이 묻혀서, 끝을 한 점으로 더 모으고(tip 1) 더 젖힘
+    pointed: { outerPointy: 1,    reflex: 1.6, tip: 1.0,  flareAdd: 0.6,  widthAdd: 0.1 },
+    between: { outerPointy: 0.45, reflex: 0.4, tip: 0.12, flareAdd: 0,    widthAdd: 0 },    // 애매
+    rounded: { outerPointy: 0,    reflex: 0,   tip: 0,    flareAdd: -0.25, widthAdd: 0 }    // 둥근
+  };
+  // 같은 틀 안에서 장미마다 조금씩 (예전 SHAPE_VARY보다 범위를 좁게)
+  const FORM_VARY = {
+    flat1: { petals: [5, 6, true], petalWidth: [0.6, 0.85], ruffle: [0, 0.4], core: [1.8, 2.6], spiral: [0.1, 0.6] },
+    flat2: { petals: [6, 8, true], petalWidth: [0.75, 0.95], ruffle: [0.1, 0.45], innerOpen: [1.2, 1.4], spiral: [0.4, 0.9] },
+    flat3: { petals: [7, 9, true], rings: [4, 6, true], petalWidth: [0.9, 1.1], ruffle: [0.15, 0.5], spread: [0.75, 0.9], spiral: [0.8, 1.2] },
+    cup:   { petals: [7, 9, true], rings: [8, 10, true], petalWidth: [1.1, 1.3], open: [0.52, 0.68], spread: [0.65, 0.8], bud: [0.8, 1.0], spiral: [1.1, 1.5] },
+    quarter:     { petals: [8, 10, true], rings: [6, 8, true], petalWidth: [1.0, 1.2], open: [0.42, 0.58], spiral: [0.7, 1.1] },
+    quarterOpen: { petals: [8, 10, true], rings: [5, 7, true], petalWidth: [1.0, 1.2], open: [0.68, 0.82], spiral: [0.7, 1.1] },
+    wing:        { petals: [6, 8, true], rings: [3, 5, true], petalWidth: [1.05, 1.25], ruffle: [0.6, 1.0], messy: [0.6, 1.0], spread: [0.78, 0.92] }
+  };
+  // 장미 이름 + 분류 → 모양 값 (색은 빼고). 없으면 null → 예전 방식으로
+  function formShapeOf(name, colors) {
+    const f = (window.ROSE_FORMS || {})[name];
+    if (!f) return null;
+    let type = null;
+    if (f.form === 'flat') type = 'flat' + Math.min(3, Math.max(1, f.layers || 3));
+    else if (f.form === 'cup') type = 'cup';
+    else if (f.pattern && PATTERN_TYPE[f.pattern]) type = PATTERN_TYPE[f.pattern];   // 둥근·이게뭐고 중 패턴이 정해진 장미
+    if (!type) return null;                                   // 패턴이 없는 둥근·이게뭐고(보류·줄무늬)는 아직 예전 방식
+    const shape = Object.assign({}, FORM_TYPES[type], shapeVariant(type, name, FORM_VARY));
+    shape.seed = Math.floor(seededRandom('messy:' + name)() * 1000);   // 흐트러짐(messy)·줄무늬 위치가 장미마다 다르게
+    if (colors && colors.stripe) Object.assign(shape, STRIPE_STYLE[name] || STRIPE_DEFAULT);   // 줄무늬 장미
+    // 평평 겹꽃: 수술 색이 있는 장미만 가운데를 열어 수술을 보여 줌 (예전 'open'과 같은 규칙)
+    if (type === 'flat3' && colors && colors.stamen) { shape.innerOpen = 0.75; shape.core = 1.3; shape.threads = 1; }
+    if (type === 'cup') {
+      const layer = TIP_LAYER[f.tip] || TIP_LAYER.between;    // 꽃잎 끝을 모르면 '애매'
+      shape.outerPointy = layer.outerPointy;
+      shape.reflex = layer.reflex;
+      shape.tip = layer.tip;
+      shape.flare = shape.flare + layer.flareAdd;
+      shape.petalWidth = shape.petalWidth + (layer.widthAdd || 0);
+    }
+    // 수술이 보이는 평평(홑·반겹)인데 수술 색이 따로 없는 장미: 사진의 '가운데 색'은 사실 수술 색이라 꽃잎(특히 안쪽 겹)이 그 색으로 물듦
+    //   → 가운데 색은 수술로 옮기고, 꽃잎 가운데 색은 바깥 색 쪽으로 (2026-11-23 피드백: 라벤더 드림 "녹아웃처럼 위층")
+    if ((type === 'flat1' || type === 'flat2') && colors && !colors.stamen && colors.center && colors.outer) {
+      const petalCenter = '#' + new THREE.Color(colors.center).lerp(new THREE.Color(colors.outer), 0.8).getHexString();
+      shape.colorsFix = Object.assign({}, colors, { stamen: colors.center, center: petalCenter });
+    }
+    // 하얀(아주 밝은) 장미: 그늘이 잘 안 보여 층끼리 구분이 안 됨 → 겹 경계 그늘·꽃잎 경계선을 더 진하게 (2026-11-23 피드백: 아이스버그·크리스탈훼어리)
+    if (shape.ringShade && colors && colors.outer) {
+      const hsl = {}; new THREE.Color(colors.outer).getHSL(hsl);
+      if (hsl.l > 0.8) {
+        const k = Math.min(1, (hsl.l - 0.8) / 0.12);                // 0.8 → 0.92 밝을수록 더 진하게
+        shape.ringShade = shape.ringShade + 0.7 * k;
+        shape.seams = Math.max(shape.seams || 0, 0.8 + 0.4 * k);
+        shape.layerShade = 0.7 + 0.3 * k;
+      }
+    }
+    shape.formType = type + (type === 'cup' ? '·' + (f.tip || 'between') : '');   // 확인용 이름
+    return shape;
+  }
+  window.ROSE_FORM_TYPES = FORM_TYPES;     // 비교 페이지에서 값을 바꿔 보며 맞춤
+  window.ROSE_TIP_LAYER = TIP_LAYER;
+  window.ROSE_FORM_VARY = FORM_VARY;
+  window.ROSE_STRIPE_STYLE = STRIPE_STYLE;   // 비교 페이지에서 줄 모양을 바꿔 보며 맞춤
+  window.roseFormShape = formShapeOf;
+
   window.ROSE_SHAPE_VARY = SHAPE_VARY;     // 확인 페이지에서 씀
   window.roseShapeVariant = shapeVariant;
 
@@ -112,9 +213,10 @@
     if (!c) return null;                       // 이 장미는 뽑은 색이 없음
     const colors = {};
     if (c.pattern === 'stripe') {
-      // 줄무늬 장미: 줄무늬 칠하기는 아직 없어서 우선 바탕색 한 가지로 칠함 (줄무늬는 모양 작업 때)
+      // 줄무늬 장미: 바탕색으로 칠하고, 줄무늬 색은 틀이 꽃잎마다 줄로 그림 (2026-11-23 줄무늬 작업)
       colors.center = c.base;
       colors.outer = c.base;
+      colors.stripe = c.stripe;
     } else {
       colors.center = c.center;
       colors.outer = c.outer;
@@ -161,8 +263,23 @@
     // 1) 대표 5개: 손으로 디자인한 모양과 색
     const own = BY_NAME[item.name];
     if (own) return Object.assign({ kind: 'featured' }, own);
-    // 2) 나머지: 그 장미의 모양 종류(data/rose-shapes.js) + 사진에서 뽑은 색
     const colors = photoColors(item.name);
+    // 2) 장미 카드(data/rose-cards.js)가 있으면 카드 값 그대로 — 장미마다 따로 손볼 수 있게 (2026-11-23)
+    const card = (window.ROSE_CARDS || {})[item.name];
+    if (card && colors) {
+      const shape = Object.assign({}, card);
+      const useColors = shape.colorsFix || colors;   // 카드에 손본 색이 있으면 그것
+      delete shape.colorsFix;
+      return Object.assign({ kind: 'card' }, shape, { colors: useColors });
+    }
+    // 3) 카드가 없으면 계산기: 새 분류(data/rose-forms.js)가 있는 평평 · 컵·하이센터: 가운데 틀 + 바깥층 꽃잎 끝 + 사진 색 (2026-11-23)
+    const formShape = colors ? formShapeOf(item.name, colors) : null;
+    if (formShape) {
+      const useColors = formShape.colorsFix || colors;   // 틀에 맞춰 손본 색이 있으면 그것 (예: 수술 색 옮기기)
+      delete formShape.colorsFix;
+      return Object.assign({ kind: 'sample', shapeType: formShape.formType }, formShape, { colors: useColors });
+    }
+    // 4) 나머지: 그 장미의 예전 모양 종류(data/rose-shapes.js) + 사진에서 뽑은 색
     const type = (window.ROSE_SHAPES || {})[item.name];
     //    종류 기본 모양 → 장미마다 조금씩 다른 값(shapeVariant) → 확인 페이지에서 손으로 고친 값(ROSE_SHAPE_FIX, 있으면)
     if (colors && type && SHAPE_TYPES[type]) {
@@ -170,7 +287,7 @@
       return Object.assign({ kind: 'sample', shapeType: type }, shapeOf(type, colors), shapeVariant(type, item.name), fix, { colors: colors });
     }
     if (colors) return Object.assign({ kind: 'sample' }, SAMPLE_SHAPE, { colors: colors });   // 모양 종류가 없으면 공통 모양
-    // 3) 사진 색도 없으면: 공통 모양 + 7가지 색 중 하나
+    // 5) 사진 색도 없으면: 공통 모양 + 7가지 색 중 하나
     return Object.assign({ kind: 'sample' }, SAMPLE_SHAPE, { colors: SAMPLE_COLORS[index % SAMPLE_COLORS.length] });
   }
 })();

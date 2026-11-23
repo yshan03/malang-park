@@ -155,13 +155,23 @@
   body.detail.sheet-open #info { transform: translateY(0); }   /* TMI 🤓 를 눌러야 올라옴 */
   #info { padding-top: 40px; }                                /* 위 가장자리에 걸친 TMI 버튼 자리 */
   #info .inner { max-width: 640px; margin: 0 auto; }
-  #info h2 { margin: 0; font-size: 24px; }
+  /* TMI 꽃 이름·설명도 손글씨(Gaegu 굵게, 2026-11-19). 손글씨는 같은 크기면 작아 보여서 키움 (이름 24→30px, 설명 15→18px) */
+  /* TMI의 꽃 이름: 화면 위에 이미 손글씨 이름이 떠 있어서 여기선 숨김 (화면 읽기 프로그램에는 읽히게) — 2026-11-19 */
+  #info h2 { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
   #info .photo { width: 100%; max-width: 420px; aspect-ratio: 3/2; object-fit: cover; display: block; border-radius: 14px; margin-top: 16px; background: var(--line); }
   #info .swatch { display: inline-block; width: 16px; height: 16px; border-radius: 50%; vertical-align: 1px; margin-right: 8px; }
   #info .en { margin: 2px 0 12px; color: var(--muted); font-size: 14px; }
   #info .tags { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
   #info .tags span { font-size: 12px; padding: 4px 10px; border-radius: 999px; background: #f1e8d8; }
-  #info p.desc { margin: 0; font-size: 15px; line-height: 1.7; }
+  /* 줄 있는 공책 (2026-11-23): "이 장미는"과 설명 글 아래에 연한 가로줄. 줄 간격 = 글 줄 높이(33.6px = 21px × 1.6)라서
+     손글씨가 줄 위에 쓰인 것처럼 보임. 줄은 각 줄 칸의 맨 아래에 1px로 그림(repeating-linear-gradient) */
+  #info { --rule: 33.6px; --rule-c: #e6d9bf; }
+  #info p.about, #info p.desc {
+    background-image: repeating-linear-gradient(to bottom, transparent 0, transparent calc(var(--rule) - 1px), var(--rule-c) calc(var(--rule) - 1px), var(--rule-c) var(--rule));
+    line-height: var(--rule);
+  }
+  #info p.about { margin: 0; font-family: 'Gaegu', 'Apple SD Gothic Neo', sans-serif; font-weight: 700; font-size: 26px; color: var(--hint-c, var(--ink)); }   /* '이 장미는' — 그 꽃의 진한 색 (공책 첫 줄) */
+  #info p.desc { margin: 0; font-family: 'Gaegu', 'Apple SD Gothic Neo', sans-serif; font-weight: 700; font-size: 21px; color: #6B9A2E; }   /* 설명 21px · 연두색 (밝은 연두는 흰 카드에서 안 읽혀서 조금 진한 연두) */
   #info a.more { display: inline-block; margin-top: 12px; color: var(--accent); font-size: 13px; }
   #info .count { margin-top: 16px; font-size: 12px; color: var(--muted); }
   #info .credit { margin-top: 6px; font-size: 11px; color: #b0aaa0; }
@@ -209,6 +219,10 @@
 <script src="data/rose-colors.js"></script>
 <!-- 장미별 블롭 모양 종류 (홑꽃·하이센터·컵·활짝 핀 겹꽃). 사진을 보고 나눈 결과 -->
 <script src="data/rose-shapes.js"></script>
+<!-- 장미별 새 분류 (모양·꽃잎 겹 수·바깥 꽃잎 끝). 평평·컵·하이센터는 이걸로 블롭을 만들고, 나머지는 위 모양 종류를 씀 -->
+<script src="data/rose-forms.js"></script>
+<!-- 장미 카드: 장미마다 블롭 모양 값 (있으면 이게 먼저). 장미 하나만 고칠 때는 여기 그 장미 줄만 -->
+<script src="data/rose-cards.js"></script>
 <script src="js/designs/roseBlobs.js"></script> <!-- 장미별 블롭 디자인 설정 -->
 <script src="js/zones.js"></script>
 <script src="js/dataStore.js"></script>
@@ -308,7 +322,7 @@
     }
   }
 
-  // 꽃 디자인 색(item.blob.colors.outer = 꽃잎 바깥 색)으로 이름 글자 색 만들기
+  // 꽃 디자인 색(item.blob.colors.outer = 꽃잎 바깥 색)으로 이름 글자 색 만들기 (블롭 색은 안 바뀜 — 글씨용 계산)
   // 색을 HSL(색상 h · 채도 s · 밝기 l)로 나눠서 "밝기"만 낮춤 → 꽃 색 느낌은 남고 배경 위에서 잘 읽힘
   //   그냥 RGB를 곱해 어둡게 하면: 흰 꽃 → 회색, 노란 꽃 → 올리브색으로 탁해짐. 그래서 두 경우만 따로 처리
   function nameTone(item) {
@@ -323,7 +337,14 @@
     };
     // 1단계: 아주 밝은 꽃은 먼저 한 번 진하게 (밝기 0.62 / 0.55), 보통 꽃은 그대로
     const outer = col.outer || col.center || '#E86B86';
-    const L = toHsl(outer).l;
+    // 분홍 계열(색상 빨강~자홍 · 채도 뚜렷 · 원래 밝음)은 그대로 진하게 내리면 "진한 빨강"이 돼 버림
+    //   → 밝기를 0.48까지만 내리고, 채도를 조금 낮추고, 색상을 살짝 자홍 쪽으로 → 진한 분홍(라즈베리) (2026-11-19)
+    const o = toHsl(outer);
+    if ((o.h > 0.88 || o.h < 0.02) && o.s > 0.3 && o.l > 0.62) {
+      const h = o.h > 0.5 ? Math.min(o.h, 0.955) - 0.01 : 0.945;     // 주홍 쪽(0.98~1.0)이면 자홍 쪽으로 당김
+      return '#' + new THREE.Color().setHSL(h, Math.min(0.7, o.s * 0.85), 0.48).getHexString();
+    }
+    const L = o.l;
     const fill = L > 0.72 ? warmDeep(outer, 0.62) : L > 0.6 ? warmDeep(outer, 0.55) : outer;
     // 2단계: 글자 색 = 그 색의 밝기를 약 0.6배 (최대 0.36) → 배경(#f6f1e7) 위에서 또렷하게
     return warmDeep(fill, Math.min(0.36, toHsl(fill).l * 0.62));
@@ -350,6 +371,8 @@
     } else {
       h2.style.marginBottom = '12px';
     }
+    // 설명 위 한마디 ('이 장미는') — 구역 표(zones.js)의 aboutLabel. 없으면 안 붙임 (이 페이지는 "장미"를 모름)
+    if (zone && zone.aboutLabel) { const lb = document.createElement('p'); lb.className = 'about'; lb.textContent = zone.aboutLabel; box.appendChild(lb); }
     const p = document.createElement('p'); p.className = 'desc'; p.textContent = item.description; box.appendChild(p);
     // 사진은 참고용이라 설명 아래에 (주인공은 위의 말랑한 도형)
     const urls = item.imageUrls || (item.imageUrl ? [item.imageUrl] : []);
