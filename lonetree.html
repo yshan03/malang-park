@@ -31,6 +31,24 @@
     min-width: 44px; min-height: 44px; color: inherit; text-decoration: none;
     border-radius: 50%; background: #f7f8ed9c;
   }
+  .tmi {
+    position: absolute; top: 0; right: 12px; display: grid; place-items: center;
+    width: 44px; height: 44px; padding: 0; border: 0; border-radius: 8px;
+    background: transparent; cursor: pointer;
+  }
+  .tmi svg { width: 35px; height: 35px; }
+  .tree-notes {
+    width: min(calc(100% - 32px), 375px); max-height: calc(100svh - 48px);
+    border: 0; border-radius: 20px; padding: 22px; color: #294838;
+    background: #faf8ec; box-shadow: 0 12px 36px #24382535;
+  }
+  .tree-notes::backdrop { background: #24382555; }
+  .tree-notes h2 { margin: 0 44px 8px 0; font: 700 30px/1.1 Gaegu, system-ui, sans-serif; }
+  .tree-notes p + p { margin-top: 10px; }
+  .tree-notes .close {
+    position: absolute; top: 8px; right: 8px; width: 44px; height: 44px;
+    border: 0; border-radius: 50%; background: transparent; color: inherit; font-size: 24px; cursor: pointer;
+  }
   .back svg { display: block; width: 16px; height: 16px; }
   .controls { bottom: max(26px, calc(env(safe-area-inset-bottom) + 16px)); padding: 0 20px; }
   .prompt { font: 700 25px/1.1 Gaegu, system-ui, sans-serif; margin: 0 0 12px; }
@@ -128,6 +146,15 @@
               stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
       </svg>
     </a>
+    <button class="tmi" id="tree-tmi" type="button" aria-label="나홀로나무 TMI 보기"
+      aria-haspopup="dialog" aria-controls="tree-notes">
+      <svg viewBox="0 0 32 32" aria-hidden="true">
+        <path d="M5 9q0-2 2-2h17q3 0 3 3v15H8q-3 0-3-3Z" fill="#f8edcd" stroke="#6c8666" stroke-width="1.3"/>
+        <path d="M9 7v18" fill="none" stroke="#a2b28d" stroke-width="1.2"/>
+        <path d="M16.5 19q-4 0-4-3.3 0-1.6 1.3-2.7.5-3.3 4.1-3.3 3.5 0 4.1 3.6 1.4 1.1 1.3 2.9-.2 2.8-4.2 2.8m-1.3.2v2.8"
+          fill="none" stroke="#476f50" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </button>
     <h1>나홀로나무</h1>
   </header>
   <div class="controls">
@@ -137,7 +164,20 @@
     </button>
     <p class="privacy" id="privacy-note">소리는 기기 안에서만 분석해요.</p>
   </div>
+  <dialog class="tree-notes" id="tree-notes" aria-labelledby="tree-notes-title">
+    <form method="dialog">
+      <button class="close" type="submit" aria-label="TMI 닫기" autofocus>×</button>
+    </form>
+    <h2 id="tree-notes-title">나홀로나무 TMI</h2>
+    <p>몽촌토성 잔디 언덕에 서 있는 이 나무는 높이 약 10m의 측백나무예요. 올림픽공원 9경 중 여섯 번째 풍경이기도 해요.</p>
+    <p>공원 안내에 따르면, 1985년 아시안게임과 서울올림픽을 준비하며 몽촌토성 안의 민가를 정리할 때 이 나무 한 그루를 남겼대요.</p>
+  </dialog>
 </main>
+<script>
+  const treeTmi = document.getElementById('tree-tmi');
+  const treeNotes = document.getElementById('tree-notes');
+  treeTmi.addEventListener('click', () => treeNotes.showModal());
+</script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="js/lonetree-mic.js?v=cedar-wind"></script>
 <script>
@@ -284,6 +324,14 @@ function drawTree() {
       { x: -.14, y: 2.46, width: .28, height: .18, count: 32, minDepth: .53, shade: 5 },
       { x: -.14, y: 2.45, width: .24, height: .17, count: 30, minDepth: .54, shade: 4, inner: true },
     ];
+    // 왼쪽 앞잎이 눌려도 그 뒤에 남는 잎층을 위·가운데·아래에 보강한다.
+    touchups.push(
+      { x: -.42, y: 2.12, width: .25, height: .22, count: 32, shade: 5, inner: true, recess: .09 },
+      { x: -.57, y: 1.62, width: .26, height: .31, count: 47, shade: 4, inner: true, recess: .10 },
+      { x: -.49, y: 1.03, width: .24, height: .26, count: 37, shade: 4, inner: true, recess: .09 },
+      { x: -.24, y: 2.57, width: .29, height: .12, count: 38, shade: 5, inner: true, recess: .075, coverCore: true },
+      { x: .10, y: 2.60, width: .28, height: .13, count: 42, shade: 5, inner: true, recess: .075, coverCore: true },
+    );
     const regularLeaves = rows.reduce((sum, row) => sum + row.count * (spraysPerCluster + surfaceSprays), 0);
     const patchLeaves = touchups.reduce((sum, area) => sum + area.count, 0);
     const leafCount = regularLeaves + patchLeaves;
@@ -311,7 +359,7 @@ function drawTree() {
           Math.sin(angle) * lowerRadius);
         puff.scale.set(size * (1 + .2 * random()), size * (1.03 + .24 * random()), size);
         puff.rotation.y = angle;
-        puff.userData = { h, rest: puff.position.clone(), restScale: puff.scale.clone(), squeeze: 0 };
+        puff.userData = { h, rest: puff.position.clone(), restScale: puff.scale.clone(), restRotation: puff.quaternion.clone(), windTilt: new THREE.Quaternion(), squeeze: 0 };
         crown.add(puff);
 
         // 잔잎 송이를 큰 덩어리의 표면에 얹어 수관 안쪽과 가장자리에 결을 만든다.
@@ -378,7 +426,20 @@ function drawTree() {
     const up = new THREE.Vector3().crossVectors(front, right);
     const towardTree = front.clone().negate();
     const surfaceMeshes = [...puffs, core];
-    touchups.forEach(({ x, y, width, height, count, minDepth, shade, inner = false }) => {
+    // 앞잎 표면에서 안쪽 수관까지의 여유를 한 번 계산해 눌림 깊이에 사용한다.
+    const pressDirection = new THREE.Vector3(depthX, 0, depthZ);
+    puffs.forEach(puff => {
+      origin.copy(puff.position).addScaledVector(pressDirection, -4);
+      surfaceRay.set(origin, pressDirection);
+      const leafHit = surfaceRay.intersectObject(puff, false)[0];
+      const coreHit = surfaceRay.intersectObject(core, false)[0];
+      const clearance = leafHit && coreHit ? coreHit.distance - leafHit.distance : Infinity;
+      puff.userData.pressDepth = Number.isFinite(clearance)
+        ? THREE.MathUtils.clamp(clearance - .045, .025, .30)
+        : Infinity;
+      puff.userData.depthOffset = 0;
+    });
+    touchups.forEach(({ x, y, width, height, count, minDepth, shade, inner = false, recess, coverCore = false }) => {
       for (let i = 0; i < count; i++) {
         const angle = i * Math.PI * (3 - Math.sqrt(5)) + .34 * random();
         const radius = Math.sqrt((i + .5) / count);
@@ -388,10 +449,19 @@ function drawTree() {
         const hit = surfaceRay.intersectObjects(surfaceMeshes, false)[0];
         if (!hit) continue;
         const depth = hit.point.dot(front);
-        const lift = inner
-          ? Math.max(.018, minDepth - depth - .045 * radius)
-          : Math.max(.02, (minDepth - depth) * (1 - .36 * radius));
-        hit.point.addScaledVector(front, lift + .022 * random());
+        if (recess !== undefined) {
+          const coreHit = surfaceRay.intersectObject(core, false)[0];
+          if (!coreHit) continue;
+          const clearance = depth - coreHit.point.dot(front);
+          // 꼭대기는 앞잎이 없는 틈도 있어 안쪽 수관 바로 앞까지 잎을 채운다.
+          if (clearance < .05 && !coverCore) continue;
+          hit.point.addScaledVector(front, Math.max(-recess, .035 - clearance));
+        } else {
+          const lift = inner
+            ? Math.max(.018, minDepth - depth - .045 * radius)
+            : Math.max(.02, (minDepth - depth) * (1 - .36 * radius));
+          hit.point.addScaledVector(front, lift + .022 * random());
+        }
         const puff = hit.object === core ? puffs.reduce((closest, candidate) => (
           candidate.position.distanceToSquared(hit.point) < closest.position.distanceToSquared(hit.point)
             ? candidate : closest
@@ -416,13 +486,17 @@ function drawTree() {
         const onLowerEdge = restHeight < .45;
         const tuck = onLowerEdge ? size * .52 : 0;
         const stretchOut = 1 + puff.userData.squeeze * .12;
-        const stay = inner ? puff.userData.squeeze * .82 : 0;
-        detail.position.set(puff.position.x + x * stretchOut - depthX * stay * .24,
-          puff.position.y + (y + tuck) / stretchOut + stay * .13,
-          puff.position.z + z * stretchOut - depthZ * stay * .24);
+        const stay = inner ? .82 : 0;
+        const retainedDepth = puff.userData.depthOffset * stay;
+        detail.position.set(x * stretchOut, (y + tuck) / stretchOut, z * stretchOut)
+          .applyQuaternion(puff.userData.windTilt).add(puff.position);
+        detail.position.x -= depthX * retainedDepth;
+        detail.position.y += puff.userData.squeeze * stay * .13;
+        detail.position.z -= depthZ * retainedDepth;
         detail.scale.set(size * 1.30, size * stretch * 1.22, size * .82);
         const roll = tilt * 1.7 + (onLowerEdge ? Math.PI : 0);
         detail.rotation.set(-rise * .7 + tilt * .7, Math.PI / 2 - spread, roll, 'YXZ');
+        detail.quaternion.premultiply(puff.userData.windTilt);
         detail.updateMatrix();
         fineLeaves.setMatrixAt(i, detail.matrix);
       });
@@ -510,26 +584,33 @@ function drawTree() {
 
   // 밑동은 지면을 조금 밀고, 위쪽은 같은 호를 따라 더 크게 휜다.
   const trunkFollow = .48;
-  function bendPoint(target, x, y, z, angle, baseShift, lift, footPlanted = false) {
+  const bendAxis = new THREE.Vector3(depthZ, 0, -depthX);
+  const bendAbove = new THREE.Vector3();
+  const bendBelow = new THREE.Vector3();
+  function bendPoint(target, x, y, z, angle, baseShift, lift, rootSetback, footPlanted = false) {
     const height = Math.max(0, y);
     const turn = angle * height / 2.7;
     const upper = footPlanted ? 0 : THREE.MathUtils.smoothstep(height, .54, 2.36);
     const lower = footPlanted ? 0 : 1 - THREE.MathUtils.smoothstep(height, .20, 1.45);
     const arcBack = turn < .0001 ? 0 : 1.28 * height * (1 - Math.cos(turn)) / turn;
     // 밑동과 앞 지지대는 더 따라가고, 수관 위로 갈수록 젖혀지는 폭을 줄인다.
-    const back = (baseShift + arcBack) * (1 - .24 * upper) + trunkFollow * baseShift * lower;
+    const rootWeight = 1 - THREE.MathUtils.smoothstep(height, .15, 1.25);
+    const back = (baseShift + arcBack) * (1 - .24 * upper)
+      + trunkFollow * baseShift * lower + rootSetback * rootWeight;
     const arcDrop = (turn < .0001 ? 0 : height * (1 - Math.sin(turn) / turn)) * (1 - .17 * upper);
     // 뒤로 밀리면 내려다보는 카메라에서는 위로 보이므로, 수관에 아래쪽 기울기를 더한다.
     const drop = arcDrop + .46 * back * THREE.MathUtils.smoothstep(height, .3, 2.32);
     return target.set(x + depthX * back, y + lift - drop, z + depthZ * back);
   }
 
-  let previousAngle = 0, previousShift = 0, previousLift = 0;
-  function bendSurfaces(angle, baseShift, rootLift) {
-    if (angle === previousAngle && baseShift === previousShift && rootLift === previousLift) return;
+  let previousAngle = 0, previousShift = 0, previousLift = 0, previousSetback = 0;
+  function bendSurfaces(angle, baseShift, rootLift, rootSetback) {
+    if (angle === previousAngle && baseShift === previousShift && rootLift === previousLift
+      && rootSetback === previousSetback) return;
     previousAngle = angle;
     previousShift = baseShift;
     previousLift = rootLift;
+    previousSetback = rootSetback;
     surfaceMeshes.forEach(({ mesh, positions, rest, inverse }) => {
       for (let i = 0; i < positions.count; i++) {
         const offset = i * 3;
@@ -539,7 +620,7 @@ function drawTree() {
           ? THREE.MathUtils.clamp((y - .025) / .47, 0, 1)
           : 1;
         bendPoint(point, rest[offset], y, rest[offset + 2], angle,
-          baseShift * follow, rootLift * follow, mesh.userData.footPlanted);
+          baseShift * follow, rootLift * follow, rootSetback * follow, mesh.userData.footPlanted);
         // 앞 지지대는 발이 더 크게 들리고, 줄기에 닿는 쪽은 같은 곡선을 따른다.
         if (mesh.userData.liftsInWind) point.y += .88 * rootLift * Math.max(0, 1 - y / .48);
         point.applyMatrix4(inverse);
@@ -593,8 +674,8 @@ function drawTree() {
     const hit = touchRay.intersectObjects(puffs, false)[0];
     if (!hit) return false;
     const center = hit.object.userData.rest;
-    const weights = puffs.map(puff => 1 - THREE.MathUtils.smoothstep(
-      puff.userData.rest.distanceTo(center), .03, .69));
+    const weights = puffs.map(puff => (1 - THREE.MathUtils.smoothstep(
+      puff.userData.rest.distanceTo(center), .03, .69)) ** 1.35);
     touch = { weights, releaseAt: null, startAt: performance.now(), releaseDepth: 0 };
     wake();
     return true;
@@ -604,8 +685,11 @@ function drawTree() {
     if (!touch || touch.releaseAt !== null) return;
     touch.releaseAt = performance.now();
     const held = touch.releaseAt - touch.startAt;
-    touch.releaseDepth = Math.max(cancelled ? 0 : .50, 1 - Math.exp(-held / 92));
+    touch.releaseDepth = 1 - Math.exp(-held / 92);
+    touch.holdStrength = THREE.MathUtils.smoothstep(held, 280, 650);
+    touch.rebound = THREE.MathUtils.lerp(.18, .66, THREE.MathUtils.smoothstep(held, 45, 380));
     touch.cancelled = cancelled;
+    touch.longRelease = !cancelled && held >= 380;
     wake();
   }
 
@@ -613,12 +697,32 @@ function drawTree() {
     if (!touch) return 0;
     if (touch.releaseAt === null) return 1 - Math.exp(-Math.max(0, now - touch.startAt) / 92);
     const time = Math.max(0, now - touch.releaseAt);
-    if (time >= 620) {
+    if (time >= (touch.longRelease ? 820 : 430)) {
       touch = null;
       return 0;
     }
-    const bounce = touch.cancelled ? 1 : Math.cos(time / 51);
-    return touch.releaseDepth * Math.exp(-time / 157) * bounce;
+    if (touch.cancelled) {
+      return touch.releaseDepth * (1 - THREE.MathUtils.smoothstep(time, 0, 180));
+    }
+    if (touch.longRelease) {
+      const rebound = touch.rebound * 1.12;
+      if (time < 115) {
+        return THREE.MathUtils.lerp(touch.releaseDepth, -rebound,
+          THREE.MathUtils.smoothstep(time, 0, 115));
+      }
+      const elapsed = time - 115;
+      const decay = Math.exp(-elapsed / 230) * (1 - THREE.MathUtils.smoothstep(time, 610, 820));
+      return -rebound * Math.cos(elapsed * Math.PI / 130) * decay;
+    }
+    if (time < 115) {
+      return THREE.MathUtils.lerp(touch.releaseDepth, -touch.rebound,
+        THREE.MathUtils.smoothstep(time, 0, 115));
+    }
+    if (time < 240) {
+      return THREE.MathUtils.lerp(-touch.rebound, touch.rebound * .23,
+        THREE.MathUtils.smoothstep(time, 115, 240));
+    }
+    return touch.rebound * .23 * (1 - THREE.MathUtils.smoothstep(time, 240, 430));
   }
   function sway(now) {
     const elapsed = Math.min(50, now - previousTime);
@@ -632,24 +736,51 @@ function drawTree() {
     const angle = (1.26 + .91 * wind + .08 * Math.sin(now / 155)) * wind + .24 * gust;
     const baseShift = .36 * wind + .35 * gust;
     const rootLift = .065 * wind ** 1.5 + .14 * gust;
-    bendSurfaces(angle, baseShift, rootLift);
-    shadow.position.z = -baseShift * (1 + trunkFollow) * 1.14;
+    const rootSetback = .46 * THREE.MathUtils.smoothstep(wind, .59, .96);
+    bendSurfaces(angle, baseShift, rootLift, rootSetback);
+    shadow.position.z = -(baseShift * (1 + trunkFollow) + rootSetback) * 1.14;
     shadow.scale.y = .53 + .24 * wind + .15 * gust;
     shadow.material.opacity = .25 - .06 * gust;
     const press = touchAmount(now);
+    const heldFor = touch?.releaseAt === null ? now - touch.startAt : 0;
+    const pulseTime = touch ? (touch.releaseAt ?? now) - touch.startAt : 0;
+    const pulseStrength = touch?.releaseAt === null
+      ? THREE.MathUtils.smoothstep(heldFor, 280, 650)
+      : (touch?.holdStrength || 0) * (1 - THREE.MathUtils.smoothstep(now - (touch?.releaseAt ?? now), 0, 95));
     puffs.forEach((puff, index) => {
-      const { h, rest, restScale } = puff.userData;
-      bendPoint(puff.position, rest.x, rest.y, rest.z, angle, baseShift, rootLift);
-      const flutterDepth = wind * .09 * h * Math.sin(now / 115 + index);
+      const { h, rest, restScale, restRotation, windTilt } = puff.userData;
+      bendPoint(puff.position, rest.x, rest.y, rest.z, angle, baseShift, rootLift, rootSetback);
+      // 잎 묶음의 방향을 줄기와 수관에 쓰는 곡선의 접선에 맞춘다.
+      bendPoint(bendAbove, rest.x, rest.y + .04, rest.z, angle, baseShift, rootLift, rootSetback);
+      bendPoint(bendBelow, rest.x, rest.y - .04, rest.z, angle, baseShift, rootLift, rootSetback);
+      bendAbove.sub(bendBelow);
+      windTilt.setFromAxisAngle(bendAxis, Math.atan2(
+        bendAbove.x * depthX + bendAbove.z * depthZ, bendAbove.y));
+      puff.quaternion.multiplyQuaternions(windTilt, restRotation);
+      const windPhase = rest.y * 2.4 + rest.x * 1.15 + rest.z * .65;
+      const flutterDepth = wind * .045 * h * Math.sin(now / 115 + windPhase);
       puff.position.x += flutterDepth * depthX + flutter * .055 * Math.sin(now / 43 + index);
       puff.position.z += flutterDepth * depthZ;
-      puff.position.y += wind * .021 * Math.sin(now / 92 + index * 1.7)
+      puff.position.y += wind * .014 * Math.sin(now / 92 + windPhase)
         + flutter * .035 * Math.sin(now / 37 + index);
-      const squeeze = reduceMotion.matches ? 0 : press * (touch?.weights[index] || 0);
+      const weight = touch?.weights[index] || 0;
+      // 늦게 눌리는 바깥 잎까지 짧은 떨림이 차례대로 번진다.
+      const ripple = Math.sin(pulseTime / 52 - (1 - weight) * 5);
+      const heldSqueeze = pulseStrength * (.07 + .13 * ripple);
+      const squeeze = reduceMotion.matches ? 0 : (press + heldSqueeze) * weight;
       const spread = 1 + squeeze * .12;
       puff.userData.squeeze = squeeze;
-      puff.position.x += depthX * squeeze * .24;
-      puff.position.z += depthZ * squeeze * .24;
+      const requestedDepth = squeeze * .24;
+      const limit = puff.userData.pressDepth;
+      const softStart = limit * .65;
+      let depthOffset = requestedDepth;
+      if (requestedDepth > softStart) {
+        const remaining = limit - softStart;
+        depthOffset = softStart + remaining * Math.tanh((requestedDepth - softStart) / remaining);
+      }
+      puff.userData.depthOffset = depthOffset;
+      puff.position.x += depthX * depthOffset;
+      puff.position.z += depthZ * depthOffset;
       puff.position.y -= squeeze * .13;
       puff.scale.set(restScale.x * spread, restScale.y / spread, restScale.z * spread);
     });
