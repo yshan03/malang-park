@@ -7,7 +7,7 @@
 window.ZONES = [
   { id: 'rose',       name: '장미광장',        source: 'roseApi', icon: '🌹', scenic: '9경',  // 남동
     intro: '165종의 장미가 모여 피는 커다란 장미 정원이에요.' },
-  { id: 'wildflower', name: '들꽃마루',        source: null, icon: '🌼', scenic: '8경',       // 남동, 장미광장 옆
+  { id: 'wildflower', name: '들꽃마루',        source: null, icon: '🌼', scenic: '',       // 남동, 장미광장 옆
     intro: '계절마다 다른 들꽃이 언덕을 덮어요. 봄에는 꽃양귀비와 수레국화, 가을에는 코스모스.',
     soon: '계절마다 피는 꽃이 달라서, 말랑이도 철마다 새로 빚는 중이에요' },
   { id: 'wildlab',    name: '야생화학습장',    source: null, icon: '🌸', scenic: '',          // 토성 남동쪽 자락
@@ -19,6 +19,9 @@ window.ZONES = [
   { id: 'lonetree',   name: '나홀로나무',      source: null, page: 'lonetree.html', icon: '🌲', scenic: '6경',       // 토성 위 서쪽
     intro: '넓은 잔디 언덕 위에 홀로 선 측백나무. 사진 찍으러 많이들 찾아오는 곳이에요.',
     soon: '혼자서도 씩씩한 말랑이로 빚는 중이에요' },
+  { id: 'lake',       name: '88호수',         source: null, icon: '💧', scenic: '',
+    intro: '정자에 잠깐 앉아, 바람 따라 잔물결이 번지는 호수를 바라봐요.',
+    soon: '물결 말랑이는 잔물결을 하나씩 빚는 중이에요' },
   { id: 'stream',     name: '성내천',          source: null, icon: '🌾', scenic: '',          // 북동쪽 가장자리 물길
     intro: '메말랐던 도심 하천이 습지로 되살아났어요. 창포, 붓꽃, 갈대 사이로 왜가리가 쉬어 가요.',
     soon: '물가 말랑이가 아직 물기를 말리는 중이에요' }
