@@ -10,6 +10,10 @@
 <style>
   * { box-sizing: border-box; }
   body { margin: 0; background: #e8ebde; color: #294838; font: 15px/1.55 system-ui, sans-serif; }
+  body, .tree-notes, .tree-notes * {
+    -webkit-user-select: none; user-select: none;
+    -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent;
+  }
   .scene {
     position: relative; isolation: isolate; width: min(100%, 470px); min-height: 550px;
     height: 100svh; margin: auto; overflow: hidden;
@@ -44,11 +48,15 @@
   }
   .tree-notes::backdrop { background: #24382555; }
   .tree-notes h2 { margin: 0 44px 8px 0; font: 700 30px/1.1 Gaegu, system-ui, sans-serif; }
+  .tree-notes .tree-photo { display: block; width: 100%; height: auto; margin: 0 0 12px; border-radius: 10px; -webkit-user-drag: none; }
+  .tree-notes p { font: 700 18px/1.45 Gaegu, system-ui, sans-serif; }
   .tree-notes p + p { margin-top: 10px; }
   .tree-notes .close {
     position: absolute; top: 8px; right: 8px; width: 44px; height: 44px;
     border: 0; border-radius: 50%; background: transparent; color: inherit; font-size: 24px; cursor: pointer;
   }
+  .tree-notes .close:focus { outline: none; }
+  .tree-notes .close:focus-visible { text-decoration: underline; }
   .back svg { display: block; width: 16px; height: 16px; }
   .controls { bottom: max(26px, calc(env(safe-area-inset-bottom) + 16px)); padding: 0 20px; }
   .prompt { font: 700 25px/1.1 Gaegu, system-ui, sans-serif; margin: 0 0 12px; }
@@ -61,8 +69,6 @@
   .mic:active { transform: translateY(2px); box-shadow: 0 1px 0 #244b38; }
   .mic[aria-pressed="true"] { background: #447c59; box-shadow: 0 0 0 4px #deebbc; }
   .mic svg { width: 18px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; }
-  .privacy { margin-top: 13px; font-size: 12px; }
-  .privacy[data-seen] { visibility: hidden; }
   :is(a, button):focus-visible { outline: 2px solid #294838; outline-offset: 3px; }
   @media (min-width: 560px) {
     body { display: grid; place-items: center; min-height: 100svh; }
@@ -162,13 +168,14 @@
     <button class="mic" id="mic" type="button" aria-label="마이크 꾹 눌러 말하거나 불기" aria-pressed="false">
       <svg viewBox="0 0 18 20" aria-hidden="true"><rect x="6" y="2" width="6" height="10" rx="3"/><path d="M3 9v1a6 6 0 0 0 12 0V9M9 16v3"/></svg>
     </button>
-    <p class="privacy" id="privacy-note">소리는 기기 안에서만 분석해요.</p>
   </div>
   <dialog class="tree-notes" id="tree-notes" aria-labelledby="tree-notes-title">
     <form method="dialog">
       <button class="close" type="submit" aria-label="TMI 닫기" autofocus>×</button>
     </form>
     <h2 id="tree-notes-title">나홀로나무 TMI</h2>
+    <img class="tree-photo" src="assets/lonetree-tmi.jpg" width="1100" height="734"
+      alt="푸른 하늘 아래 잔디 언덕에 홀로 서 있는 나홀로나무">
     <p>몽촌토성 잔디 언덕에 서 있는 이 나무는 높이 약 10m의 측백나무예요. 올림픽공원 9경 중 여섯 번째 풍경이기도 해요.</p>
     <p>공원 안내에 따르면, 1985년 아시안게임과 서울올림픽을 준비하며 몽촌토성 안의 민가를 정리할 때 이 나무 한 그루를 남겼대요.</p>
   </dialog>
@@ -826,7 +833,6 @@ try {
 
 const micButton = document.getElementById('mic');
 const windStatus = document.getElementById('wind-status');
-const privacy = document.getElementById('privacy-note');
 let voiceStart = null, lastVoice = 0;
 function showWindStatus(text) {
   if (windStatus.textContent !== text) windStatus.textContent = text;
@@ -865,7 +871,6 @@ const input = createLonetreeMic({
     }
     treeMotion.wind(strength);
     if (kind === 'wind') {
-      privacy.dataset.seen = '';
       voiceStart = null;
       return;
     }
