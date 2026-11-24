@@ -62,9 +62,11 @@
     display: grid; place-items: center; background: #ece9e0;
     height: var(--preview-visible-height, 100dvh);
   }
+  /* 테스트 틀 크기 = 실제 폰에서 "브라우저 안에 보이는 칸" (주소창·상태바를 뺀 크기).
+     화면 전체 크기(예: 390×844)로 두면 주소창 때문에 생기는 양옆 여백을 컴퓨터에서 못 봄 (2026-11-25) */
   html.mobile-preview .stage {
-    width: 390px;
-    height: 844px;
+    width: var(--phone-width, 440px);
+    height: var(--phone-height, 830px);
     zoom: var(--preview-scale, 1);
     border-radius: 14px;
     box-shadow: 0 0 0 1px #66725e40, 0 8px 20px #26312020;
@@ -137,10 +139,21 @@
     root.classList.add('screen-preview');
   } else if (location.port === '5182' || previewParams.get('mobile') === '1') {
     root.classList.add('mobile-preview');
+    // 어떤 폰으로 볼지: 주소 뒤에 ?phone=android 처럼 붙여서 고른다 (안 붙이면 아이폰)
+    //   숫자 = 그 폰의 브라우저 안에 보이는 칸 (폭 × 높이, 대략값)
+    const PHONES = {
+      iphone:  [440, 830],  // 아이폰 17 Pro Max, 사파리 주소창 있을 때
+      android: [412, 780],  // 최신 안드로이드, 크롬 주소창 있을 때
+      small:   [375, 553],  // 작은 옛 폰(아이폰 SE), 사파리 주소창 있을 때
+    };
+    const [phoneWidth, phoneHeight] = PHONES[previewParams.get('phone')] || PHONES.iphone;
+    root.style.setProperty('--phone-width', phoneWidth + 'px');
+    root.style.setProperty('--phone-height', phoneHeight + 'px');
     function fitMobilePreview() {
       const width = window.visualViewport?.width ?? innerWidth;
       const height = window.visualViewport?.height ?? innerHeight;
-      const scale = Math.min(1, (width - 16) / 390, (height - 16) / 844);
+      // 테스트 창이 틀보다 작으면 틀 전체를 비율대로 줄여서 다 보이게
+      const scale = Math.min(1, (width - 16) / phoneWidth, (height - 16) / phoneHeight);
       root.style.setProperty('--preview-visible-height', height + 'px');
       root.style.setProperty('--preview-scale', scale);
     }
@@ -155,7 +168,7 @@
   <h1>올림픽공원 말랑 지도</h1>
   <p><span class="hand-line">공원에선 눈으로만 👀 여기선 손으로 마음껏 🤲</span><br><b><span class="hand">식물 구역</span> 을 눌러 보세요.</b></p>
 </header>
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 390 844" data-outline-preview preserveAspectRatio="xMidYMid meet" font-family="'Jua','Apple SD Gothic Neo','Noto Sans KR',sans-serif">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 12 390 736" data-outline-preview preserveAspectRatio="xMidYMid meet" font-family="'Jua','Apple SD Gothic Neo','Noto Sans KR',sans-serif">
   <!--
     올림픽공원 일러스트 지도 v0.4 — 휴대폰 세로 한 장, 말랑 클레이 스타일 (2026-11-15)
     - 실제 지도를 따라 그린 것이 아니라, 구역의 대략적인 상대 위치(북쪽이 위)만 참고한 일러스트입니다.
@@ -781,7 +794,8 @@
   </g>
 
   <!-- 들꽃마루 (8경): 남쪽 끝, 장미광장 바로 서쪽 — 크림 점토 꽃밭 + 동글 들꽃 -->
-  <g transform="translate(7.46 -11.19)">
+  <!-- 2026-11-25: 지도 높이를 844→736으로 줄이면서 74칸 위로 올림 (원래 y -11.19) -->
+  <g transform="translate(7.46 -85.19)">
   <g class="zone" id="zone-wildflower" data-zone="wildflower" data-name="들꽃마루" data-active="false" tabindex="0" role="button" aria-label="들꽃마루">
     <g transform="translate(98 814) scale(1.1) translate(-98 -814)">
       <ellipse class="zone-hit" cx="98" cy="764" rx="72" ry="38" fill="#fff" opacity="0.001"/>
@@ -1078,7 +1092,8 @@
   </g>
 
   <!-- 장미광장 (9경): 남동쪽 끝 — 점토 장미 (실제 API 연결 구역) -->
-  <g transform="translate(-17.60 -4.83)">
+  <!-- 2026-11-25: 지도 높이를 844→736으로 줄이면서 74칸 위로 올림 (원래 y -4.83) -->
+  <g transform="translate(-17.60 -78.83)">
   <g class="zone" id="zone-rose" data-zone="rose" data-name="장미광장" data-active="true" tabindex="0" role="button" aria-label="장미광장">
     <g transform="translate(292 814) scale(1.1) translate(-292 -814)">
       <circle class="zone-hit" cx="292" cy="745" r="64" fill="#fde2e4" opacity="0.001"/>
@@ -1179,7 +1194,9 @@
     [data-landmark="thumb"]:focus { outline: none; }
     [data-landmark="thumb"]:focus-visible > ellipse { fill: #557052; opacity: .55; }
     .tree-backdrop-building { opacity: .73; filter: saturate(.68); }
-    .tree-backdrop-building:is([data-building="1"], [data-building="2"], [data-building="3"], [data-building="4"], [data-building="6"], [data-building="7"], [data-building="8"], [data-building="11"], [data-building="12"], [data-landmark="peace-gate"]) { opacity: .51; }
+    .tree-backdrop-building:is([data-building="1"], [data-building="2"], [data-building="3"], [data-building="6"], [data-building="7"], [data-building="11"], [data-building="12"], [data-landmark="peace-gate"]) { opacity: .51; }
+    /* 8번(두 흰 조각): 흰색이라 흐리게 하면 잔디에 묻혀서, 다른 건물보다 덜 흐리고 색을 덜 빼서 눈에 띄게 (2026-11-25) */
+    .tree-backdrop-building[data-building="8"] { opacity: .85; filter: saturate(1.2); }
     .landmark-label { font-family: 'Jua', sans-serif; font-size: 11px; fill: #4f6f85; stroke: #e6f4ea; stroke-width: 3px; paint-order: stroke; stroke-linejoin: round; }
     .zone[data-active="false"]:not([data-feedback-only]) { opacity: .9; transition: opacity .25s; }
     .zone[data-active="false"]:hover { opacity: 1; }
@@ -1247,7 +1264,7 @@
       <ellipse cx="10" cy="3.5" rx="6" ry="4.3" fill="#9cc1b7" stroke="#f1f1e9" stroke-width=".75"/>
       <ellipse cx="10" cy="3.2" rx="1.2" ry="1" fill="#bccac6" stroke="#f1f1e9" stroke-width=".6"/>
     </g>
-    <g class="tree-backdrop-building" data-building="3" transform="translate(54 513)">
+    <g class="tree-backdrop-building" data-building="3" transform="translate(56 518.6)">
       <!-- 중앙이 열린 흰 기둥과 구형 장식이 놓인 원형 받침 -->
       <ellipse cy="7" rx="17" ry="4" fill="#789164" opacity=".17"/>
       <ellipse cy="4" rx="13.5" ry="6.8" fill="#a8b4af"/>
@@ -1263,22 +1280,7 @@
         <circle cx="2" cy="7.7" r="1.85"/>
       </g>
     </g>
-    <g class="tree-backdrop-building" data-building="4" transform="translate(39 619)">
-      <!-- 밝은 전시동이 마당을 감싸고 앞쪽에 세로 줄무늬 별관이 있다. -->
-      <ellipse cy="8" rx="18" ry="4" fill="#789164" opacity=".17"/>
-      <path d="M-17 4 9 3l6 5-3 3-27 1Z" fill="#aab6b6"/>
-      <path d="M-16 4 8 4l2 3-25 2Z" fill="#d0d8d5"/>
-      <path d="M-17-17H-2l4 5v4h-17l-2-4Z" fill="#b5b2a3"/>
-      <path d="M-17-17H-2l4 5h-17Z" fill="#f0eee4"/>
-      <path d="M-12-11H-4l2 4h7l3 5v3H-8l2 4h-6l-4-10v-3h4Z" fill="#bcb6a3"/>
-      <path d="M-12-11H-4l2 4h7l3 5H-9l3 7h-5l-5-13h4Z" fill="#ede8d8"/>
-      <path d="M-13-2l4 7H3L0-2h2l4 9h-19l-4-9Z" fill="#babdb1"/>
-      <path d="M-13-2l4 7H3L0-2h1.4L5 6h-15l-4.6-8Z" fill="#efeadd"/>
-      <path d="M5-2H15l3 3v8H7L5 6Z" fill="#879699"/>
-      <path d="M5-2H15l3 3H7Z" fill="#aeb9b9" stroke="#e0e5df" stroke-width=".75"/>
-      <path d="M8 2v6m2-6v6m2-6v6m2-6v6m2-6v6" stroke="#b8c4c2" stroke-width=".7"/>
-    </g>
-    <g class="tree-backdrop-building" data-building="6" transform="translate(115 619)">
+    <g class="tree-backdrop-building" data-building="6" transform="translate(180.6 614.3)">
       <!-- 갈라진 돌기둥의 밝은 면과 그 사이에 끼워진 적갈색 조각 -->
       <ellipse cy="7" rx="15" ry="3.5" fill="#789164" opacity=".17"/>
       <path d="M-8-16l5-3 6 3-2 22-4 2-6-3Z" fill="#b2ae9d"/>
@@ -1289,8 +1291,8 @@
       <path d="M-6-24l7 3 3 13-3-8-5-3Z" fill="#a07c6d"/>
       <path d="M-6-24l6-2 8 4-7 1Z" fill="#d0a08b"/>
     </g>
-    <g class="tree-backdrop-building" data-building="7" transform="translate(104 660)">
-      <!-- 굽은 띠 안쪽을 비우고 아래로 겹쳐져 보이는 단면을 그린다. -->
+    <g class="tree-backdrop-building" data-building="7" transform="translate(28 622.4)">
+      <!-- 굽은 띠 안쪽을 비우고 아래로 겹쳐져 보이는 단면을 그린다. (2026-11-25 지웠다가 다시 가져옴, 사용자가 드래그로 자리 정함) -->
       <ellipse cy="8" rx="17" ry="4" fill="#789164" opacity=".17"/>
       <path d="M-17-6-13-15-4-19 6-18 15-13 17-7 14-1 8 5 5 10 0 9 0 5 5-2 4-7-1-12-8-12-11-8-5-7 0-2-2 3-10 1-16-2Z" fill="#b7af9f"/>
       <path d="M-17-9-13-17-4-21 6-20 15-15 17-10C16-4 12-1 8 2L5 7 0 6C0 2 6-1 5-6C4-9 2-12-1-14L-8-14-11-10-5-9 0-4-2 0-10-2-16-5Z" fill="#eee6d3"/>
@@ -1298,7 +1300,7 @@
       <path d="M-16-4l7 2 6 4M14-2C11 1 7 4 5 8" fill="none" stroke="#929b95" stroke-width="1.2"/>
       <ellipse cx="9" cy="-14" rx="2.6" ry="1.7" transform="rotate(25 9 -14)" fill="#d3d2c8"/>
     </g>
-    <g class="tree-backdrop-building" data-building="8" transform="translate(128 582)">
+    <g class="tree-backdrop-building" data-building="8" transform="translate(137.2 582.5)">
       <!-- 서로 기울어진 두 흰 조각과 분리된 돌 받침 -->
       <ellipse cx="-8" cy="8" rx="9" ry="2.7" fill="#789164" opacity=".19"/>
       <ellipse cx="9" cy="8" rx="8" ry="2.7" fill="#789164" opacity=".19"/>
@@ -1311,7 +1313,7 @@
       <path d="M-13 1q1-6 3.5-3t4 4m12-5q5 1 6 5M-.7-8l1.1 1.4m4.2-.4 1.4-1" fill="none" stroke="#afbcb9" stroke-width=".85" stroke-linecap="round"/>
       <path d="M-6 2l.4 6m17-6 .8 6" stroke="#bbc7c1" stroke-width=".75"/>
     </g>
-    <g class="tree-backdrop-building" data-building="9" transform="translate(367 542)">
+    <g class="tree-backdrop-building" data-building="9" transform="translate(365.9 536.3)">
       <ellipse cx="-3" cy="8" rx="14" ry="2.6" fill="#789164" opacity=".2"/>
       <!-- 오른쪽 끝이 더 높이 솟는 조각. 어두운 옆면으로 두께를 표현한다. -->
       <path d="M-12-10C-10 0-6 4 0 3C7 2 11-9 14-24C15-8 11 6 2 8C-6 9-11 1-12-10Z" fill="#ac927e"/>
@@ -1342,10 +1344,7 @@
       <path d="M0-10-15 1M0-10-12 3M0-10-10 4M0-10-7 5M0-10-3 6M0-10V6M0-10l4 16M0-10l7 15M0-10l10 15M0-10 13 3M0-10l15 12" fill="none" stroke="#f5f5ed" stroke-width=".65"/>
       <path d="M-14 2q14 8 28 0" fill="none" stroke="#e8ede3" stroke-width=".8"/>
     </g>
-    <g class="tree-backdrop-building" data-building="13" transform="translate(280 640)"><ellipse cy="7" rx="17" ry="4" fill="#789164" opacity=".17"/><path d="M-16-11Q0-15 16-11l-3 18H-13Z" fill="#c7d6b9"/><path d="M-15-11Q0-14 15-11l-2 15H-13Z" fill="#d9e6cc"/><path d="M-7-5H7L9 3H-9Z" fill="#b6c8a8" stroke="#cddcc0" stroke-width="1"/><path d="M-8-1H8m-8-4v7M-12-10l3 4m21-4-3 4m-4-6-2 5m-8-5 2 5" fill="none" stroke="#bfd0b1" stroke-width=".9"/></g>
-    <g class="tree-backdrop-building" data-building="14" transform="translate(239 615)"><ellipse cy="7" rx="17" ry="4" fill="#789164" opacity=".17"/><path d="M-15-4H15V4Q8 11-8 8Q-15 7-15 4Z" fill="#bccfae"/><ellipse cy="-5" rx="15" ry="9" fill="#dfead0"/><path d="M-12-1v6m6-4v7m6-6v7m6-7v6m6-7v5" stroke="#cbdcbd" stroke-width="1.2"/><ellipse cx="3" cy="-7" rx="3" ry="2" fill="#d8e5c9"/></g>
-    <g class="tree-backdrop-building" data-building="15" transform="translate(191 608)"><ellipse cy="7" rx="17" ry="4" fill="#789164" opacity=".17"/><path d="M-17 6Q-6-13 4-10Q12-9 18 6L13 7Q10-5 3-6Q-5-8-12 7Z" fill="#cad9bd"/><path d="M-15 6Q-6-10 4-8Q12-5 16 6" fill="none" stroke="#baccac" stroke-width="2"/><path d="M-9-2l2 5m3-9 2 5m3-7v5m5-3-1 5m5-2-1 4" stroke="#d9e6cc" stroke-width="1"/><path d="M-18 1h5v7h-5Zm32 0h5v7h-5Z" fill="#d9e6cc"/></g>
-    <g data-building="tree-rounded" transform="translate(302 606)">
+    <g data-building="tree-rounded" transform="translate(362.7 599.2)">
       <ellipse cy="16" rx="17" ry="4" fill="#789164" opacity=".22"/>
       <path d="M-3 15Q-3 1-8-11L-4-12 0-3 5-17 8-16 3 2 13-6 15-4 4 8 3 15Z" fill="#8f735b"/>
       <path d="M-20-15Q-21-23-13-25Q-9-30-3-28Q2-33 9-28Q19-29 22-21Q26-13 18-10Q19-5 9-6Q3-3-4-6Q-13-3-16-9Q-23-9-20-15Z" fill="#548052"/>
@@ -1360,7 +1359,7 @@
       <path d="M-3-14Q1-24 10-21Q13-23 18-17Q23-16 24-11L28-5Q25 0 18-2L3-7Q-4-8-3-14Z" fill="#46754b"/>
       <path d="M-5 3Q-2-2 3-1Q8-4 12 0Q11 5 5 6Q0 7-5 3Z" fill="#588253"/>
     </g>
-    <g data-building="tree-snow" transform="translate(80 568)">
+    <g data-building="tree-snow" transform="translate(75.5 582.4)">
       <ellipse cy="16" rx="17" ry="4" fill="#789164" opacity=".22"/>
       <path d="M-2 15V3h4v12Z" fill="#8f775f"/>
       <path d="M-22 2Q-23-5-18-10Q-18-16-12-18Q-9-25-3-25Q4-28 9-21Q18-20 20-14Q25-10 22-2Q21 6 12 7Q1 11-8 7Q-18 10-22 2Z" fill="#376948"/>
@@ -1371,14 +1370,31 @@
   </g>
   <g class="bg-buildings" aria-hidden="true">
     <g transform="translate(369 322)">
-      <path d="M-8 6q0-8-4-12 7 2 8 10Q-4-6 1-10 0-2 1 5q3-7 8-8-4 4-5 9Z" fill="#96b282"/>
-      <ellipse cx="6" cy="8" rx="8" ry="2" fill="#aac298" opacity=".6"/>
+      <!-- 88호수 옆 잔디 한 포기. id를 붙여서 아래 "지도 밖 잔디"에서 같은 모양을 다시 씀 -->
+      <g id="lawn-tuft">
+        <path d="M-8 6q0-8-4-12 7 2 8 10Q-4-6 1-10 0-2 1 5q3-7 8-8-4 4-5 9Z" fill="#96b282"/>
+        <ellipse cx="6" cy="8" rx="8" ry="2" fill="#aac298" opacity=".6"/>
+      </g>
     </g>
+    <!-- 88호수 옆 잔디와 같은 모양 한 포기 더, 서쪽 강가 건물들 사이 (2026-11-25, 사용자가 드래그로 자리 정함) -->
+    <use href="#lawn-tuft" transform="translate(17.8 504.5)"/>
+  </g>
+  <!-- 지도 밖 잔디 (2026-11-25): 지도 창(y 12~748) 아래쪽, 화면에 안 보이는 자리에 둔다.
+       주소창 없이 화면을 다 쓸 때(홈 화면에 추가 등)처럼 화면이 더 홀쭉하면 지도 아래가 남는데,
+       그때만 드러나서 빈 바탕 대신 잔디가 보인다. 보통 브라우저 화면에서는 안 보인다.
+       (y를 760 이상으로 둬서 잔디 끝이 748선 위로 올라오지 않게 함. scale(-1 1) = 좌우 뒤집기) -->
+  <g class="bg-buildings" aria-hidden="true">
+    <use href="#lawn-tuft" transform="translate(28 768)"/>
+    <use href="#lawn-tuft" transform="translate(92 786) scale(-.85 .85)"/>
+    <use href="#lawn-tuft" transform="translate(158 766) scale(.9)"/>
+    <use href="#lawn-tuft" transform="translate(222 790) scale(-1 1)"/>
+    <use href="#lawn-tuft" transform="translate(290 770) scale(.85)"/>
+    <use href="#lawn-tuft" transform="translate(356 784) scale(-.95 .95)"/>
   </g>
   <g class="landmark" opacity="1">
     <!-- 1. 세계평화의 문: 남서쪽 끝. 안내도 참고(2026-11-16): 굵은 흰 기둥 둘 + 바깥으로 휘어 오른 날개 지붕 둘
          (빨강·파랑 물결무늬) + 문 아래 성화. 디테일은 빼고 특징만. 성내천 왼쪽 여백에 배치 -->
-    <g class="tree-backdrop-building" data-landmark="peace-gate" transform="translate(29 554) scale(1.02)">
+    <g class="tree-backdrop-building" data-landmark="peace-gate" transform="translate(28.3 556.1) scale(1.02)">
       <g transform="scale(.62) translate(-38.87 -443.13) translate(1.47 -201.47)">
         <!-- 문 본체는 80% 크기 (기둥 아래 가운데 41,659를 기준으로 줄임). 성화는 원래 크기 그대로 -->
         <g transform="translate(41 659) scale(0.8) translate(-41 -659)">
@@ -1445,7 +1461,7 @@
     <!-- 6. 엄지손가락 조각: 동쪽 올림픽공원역 앞(만남의 광장), DOME 남쪽. 안내도 참고(2026-11-16), 수직으로 세움:
          주먹이 아니라 엄지 하나만 위로 서 있는 청동 조각. 받침·광장 없이 손가락만.
          전체 높이 40 중 손톱 8 (= 1/5), 손톱은 손가락보다 어두운 색. (0,0) = 손가락 가운데 -->
-    <g data-landmark="thumb" role="button" tabindex="0" aria-label="엄지손가락 조형물" transform="translate(352 648) scale(1.48) translate(0 -15)">
+    <g data-landmark="thumb" role="button" tabindex="0" aria-label="엄지손가락 조형물" transform="translate(363.7 685.2) scale(1.48) translate(0 -15)">
       <ellipse cx="1" cy="15" rx="9" ry="3" fill="#789164" opacity=".17"/>
       <g transform="scale(.72) translate(-370.11492 -634.57895) translate(374.19 632.99)">
         <g transform="rotate(-14 0 20)">
@@ -1654,11 +1670,14 @@ function poke(j, dv, target) {
 // 장미광장처럼 데이터가 있는 구역: 그 자리로 확대되면서 다음 화면으로
 // (viewBox = SVG에서 "어디를 얼마나 크게 볼지" 정하는 창. 이걸 좁히면 확대)
 // ------------------------------------------------------------
-const FULL_VIEW = [0, 0, 390, 844];
+// 지도 전체 창 = [왼쪽 x, 위쪽 y, 폭, 높이]
+//   폭÷높이 = 390÷736 ≈ 0.53 = 주소창이 있는 폰 브라우저 안의 비율 (2026-11-25, 예전 390×844 = 화면 전체 비율 0.46)
+//   위쪽 y가 12인 이유: 맨 위 12칸은 제목 글씨 밑이라 안 보여도 되는 하늘·구름뿐
+const FULL_VIEW = [0, 12, 390, 736];
 function zoomInto(j, done) {
   const parentToMap = svg.getScreenCTM().inverse().multiply(j.el.parentElement.getScreenCTM());
   const center = new DOMPoint(j.cx, j.cy).matrixTransform(parentToMap);
-  const to = [center.x - 70, center.y - 120, 140, 303]; // 구역 주변 (지도와 같은 세로 비율)
+  const to = [center.x - 70, center.y - 105, 140, 264]; // 구역 주변 (지도 전체 창과 같은 비율 140÷264 ≈ 0.53)
   const start = performance.now(), dur = 750;
   (function step(now) {
     const t = Math.min(1, (now - start) / dur);
