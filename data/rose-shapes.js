@@ -75,7 +75,6 @@ window.ROSE_SHAPES = {
   "아톨99": "highCenter",
   "하나로": "highCenter",
   "진선미": "highCenter",
-  "큐피드인더가든": "open",
   "드림위버": "cup",
   "다이나마이트": "cup",
   "아메리카": "open",

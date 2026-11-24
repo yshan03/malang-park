@@ -95,7 +95,8 @@
     };
   };
 
-  // 같은 이름(title)이 여러 건이면 하나만 남긴다. (API 182건 → 153개)
+  // 같은 이름(title)이 여러 건이면 하나만 남긴다. (API 182건 → 152개)
+  //   이름은 띄어쓰기를 빼고 비교한다 (2026-11-24: "큐피드인더가든" / "큐피드 인 더 가든"이 같은 장미인데 따로 남아 있었음)
   //   규칙: 설명이 가장 긴 것 → 길이가 같으면 나중에 등록된 것(url 속 list_no가 큰 것)
   //   예) 에버골드 1002·1111 → 1111,  엘르 1027·1053·1124 → 1124
   function listNo(item) {
@@ -105,7 +106,7 @@
   window.roseDedupe = function (rawItems) {
     const best = new Map(); // 이름 → 지금까지 고른 한 건
     rawItems.forEach(item => {
-      const key = String(item.title || '').trim();
+      const key = String(item.title || '').replace(/\s+/g, '');   // 띄어쓰기를 모두 뺀 이름으로 비교
       const prev = best.get(key);
       const longer = prev && (item.description || '').length - (prev.description || '').length;
       if (!prev || longer > 0 || (longer === 0 && listNo(item) > listNo(prev))) best.set(key, item);

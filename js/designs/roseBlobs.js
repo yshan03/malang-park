@@ -8,31 +8,19 @@
 
 (function () {
   const BY_NAME = {
-    // 꽃잎이 아주 많고 물결치듯 겹겹이 말린 둥근 컵 — "화려한 노란색 물결"
-    '에버골드': {
-      petals: 11, rings: 5, open: 0.4, spread: 0.6, flare: 0.3, pointy: 0.1, height: 0, ruffle: 0.9, spiral: 0.8,
-      colors: { center: '#F2C14E', outer: '#F8E39A' }
-    },
-    // 크게 활짝, 가운데는 단단한 소용돌이, 바깥 꽃잎은 끝이 뾰족하게 젖혀짐 — 크림 → 복숭아
-    '폴리카르드': {
-      petals: 9, rings: 4, open: 0.75, spread: 0.95, flare: 0.9, pointy: 0.7, height: 0.1, ruffle: 0.1, spiral: 1.1,
-      colors: { center: '#F2A57E', outer: '#FCF0E6' }
-    },
-    // 꽃잎 3겹으로 활짝 열린 꽃, 가운데 노란 수술 — 진분홍에 흰 흐림
-    '린': {
-      petals: 8, rings: 3, open: 0.85, spread: 0.85, flare: 0.35, pointy: 0.15, height: 0, ruffle: 0.25, spiral: 0.6,
-      colors: { center: '#FBE3EA', outer: '#EE6F95', stamen: '#F2C230' }
-    },
+    // 2026-11-24 한 송이씩 다듬기: 둥근(공 모양) 틀로 바꿈 — 노랑 공, 접힌 끝은 연노랑
+    '에버골드': {"dense": 0.8, "flare": -0.6, "height": 0, "innerOpen": 0.3, "open": 0.56, "petalWidth": 1.2, "petals": 7, "pointy": 0, "quarter": 0.2, "rimOpen": 0.2, "ringShade": 0.8, "rings": 8, "ruffle": 0.6, "seams": 0.6, "spiral": 0.78, "spread": 0.6, "ball": 1, "ballWalls": 3, "ballFill": 1, "ballDome": 0.6, "messy": 0.3, "natAsym": 0.2, "ballRoll": 0.9, "ballOpen": 0.85, "ballFold": 0.45, "ballRim": 0.35, "ballPeel": 0.5, "colors": {"center": "#F0BE3E", "outer": "#F8DC66", "edge": "#FCF1B4", "name": "#CF9A10"}},
+    // 2026-11-24 한 송이씩 다듬기: 컵 틀로 바꿈 — 크림 바깥, 위층일수록 살구빛
+    '폴리카르드': {"bud": 0.83, "budReach": 0.7, "dense": 0.5, "flare": 0.35, "height": 0.1, "layerShade": 0.25, "open": 0.57, "outerPointy": 0, "petalWidth": 1.18, "petals": 8, "pointy": 0, "reflex": 0, "rimOpen": 0.15, "ringShade": 0.4, "rings": 8, "ruffle": 0.1, "seams": 1.035, "spiral": 1.42, "spread": 0.71, "tip": 0, "ringTint": 0.85, "outline": 0.3, "colors": {"center": "#F2A276", "outer": "#FCF2E8", "outline": "#E8CDB8", "name": "#E08E68"}},
+    // 2026-11-24 한 송이씩 다듬기: 날개형 틀(마틸다 방식)로 바꿈 — 밑동 흰빛 → 분홍 끝, 노란 수술
+    '린': {"flare": 0.6, "height": 0.35, "innerOpen": 0.55, "layerShade": 0.2, "messy": 0.5, "open": 0.75, "petalWidth": 1.25, "petals": 7, "pointy": 0.25, "ringShade": 0.3, "rings": 3, "ruffle": 0.6, "seams": 1.022, "spiral": 1, "spread": 0.85, "natEdge": 1, "natPetal": 0.9, "innerLight": 0.3, "centerEdge": 0, "outline": 0.35, "threads": 1, "core": 0.8, "stamenSpread": 0.6, "stamenThick": 0.5, "stamenSize": 0.8, "rimOpen": 0, "crease": 1, "creaseDir": 1, "reflex": 0.9, "ringsSkip": 1, "colors": {"center": "#FBEFF2", "outer": "#EE5C8A", "outline": "#E4588A", "stamen": "#E9B23A", "filament": "#F6C9D6", "name": "#E04C80"}},
     // 가운데가 높이 솟은 반쯤 핀 모양, 끝이 뾰족 — 노랑 바탕에 꽃잎 끝만 빨강
     '데저트 피스': {
       petals: 7, rings: 4, open: 0.3, spread: 0.55, flare: 0.65, pointy: 0.9, height: 0.85, ruffle: 0, spiral: 1.0,
       colors: { center: '#F5C443', outer: '#F7D86A', edge: '#E2454F' }
     },
-    // 크고 꽃잎이 풍성한 둥근 장미, 가운데가 살짝 높음 — 연분홍 → 가운데 살구빛
-    '엘르': {
-      petals: 10, rings: 5, open: 0.5, spread: 0.75, flare: 0.45, pointy: 0.25, height: 0.3, ruffle: 0.3, spiral: 0.9,
-      colors: { center: '#F2A08E', outer: '#F7C6C8' }
-    }
+    // 2026-11-24 한 송이씩 다듬기: 날개형 틀(피스 방식)로 바꿈 — 복숭아빛 밑동 → 연어빛 분홍
+    '엘르': {"flare": 0.6, "height": 0.4, "innerOpen": 0.45, "layerShade": 0.25, "messy": 0.5, "open": 0.75, "petalWidth": 1.25, "petals": 7, "pointy": 0.25, "ringShade": 0.35, "rings": 4, "ruffle": 0.6, "seams": 0.99, "spiral": 1, "spread": 0.85, "rimOpen": 0, "natEdge": 1, "natPetal": 0.9, "innerLight": 0.15, "centerEdge": 0, "crease": 1, "creaseDir": 1, "reflex": 0.9, "threads": 0, "colors": {"center": "#F7CDB8", "outer": "#F3A6B0", "name": "#E0828E"}}
   };
 
   // 모양 종류 4가지 — 같은 종류의 장미는 이 모양을 함께 씀 (색만 각자 사진 색)

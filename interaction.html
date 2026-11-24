@@ -327,6 +327,8 @@
   //   그냥 RGB를 곱해 어둡게 하면: 흰 꽃 → 회색, 노란 꽃 → 올리브색으로 탁해짐. 그래서 두 경우만 따로 처리
   function nameTone(item) {
     const col = (item.blob && item.blob.colors) || {};
+    // 장미 카드에서 이름 색을 손으로 정했으면(colors.name, 단색) 계산하지 않고 그 색을 그대로 씀 (2026-11-24 핫 파이어부터)
+    if (col.name) return col.name;
     const toHsl = hex => { const o = {}; new THREE.Color(hex).getHSL(o); return o; };   // three.js가 hex → HSL 변환
     // 색 하나를 밝기 light로 진하게 (흰·노랑은 탁해지지 않게 색상을 살짝 옮김)
     const warmDeep = (hex, light) => {

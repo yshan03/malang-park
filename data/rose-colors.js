@@ -417,13 +417,6 @@ window.ROSE_COLORS = {
   "outer": "#FD8B99",
   "photo": 1018
  },
- "큐피드인더가든": {
-  "center": "#DCCDA2",
-  "outer": "#E4E0D4",
-  "stamen": "#D2B253",
-  "photo": 1019,
-  "check": true
- },
  "드림위버": {
   "center": "#EF463B",
   "outer": "#F3A08F",
