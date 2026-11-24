@@ -23,10 +23,6 @@
  .intro h1{margin:0;font-family:'Gaegu','Apple SD Gothic Neo',sans-serif;font-size:30px;font-weight:700;line-height:1.2;color:#507543}
  @media (prefers-reduced-motion:no-preference){
    .intro .hand { display: inline-block; }
-   @keyframes title-hold{
-     from{transform:scale(1.16,.76)}
-     to{transform:scale(1.38,.53)}
-   }
  }
  .intro p{margin:6px 0 0;font-size:15px;line-height:1.5;color:#6b665c}
  .intro .hand-line{font-weight:700}
@@ -73,6 +69,7 @@
     border-radius: 14px;
     box-shadow: 0 0 0 1px #66725e40, 0 8px 20px #26312020;
   }
+  html.screen-preview .stage { width: 100vw; }
 
   .label-color-review {
     position: absolute; z-index: 3; left: 16px; bottom: 126px;
@@ -134,8 +131,11 @@
   .garden-review strong { flex-basis: 100%; color: #455340; font: 700 12px system-ui, sans-serif; }
 </style>
 <script>
-  if (location.port === '5182' || new URLSearchParams(location.search).get('mobile') === '1') {
-    const root = document.documentElement;
+  const previewParams = new URLSearchParams(location.search);
+  const root = document.documentElement;
+  if (location.port === '5182' && previewParams.get('preview') === 'screen') {
+    root.classList.add('screen-preview');
+  } else if (location.port === '5182' || previewParams.get('mobile') === '1') {
     root.classList.add('mobile-preview');
     function fitMobilePreview() {
       const width = window.visualViewport?.width ?? innerWidth;
@@ -1175,31 +1175,11 @@
     #zone-wildflower .zone-label { fill: #b8661a; }  /* 들꽃마루: 주황 들꽃 색을 진하게 */
     .landmark, .bg-buildings { pointer-events: none; }
     [data-landmark="thumb"], .thumb-hit { -webkit-tap-highlight-color: transparent; }
-    .landmark-tap { pointer-events: all; cursor: pointer; touch-action: manipulation; }
-    :is(.dome-art, .gate-art) { transform-box: fill-box; transform-origin: center 75%; }
-    [data-building="11"], [data-landmark="peace-gate"], .landmark-tap { -webkit-tap-highlight-color: transparent; }
-    [data-building="11"]:focus, [data-landmark="peace-gate"]:focus { outline: none; }
-    [data-building="11"]:focus-visible .dome-art,
-    [data-landmark="peace-gate"]:focus-visible .gate-art { filter: drop-shadow(0 1px 2px #557052); }
-    @media (prefers-reduced-motion: no-preference) {
-      [data-building="11"]:active .dome-art,
-      [data-landmark="peace-gate"]:active .gate-art { transform: scale(1.16,.76); }
-      :is(.dome-art, .gate-art).is-held {
-        --compression-time: .48s;
-        animation: title-hold var(--compression-time) ease-out both,
-          hold-tremble 150ms linear var(--compression-time) infinite;
-      }
-      @keyframes hold-tremble {
-        0%, 100% { rotate: 0deg; }
-        33.33% { rotate: -4deg; }
-        66.67% { rotate: 4deg; }
-      }
-    }
     .thumb-hit { pointer-events: all; cursor: pointer; touch-action: manipulation; }
     [data-landmark="thumb"]:focus { outline: none; }
     [data-landmark="thumb"]:focus-visible > ellipse { fill: #557052; opacity: .55; }
     .tree-backdrop-building { opacity: .73; filter: saturate(.68); }
-    .tree-backdrop-building:is([data-building="1"], [data-building="2"], [data-building="3"], [data-building="4"], [data-building="6"], [data-building="7"], [data-building="8"], [data-building="12"]) { opacity: .51; }
+    .tree-backdrop-building:is([data-building="1"], [data-building="2"], [data-building="3"], [data-building="4"], [data-building="6"], [data-building="7"], [data-building="8"], [data-building="11"], [data-building="12"], [data-landmark="peace-gate"]) { opacity: .51; }
     .landmark-label { font-family: 'Jua', sans-serif; font-size: 11px; fill: #4f6f85; stroke: #e6f4ea; stroke-width: 3px; paint-order: stroke; stroke-linejoin: round; }
     .zone[data-active="false"]:not([data-feedback-only]) { opacity: .9; transition: opacity .25s; }
     .zone[data-active="false"]:hover { opacity: 1; }
@@ -1338,22 +1318,19 @@
       <path d="M-12-10C-10-1-6 3-1 2C6 1 9-8 10-16L14-24C13-10 9 5 0 8C-7 10-12 2-13-4Z" fill="#d6b39f"/>
     </g>
     <g class="tree-backdrop-building" data-building="10" transform="translate(277 555)"><ellipse cy="7" rx="17" ry="4" fill="#789164" opacity=".17"/><path d="M-17-4 1-14 17-7v10L-1 9-17 3Z" fill="#bccdaf"/><path d="m-17-4 18-10 16 7L-1 3Z" fill="#dfead1"/><path d="m-14-1 3 5 3-3 3 6 3-4m4 3 3-6 3 4 4-7" fill="none" stroke="#d1dec2" stroke-width="1.2"/></g>
-    <g data-building="11" transform="translate(359 377) scale(1.5)" role="button" tabindex="0" aria-label="올림픽수영장">
-      <g class="dome-art">
-        <ellipse cy="8" rx="17" ry="3.5" fill="#789164" opacity=".17"/>
-        <path d="M-17-2H17V1C16 7 7 9 0 9S-16 7-17 1Z" fill="#a4aeab"/>
-        <path d="M-16 2C-12 6-5 7 2 7S13 5 16 2" fill="none" stroke="#cbd1cb" stroke-width=".9"/>
-        <path d="M-17-2Q-16-15 0-16Q16-15 17-3Q14 5 0 5Q-13 5-17-2Z" fill="#f3f2e7"/>
-        <!-- 지붕을 따라 휘어지는 중앙 띠와 양옆의 좁은 띠 -->
-        <path d="M-7-14Q-4-16-1-15.8Q5-12 8-4.6L3-3.6Q-1-11-7-14Z" fill="#7694a1"/>
-        <path d="M-4-15.2L-1-15.8Q5-12 8-4.6L6-4.2Q2-12-4-15.2Z" fill="#547381"/>
-        <path d="M-12-11.5Q-7-8.3-5.5-3.2M4.5-15Q9.7-11.6 11.8-7.4" fill="none" stroke="#90aab4" stroke-width="1.35" stroke-linecap="round"/>
-        <!-- 앞으로 나온 아치형 차양과 양쪽 기둥 -->
-        <path d="M-5.5 4.7Q-5.1-.6 2.1-2.7Q9.9-5 12.8-.1L13.4 3.3L-4.6 7Z" fill="#e5e6df"/>
-        <path d="M-4.6 7Q-4.3 2.3 2.7.1Q10-2.2 13.4 3.3L12.8 5.3L-4.1 8.1Z" fill="#a3aeac"/>
-        <path d="M-2.6 4.3L-.9 3.8L.8 8.7L-1 9.2ZM9.1 1.8L10.8 1.6L12.7 6.3L10.8 6.9Z" fill="#f7f6ee"/>
-      </g>
-      <rect class="landmark-tap" x="-18" y="-17" width="36" height="28" rx="5" fill="transparent"/>
+    <g class="tree-backdrop-building" data-building="11" transform="translate(359 377) scale(1.27)">
+      <ellipse cy="8" rx="17" ry="3.5" fill="#789164" opacity=".17"/>
+      <path d="M-17-2H17V1C16 7 7 9 0 9S-16 7-17 1Z" fill="#a4aeab"/>
+      <path d="M-16 2C-12 6-5 7 2 7S13 5 16 2" fill="none" stroke="#cbd1cb" stroke-width=".9"/>
+      <path d="M-17-2Q-16-15 0-16Q16-15 17-3Q14 5 0 5Q-13 5-17-2Z" fill="#f3f2e7"/>
+      <!-- 지붕을 따라 휘어지는 중앙 띠와 양옆의 좁은 띠 -->
+      <path d="M-7-14Q-4-16-1-15.8Q5-12 8-4.6L3-3.6Q-1-11-7-14Z" fill="#7694a1"/>
+      <path d="M-4-15.2L-1-15.8Q5-12 8-4.6L6-4.2Q2-12-4-15.2Z" fill="#547381"/>
+      <path d="M-12-11.5Q-7-8.3-5.5-3.2M4.5-15Q9.7-11.6 11.8-7.4" fill="none" stroke="#90aab4" stroke-width="1.35" stroke-linecap="round"/>
+      <!-- 앞으로 나온 아치형 차양과 양쪽 기둥 -->
+      <path d="M-5.5 4.7Q-5.1-.6 2.1-2.7Q9.9-5 12.8-.1L13.4 3.3L-4.6 7Z" fill="#e5e6df"/>
+      <path d="M-4.6 7Q-4.3 2.3 2.7.1Q10-2.2 13.4 3.3L12.8 5.3L-4.1 8.1Z" fill="#a3aeac"/>
+      <path d="M-2.6 4.3L-.9 3.8L.8 8.7L-1 9.2ZM9.1 1.8L10.8 1.6L12.7 6.3L10.8 6.9Z" fill="#f7f6ee"/>
     </g>
     <g class="tree-backdrop-building" data-building="12" transform="translate(368 425)">
       <!-- KSPO DOME: 낮은 원형 외벽 위로 지붕 패널이 중심에서 퍼진다. -->
@@ -1401,7 +1378,7 @@
   <g class="landmark" opacity="1">
     <!-- 1. 세계평화의 문: 남서쪽 끝. 안내도 참고(2026-11-16): 굵은 흰 기둥 둘 + 바깥으로 휘어 오른 날개 지붕 둘
          (빨강·파랑 물결무늬) + 문 아래 성화. 디테일은 빼고 특징만. 성내천 왼쪽 여백에 배치 -->
-    <g data-landmark="peace-gate" transform="translate(29 554) scale(1.2)" role="button" tabindex="0" aria-label="세계평화의 문"><g class="gate-art">
+    <g class="tree-backdrop-building" data-landmark="peace-gate" transform="translate(29 554) scale(1.02)">
       <g transform="scale(.62) translate(-38.87 -443.13) translate(1.47 -201.47)">
         <!-- 문 본체는 80% 크기 (기둥 아래 가운데 41,659를 기준으로 줄임). 성화는 원래 크기 그대로 -->
         <g transform="translate(41 659) scale(0.8) translate(-41 -659)">
@@ -1438,8 +1415,6 @@
         <path d="M41 669 C 37 666, 38 662, 41 658 C 44 662, 45 666, 41 669 Z" fill="#f2a541"/>
         <path d="M41 668 C 39.5 666.5, 40 665, 41 663 C 42 665, 42.5 666.5, 41 668 Z" fill="#fde29a"/>
       </g>
-      </g>
-      <rect class="landmark-tap" x="-19" y="-19" width="38" height="40" rx="5" fill="transparent"/>
     </g>
     <!-- 4. 티켓링크 라이브 아레나(옛 핸드볼경기장): 벨로드롬 오른쪽. 처음엔 KSPO DOME으로 그렸는데, 안내도와 비교해 보니
          이 모양(꽃잎처럼 퍼지는 판으로 된 둥근 지붕)은 티켓링크 라이브 아레나라서 이름과 자리를 바꿈(2026-11-17).
@@ -1470,7 +1445,7 @@
     <!-- 6. 엄지손가락 조각: 동쪽 올림픽공원역 앞(만남의 광장), DOME 남쪽. 안내도 참고(2026-11-16), 수직으로 세움:
          주먹이 아니라 엄지 하나만 위로 서 있는 청동 조각. 받침·광장 없이 손가락만.
          전체 높이 40 중 손톱 8 (= 1/5), 손톱은 손가락보다 어두운 색. (0,0) = 손가락 가운데 -->
-    <g data-landmark="thumb" role="button" tabindex="0" aria-label="엄지손가락 조형물" transform="translate(365 630) scale(1.2)">
+    <g data-landmark="thumb" role="button" tabindex="0" aria-label="엄지손가락 조형물" transform="translate(352 648) scale(1.48) translate(0 -15)">
       <ellipse cx="1" cy="15" rx="9" ry="3" fill="#789164" opacity=".17"/>
       <g transform="scale(.72) translate(-370.11492 -634.57895) translate(374.19 632.99)">
         <g transform="rotate(-14 0 20)">
@@ -1937,90 +1912,10 @@ document.querySelectorAll('.zone').forEach(z => {
   }
 </script>
 <script>
-const titleReduceMotion = matchMedia('(prefers-reduced-motion: reduce)');
-function bindSquish(control, art, bounceOnRelease) {
-  let titleBounce, titleHeldAt, titleHoldTimer;
-  control.addEventListener('pointerdown', event => {
-    if (!event.isPrimary || event.button !== 0) return;
-    control.setPointerCapture(event.pointerId);
-    titleBounce?.cancel();
-    titleHeldAt = performance.now();
-    clearTimeout(titleHoldTimer);
-    titleHoldTimer = setTimeout(() => art.classList.add('is-held'), 220);
-  });
-  function clearTitleHold() {
-    clearTimeout(titleHoldTimer);
-    art.classList.remove('is-held');
-  }
-  control.addEventListener('pointerup', clearTitleHold);
-  control.addEventListener('contextmenu', event => event.preventDefault());
-  for (const type of ['pointercancel', 'pointerleave']) {
-    control.addEventListener(type, () => {
-      titleHeldAt = undefined;
-      clearTitleHold();
-    });
-  }
-  control.addEventListener('click', event => {
-    const held = event.detail > 0 && titleHeldAt !== undefined
-      ? performance.now() - titleHeldAt : 0;
-    titleHeldAt = undefined;
-    clearTitleHold();
-    if (titleReduceMotion.matches) return;
-    titleBounce?.cancel();
-    if (bounceOnRelease) {
-      titleBounce = bounceOnRelease(art, held);
-      return;
-    }
-    if (held >= 310) {
-      const force = Math.min(1, (held - 220) / 480);
-      titleBounce = art.animate([
-        {transform:`scale(${1.16 + .22 * force},${.76 - .23 * force})`},
-        {transform:`translateY(${-5 - 5 * force}px) rotate(-6deg) scale(.76,1.34)`,offset:.25},
-        {transform:'translateY(1px) rotate(4deg) scale(1.16,.85)',offset:.47},
-        {transform:'translateY(-3px) rotate(-2deg) scale(.91,1.11)',offset:.67},
-        {transform:'scale(1.04,.96)',offset:.84},
-        {transform:'scale(1)'}
-      ], {duration:680,easing:'ease-out'});
-      return;
-    }
-    titleBounce = art.animate([
-      {transform:'scale(1.16,.76)'},
-      {transform:'scale(.91,1.2)',offset:.31},
-      {transform:'scale(1.05,.94)',offset:.58},
-      {transform:'scale(.98,1.03)',offset:.78},
-      {transform:'scale(1)'}
-    ], {duration:480,easing:'ease-out'});
-  });
-}
-const dome = document.querySelector('[data-building="11"]');
-bindSquish(dome, dome.querySelector('.dome-art'));
-
-const gate = document.querySelector('[data-landmark="peace-gate"]');
-bindSquish(gate, gate.querySelector('.gate-art'), (art, held) => {
-  const longPress = held >= 310;
-  const compression = Math.min(1, Math.max(0, (held - 220) / 480));
-  const height = longPress ? 24 + 10 * compression : 8;
-  return art.animate([
-    { transform: `scale(${1.16 + .22 * compression}, ${.76 - .23 * compression})` },
-    { transform: `translateY(-${height}px) ${longPress ? 'scale(.92,1.12)' : 'scale(.99,1.03)'}`, offset: .24 },
-    { transform: longPress ? 'scale(1.09,.9)' : 'scale(1.02,.98)', offset: .48 },
-    { transform: `translateY(-${height * .46}px)`, offset: .69 },
-    { transform: longPress ? 'scale(1.04,.96)' : 'scale(1)', offset: .86 },
-    { transform: 'scale(1)' },
-  ], { duration: longPress ? 740 : 360, easing: 'ease-in-out' });
-});
-for (const control of [dome, gate]) {
-  control.addEventListener('keydown', event => {
-    if (event.key !== 'Enter' && event.key !== ' ') return;
-    event.preventDefault();
-    if (!event.repeat) control.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-  });
-}
-</script>
-<script>
 {
   const thumb = document.querySelector('[data-landmark="thumb"]');
   const art = thumb.querySelector(':scope > g > g');
+  const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)');
   const restAngle = -14;
   const holdLean = 36;
   const holdDelay = 160;
@@ -2032,7 +1927,7 @@ for (const control of [dome, gate]) {
     return { transform: `rotate(${restAngle + angle}deg)`, transformOrigin: '0px 20px' };
   }
   function rockThumb(heldMs = 0, startAngle = 0) {
-    if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    if (reduceMotion.matches) return;
     const strength = Math.max(0, Math.min(1, (heldMs - holdDelay) / 460));
     const amplitude = 12 + 63 * strength;
     const swings = startAngle < 0 ? [.85, -.6, .35, -.18, 0] : [-1, .85, -.6, .35, -.18, 0];
@@ -2048,7 +1943,7 @@ for (const control of [dome, gate]) {
     press = { id: event.pointerId, at: performance.now(), x: event.clientX, y: event.clientY };
     event.preventDefault();
     thumb.setPointerCapture(event.pointerId);
-    if (!titleReduceMotion.matches) {
+    if (!reduceMotion.matches) {
       wobble?.cancel();
       lean = art.animate([thumbPose(0), thumbPose(-holdLean)], {
         delay: holdDelay, duration: 440, fill: 'both',
@@ -2056,7 +1951,7 @@ for (const control of [dome, gate]) {
       });
       const currentLean = lean;
       currentLean.onfinish = () => {
-        if (!press || lean !== currentLean || titleReduceMotion.matches) return;
+        if (!press || lean !== currentLean || reduceMotion.matches) return;
         tremble = art.animate(
           [0, -4, 4, 0].map(angle => ({ rotate: `${angle}deg` })),
           { duration: 150, iterations: Infinity },
