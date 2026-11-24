@@ -186,7 +186,7 @@
   treeTmi.addEventListener('click', () => treeNotes.showModal());
 </script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-<script src="js/lonetree-mic.js?v=cedar-wind"></script>
+<script src="js/lonetree-mic.js?v=hold-permission"></script>
 <script>
 function drawTree() {
   const lin = h => new THREE.Color(h).convertSRGBToLinear();
@@ -840,7 +840,9 @@ function showWindStatus(text) {
 
 const instructions = {
   off: '마이크를 꾹 누르고',
-  starting: '마이크 사용을 허용해 주세요',
+  permission: '마이크 사용을 허용해 주세요',
+  ready: '마이크를 꾹 눌러 주세요',
+  starting: '마이크 여는 중…',
   calibrating: '누른 채 2초만 조용히 기다려 줘',
   listening: '후~ 불거나 말을 걸어봐',
   ended: '마이크가 끊겼어요 · 다시 켜 주세요',
@@ -850,6 +852,7 @@ const instructions = {
 
 const input = createLonetreeMic({
   reuseCalibration: true,
+  reuseStream: true,
   windSound: true,
   onState(state) {
     const running = state === 'calibrating' || state === 'listening';
@@ -859,7 +862,7 @@ const input = createLonetreeMic({
       voiceStart = null;
       lastVoice = 0;
       treeMotion.wind(0);
-      if (state !== 'off') treeMotion.reply(0);
+      if (state !== 'off' && state !== 'ready') treeMotion.reply(0);
     }
   },
   onSample({ kind, strength, time, calibrationRemaining }) {

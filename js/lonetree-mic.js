@@ -138,8 +138,10 @@
     };
   }
 
-  function createLonetreeMic({ onState, onSample, reuseCalibration = false, windSound = false }) {
+  function createLonetreeMic({ onState, onSample, reuseCalibration = false, windSound = false, reuseStream = false }) {
     let session = null, savedFloor = null;
+    let preparedStream = null, permissionRequest = null;
+    const audioOptions = { echoCancellation: false, noiseSuppression: false, autoGainControl: false };
     let tailContext = null, tailTimer;
     let touchContext = null;
 
@@ -205,7 +207,10 @@
       if (active) {
         cancelAnimationFrame(active.frame);
         active.windRustle?.stop();
-        active.stream?.getTracks().forEach(track => track.stop());
+        active.stream?.getTracks().forEach(track => {
+          if (active.stream === preparedStream) track.enabled = false;
+          else track.stop();
+        });
         const replyRemaining = (active.replyEndsAt || 0) - performance.now();
         if (letReplyFinish && replyRemaining > 0) {
           tailContext = active.context;
@@ -217,6 +222,39 @@
       onState(state, error);
     }
 
+    async function prepare() {
+      if (permissionRequest) return;
+      onState('permission');
+      const request = navigator.mediaDevices.getUserMedia({ audio: audioOptions });
+      permissionRequest = request;
+      try {
+        const stream = await request;
+        if (permissionRequest !== request) {
+          stream.getTracks().forEach(track => track.stop());
+          return;
+        }
+        const track = stream.getAudioTracks()[0];
+        if (!track || track.readyState !== 'live') {
+          stream.getTracks().forEach(item => item.stop());
+          onState('ended');
+          return;
+        }
+        track.enabled = false;
+        preparedStream = stream;
+        track.addEventListener('ended', () => {
+          if (preparedStream !== stream) return;
+          preparedStream = null;
+          savedFloor = null;
+          stop('ended');
+        }, { once: true });
+        onState('ready');
+      } catch (error) {
+        if (permissionRequest === request) onState('error', error);
+      } finally {
+        if (permissionRequest === request) permissionRequest = null;
+      }
+    }
+
     async function start() {
       if (session) return;
       closeTail();
@@ -225,20 +263,20 @@
         onState('unavailable');
         return;
       }
+      if (reuseStream && !preparedStream) return prepare();
       let active;
       try {
         active = { context: new Audio() };
         session = active;
         onState('starting');
         const resuming = active.context.resume().catch(error => error);
-        const stream = await navigator.mediaDevices.getUserMedia({
-          audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false },
-        });
+        const stream = preparedStream || await navigator.mediaDevices.getUserMedia({ audio: audioOptions });
         if (session !== active) {
           stream.getTracks().forEach(track => track.stop());
           return;
         }
         active.stream = stream;
+        if (stream === preparedStream) stream.getAudioTracks().forEach(track => { track.enabled = true; });
         const resumeError = await resuming;
         if (session !== active) return;
         if (resumeError) throw resumeError;
@@ -251,9 +289,11 @@
           spectrum: new Float32Array(analyser.frequencyBinCount),
           lastSample: performance.now(),
         });
-        stream.getAudioTracks().forEach(track => track.addEventListener('ended', () => {
-          if (session === active) stop('ended');
-        }, { once: true }));
+        if (stream !== preparedStream) {
+          stream.getAudioTracks().forEach(track => track.addEventListener('ended', () => {
+            if (session === active) stop('ended');
+          }, { once: true }));
+        }
         if (savedFloor === null) {
           calibrate();
         } else {
@@ -300,12 +340,17 @@
       if (!session) return 0;
       if (shouldReply) rustle();
       const remaining = Math.max(0, (session.replyEndsAt || 0) - performance.now());
-      stop('off', undefined, true);
+      stop(preparedStream ? 'ready' : 'off', undefined, true);
       return remaining;
     }
 
     addEventListener('pagehide', () => {
+      permissionRequest = null;
       if (session) stop();
+      preparedStream?.getTracks().forEach(track => track.stop());
+      preparedStream = null;
+      savedFloor = null;
+      if (reuseStream) onState('off');
       closeTail();
       if (touchContext) touchContext.close().catch(() => {});
       touchContext = null;
