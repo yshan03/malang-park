@@ -849,12 +849,13 @@ function showWindStatus(text) {
 
 const instructions = {
   off: '마이크를 누르고',
-  permission: '사용을 허용해줘..!!',
+  permission: '사용하게 해줘요..!!',
   authorized: '이제 마이크를 꾹 누르고,',
   ready: '마이크를 꾹 눌러',
   starting: '마이크 여는 중…',
-  calibrating: '누른 채 2초만 조용히 기다려 줘',
-  listening: '후~ 불거나 말을 걸어봐',
+  calibrating: '누른 채 2초만 조용히 기다려줘요..',
+  calibratingLastSecond: '누른 채 1초만 조용히 기다려줘요..',
+  listening: '후~ 불거나 말을 걸어봐요!',
   ended: '마이크가 끊겼어요 · 다시 켜 주세요',
   unavailable: '이 브라우저에서는 마이크를 사용할 수 없어요',
   error: '마이크를 켤 수 없어요 · 권한을 확인해 주세요',
@@ -878,7 +879,9 @@ const input = createLonetreeMic({
   onSample({ kind, strength, time, calibrationRemaining }) {
     if (kind === 'calibration') {
       if (calibrationRemaining > 0) {
-        showWindStatus(`누른 채 ${Math.ceil(calibrationRemaining / 1000)}초만 조용히 기다려 줘`);
+        showWindStatus(calibrationRemaining > 1000
+          ? instructions.calibrating
+          : instructions.calibratingLastSecond);
       }
       return;
     }
