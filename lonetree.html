@@ -49,16 +49,24 @@
   .tree-notes::backdrop { background: #24382555; }
   .tree-notes h2 { margin: 0 44px 8px 0; font: 700 30px/1.1 Gaegu, system-ui, sans-serif; }
   .tree-notes .tree-photo { display: block; width: 100%; height: auto; margin: 0 0 12px; border-radius: 10px; -webkit-user-drag: none; }
-  .tree-notes p { font: 700 18px/1.45 Gaegu, system-ui, sans-serif; }
+  .tree-notes p {
+    --notebook-line-height: 26px;
+    font: 700 18px/var(--notebook-line-height) Gaegu, system-ui, sans-serif;
+    background-image: repeating-linear-gradient(to bottom,
+      transparent 0 calc(var(--notebook-line-height) - 1px),
+      #6b84632e calc(var(--notebook-line-height) - 1px) var(--notebook-line-height));
+  }
   .tree-notes p + p { margin-top: 10px; }
   .tree-notes .close {
     position: absolute; top: 8px; right: 8px; width: 44px; height: 44px;
     border: 0; border-radius: 50%; background: transparent; color: inherit; font-size: 24px; cursor: pointer;
   }
   .tree-notes .close:focus { outline: none; }
-  .tree-notes .close:focus-visible { text-decoration: underline; }
+  .tree-notes .close:focus-visible { color: #547b54; }
   .back svg { display: block; width: 16px; height: 16px; }
   .controls { bottom: max(26px, calc(env(safe-area-inset-bottom) + 16px)); padding: 0 20px; }
+  .earphone-note { margin-top: 10px; font-size: 12px; }
+  .earphone-note[data-seen] { visibility: hidden; }
   .prompt { font: 700 25px/1.1 Gaegu, system-ui, sans-serif; margin: 0 0 12px; }
   .mic {
     display: inline-flex; align-items: center; gap: 8px; min-height: 48px; width: 51px; justify-content: center; padding: 0; border: 0; cursor: pointer;
@@ -164,10 +172,11 @@
     <h1>나홀로나무</h1>
   </header>
   <div class="controls">
-    <p class="prompt" id="wind-status" role="status">마이크를 꾹 누르고</p>
+    <p class="prompt" id="wind-status" role="status">마이크를 누르고</p>
     <button class="mic" id="mic" type="button" aria-label="마이크 꾹 눌러 말하거나 불기" aria-pressed="false">
       <svg viewBox="0 0 18 20" aria-hidden="true"><rect x="6" y="2" width="6" height="10" rx="3"/><path d="M3 9v1a6 6 0 0 0 12 0V9M9 16v3"/></svg>
     </button>
+    <p class="earphone-note" id="earphone-note">(이어폰을 끼면 잘 안돼요..ㅠ)</p>
   </div>
   <dialog class="tree-notes" id="tree-notes" aria-labelledby="tree-notes-title">
     <form method="dialog">
@@ -186,7 +195,7 @@
   treeTmi.addEventListener('click', () => treeNotes.showModal());
 </script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-<script src="js/lonetree-mic.js?v=hold-permission"></script>
+<script src="js/lonetree-mic.js?v=hold-guidance"></script>
 <script>
 function drawTree() {
   const lin = h => new THREE.Color(h).convertSRGBToLinear();
@@ -833,15 +842,17 @@ try {
 
 const micButton = document.getElementById('mic');
 const windStatus = document.getElementById('wind-status');
+const earphoneNote = document.getElementById('earphone-note');
 let voiceStart = null, lastVoice = 0;
 function showWindStatus(text) {
   if (windStatus.textContent !== text) windStatus.textContent = text;
 }
 
 const instructions = {
-  off: '마이크를 꾹 누르고',
-  permission: '마이크 사용을 허용해 주세요',
-  ready: '마이크를 꾹 눌러 주세요',
+  off: '마이크를 누르고',
+  permission: '사용을 허용해줘..!!',
+  authorized: '이제 마이크를 꾹 누르고,',
+  ready: '마이크를 꾹 눌러',
   starting: '마이크 여는 중…',
   calibrating: '누른 채 2초만 조용히 기다려 줘',
   listening: '후~ 불거나 말을 걸어봐',
@@ -874,6 +885,7 @@ const input = createLonetreeMic({
     }
     treeMotion.wind(strength);
     if (kind === 'wind') {
+      earphoneNote.dataset.seen = '';
       voiceStart = null;
       return;
     }

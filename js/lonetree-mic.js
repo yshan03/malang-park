@@ -247,7 +247,7 @@
           savedFloor = null;
           stop('ended');
         }, { once: true });
-        onState('ready');
+        onState('authorized');
       } catch (error) {
         if (permissionRequest === request) onState('error', error);
       } finally {
