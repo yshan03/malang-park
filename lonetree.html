@@ -842,6 +842,10 @@ try {
 const micButton = document.getElementById('mic');
 const windStatus = document.getElementById('wind-status');
 const earphoneNote = document.getElementById('earphone-note');
+// 마이크 아래 작은 안내 줄: 평소엔 이어폰 안내, 마이크를 못 켰을 때는 설정 안내로 바꿔 보여 준다 (2026-11-25)
+//   휴대폰 설정에서 이 앱(사파리·크롬·네이버 등)의 마이크가 꺼져 있으면 허락 창조차 뜨지 않고 바로 실패하기 때문
+const earphoneText = earphoneNote.textContent;
+const micSettingsText = '(설정 → 이 앱 → 마이크를 켜고, 다시 눌러줘요..!)';
 let voiceStart = null, lastVoice = 0;
 function showWindStatus(text) {
   if (windStatus.textContent !== text) windStatus.textContent = text;
@@ -869,6 +873,12 @@ const input = createLonetreeMic({
     const running = state === 'calibrating' || state === 'listening';
     micButton.setAttribute('aria-pressed', String(running));
     showWindStatus(instructions[state]);
+    if (state === 'error' || state === 'unavailable') {
+      earphoneNote.textContent = micSettingsText;
+      delete earphoneNote.dataset.seen;          // 이어폰 안내를 이미 숨겼더라도 설정 안내는 보이게
+    } else if (earphoneNote.textContent !== earphoneText) {
+      earphoneNote.textContent = earphoneText;   // 다시 시도해서 마이크가 켜지면 원래 안내로
+    }
     if (state !== 'listening') {
       voiceStart = null;
       lastVoice = 0;
