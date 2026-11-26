@@ -43,7 +43,8 @@
      화면 읽기 프로그램(시각장애인용)에는 그대로 읽히도록 "보이지만 않게" 처리 */
   h1 { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
   .hint { margin: 0; font-size: 13px; color: var(--muted); transition: opacity .4s; }   /* 혼자 남아서 12 → 13px */
-  body.list-touched .hint { opacity: 0; }                /* 밭을 한 번 만지면 스르르 사라짐 */
+  .hint.fading { opacity: 0; }                          /* 다음 단계 문구로 바뀔 때 잠깐 스르르 사라졌다가 다시 나타남 */
+  body.hint-done .hint { opacity: 0; }                   /* 단계를 다 해 보면 사라짐 (2026-11-26: 예전엔 처음 만지면 바로 사라짐) */
   .titles { flex: 1; text-align: center; }          /* 안내 문구: ← 버튼과 🔍 버튼 사이 가운데 */
   body.detail .titles { display: none; }               /* 상세 모드에선 구역 제목 대신 꽃 이름 */
 
@@ -254,8 +255,42 @@
     return;
   }
 
+  // ----- 말랑이 밭 단계별 안내 문구 (2026-11-26) -----
+  //   나홀로나무처럼 한 줄 안내가 "다음에 해 볼 것"으로 바뀜. 순서를 건너뛰어도 됨:
+  //   늘 "아직 안 해 본 것 중 맨 앞 단계"를 보여 주고, 다 해 보면 사라짐
+  //   ① 굴리기 + 누르기 → ② 코르크 뽑기 → ③ 던지기 → 끝
+  //   (2026-11-27 사용자: 코르크가 닫힌 병 안은 꽃이 빽빽해서 던지는 맛이 안 남 → 던지기는 코르크 뒤로, '다시 닫기' 안내는 뺌.
+  //    '꽃 꺼내기' 안내도 뺌: 열린 병에서 던지면 꽃이 밖으로 나가는 걸 저절로 보게 됨)
+  const tried = new Set();   // 해 본 것들: 'roll' 'tap' 'corkOpen' 'throw'
+  function nextHint() {
+    if (!tried.has('roll') && !tried.has('tap')) return '꽃을 끌어서 굴려보고, 눌러 자세히 보세요';
+    if (!tried.has('roll')) return '꽃을 끌어서 굴려봐요!';
+    if (!tried.has('tap')) return '꽃을 톡 누르면 자세히 볼 수 있어요';
+    if (!tried.has('corkOpen')) return '코르크를 위로 쭉 뽑아봐요..!';
+    if (!tried.has('throw')) return '꽃을 휙~ 던져봐요!';
+    return null;             // 다 해 봄 → 문구 숨김
+  }
+  const hintEl = document.querySelector('.hint');
+  let hintTimer = null;
+  function updateHint() {
+    const text = nextHint();
+    if (text === null) { document.body.classList.add('hint-done'); return; }
+    if (hintEl.textContent === text) return;
+    // 바로 바꾸지 않고: 스르르 사라짐(0.4초) → 글자 바꿈 → 다시 나타남
+    clearTimeout(hintTimer);
+    hintEl.classList.add('fading');
+    hintTimer = setTimeout(() => { hintEl.textContent = text; hintEl.classList.remove('fading'); }, 400);
+  }
+  function tryAction(name) {
+    if (name === 'throw' && !tried.has('corkOpen')) return;   // 코르크를 열기 전에 던진 건 안 셈 (열린 뒤에 던지는 맛을 보게)
+    if (tried.has(name)) return;
+    tried.add(name);
+    updateHint();
+  }
+
   const scene = createSquishyScene(document.getElementById('stage'), items, {
-    onOpen: index => openDetail(index, 0, 'push') // 목록에서 꽃을 톡 누르면
+    onOpen: index => { tryAction('tap'); openDetail(index, 0, 'push'); }, // 목록에서 꽃을 톡 누르면
+    onAction: tryAction                                                   // 굴리기·던지기·코르크 등 (squishy.js가 알려 줌)
   });
 
   let current = -1; // 상세 모드에서 보고 있는 꽃 번호 (-1 = 목록)
@@ -468,9 +503,9 @@
     if (document.body.classList.contains('finder-open') && !e.target.closest('#finder, #find-btn')) setFinder(false);
   });
 
-  // 꽃을 처음 만지면 안내를 숨김: 상세에선 "꾹 눌러보고…", 말랑이 밭에선 "꽃을 끌어서 굴려보고…"
+  // 상세에서 꽃을 처음 만지면 "꾹 눌러보고…" 안내를 숨김 (말랑이 밭 안내는 위의 단계별 문구가 맡음)
   document.getElementById('stage').addEventListener('pointerdown', () => {
-    document.body.classList.add(current >= 0 ? 'touched' : 'list-touched');
+    if (current >= 0) document.body.classList.add('touched');
   });
 
   // ----- 버튼·키보드 -----

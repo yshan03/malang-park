@@ -46,7 +46,15 @@
   //   코르크를 위로 끌면 조금 버티다가 "뽕!" 하고 빠짐 → 손을 따라다니다 놓으면 떨어져 병 옆에 놓임
   //   빠진 코르크를 끌어다 병 입구에 가져가면 "쏙" 다시 꽂힘. 병이 열려 있는 동안은 꽃이 병목으로 드나듦
   const CORK_POP_PX = 26;                   // 이만큼(px) 끌어 올리면 빠짐
-  const CORK_SNAP_PX = 22;                  // 빠진 코르크가 입구에서 이만큼(px) 안으로 오면 다시 꽂힘
+  const CORK_SNAP_PX = 32;                  // 빠진 코르크가 입구에서 이만큼(px) 안으로 오면 다시 꽂힘 (2026-11-27: 22 → 32, 대충 가져다 대도 꽂히게)
+  const CORK_ESCAPE = 1.5;                  // 들고 있는 코르크: 손이 벽 밖으로 코르크 지름의 이만큼 넘게 나가면 놓침 (그 전엔 벽을 따라 미끄러짐)
+  // 코르크가 빠질 때 꽃들이 깜짝 튀어 오르기 (2026-11-26, wakeNearMouth)
+  const POP_JUMP_COUNT = 8;                 // 입구에서 가까운 꽃 몇 송이가 튈지
+  const POP_JUMP_MAX = 6.0;                 // 가장 가까운 꽃이 튀는 높이 = 꽃 반지름의 몇 배
+  const POP_JUMP_MIN = 2.8;                 // 가장 먼(8번째) 꽃이 튀는 높이
+  const POP_SIDE = 2.4;                     // 좌우로 흩어지는 속도 (최대)
+  const THROW_SPEED = 900;                 // 놓기 직전 손이 이보다 빠르면(px/초) '던졌다'로 봄 — 단계별 안내 문구용
+  const CORK_HOP_SECONDS = 3.2;             // 코르크 손짓 한 바퀴 시간 (🤓 버튼과 같은 박자)
   const MAX_RADIUS = 1.15; // 공이 적을 때 너무 커지지 않게
   // ----- 조작 -----
   const DRAG_THRESHOLD = 6;// 이만큼(px) 움직이면 '누르기'가 아니라 '끌기'
@@ -71,7 +79,10 @@
   const BUTTON_ZONE_PX = 110; // 아래 TMI 버튼이 차지하는 높이
   const CAMERA_Z = 12;
 
-  window.createSquishyScene = function (container, items, { onOpen } = {}) {
+  window.createSquishyScene = function (container, items, { onOpen, onAction } = {}) {
+    // onAction(이름): 사용자가 무언가를 처음/다시 해 봤을 때 바깥(페이지)에 알림 → 단계별 안내 문구가 다음으로 넘어감 (2026-11-26)
+    //   'roll' 꽃을 끌어 굴림 · 'throw' 꽃을 휙 던짐 · 'corkOpen' 코르크 뽑음 · 'flowerOut' 꽃이 병 밖으로 나감 · 'corkClose' 코르크 다시 꽂음
+    const tell = name => { if (onAction) onAction(name); };
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     // 캔버스 바탕을 페이지 바탕색으로 꽉 칠함 (투명 X). 투명하면 휴대폰(아이폰 사파리)에서 빛무리·향기처럼 아주 옅게 사라지는 부분에
     //   색 정밀도가 깨져 알록달록한 점이 보였음 (2026-11-18). 페이지 바탕이 한 가지 색이라 겉보기는 똑같음
@@ -413,7 +424,7 @@
     const jar = { cx: 0, cy: 0, ax: 1, ay: 1, neckTop: 1, neckHalf: 0.1, wall: 0.02, shoulderY: 1, corkPx: null };
     // 코르크 상태: 'in' 꽂힘(pull = 끌어 올린 길이) / 'held' 손에 들림 / 'free' 떨어져 굴러다니거나 놓여 있음
     //   p = 코르크 무게중심(3D 길이), v = 속도, a = 기울기(라디안)
-    const cork = { state: 'in', pull: 0, p: new THREE.Vector2(), v: new THREE.Vector2(), a: 0, r: 0.2 };
+    const cork = { state: 'in', pull: 0, p: new THREE.Vector2(), v: new THREE.Vector2(), a: 0, r: 0.2, grabbed: false, armed: true };  // grabbed = 지금 손가락이 코르크를 잡고 있음, armed = 입구에 가져가면 꽂힐 수 있음
     const detailFull = { pos: new THREE.Vector3(), scale: 1 }; // 상세: 시트 닫힘 (가운데, 크게)
     const detailSplit = { pos: new THREE.Vector3(), scale: 1 };// 상세: 시트 열림 (위쪽)
     const detailNow = () => (sheetOpen ? detailSplit : detailFull);
@@ -559,12 +570,32 @@
     }
     // 코르크 그림 자리 옮기기 (매 프레임): 꽂혀 있으면 입구에서 pull만큼 위로, 빠졌으면 무게중심 p에 기울기 a로
     let corkEls = null;
+    // ----- 코르크 손짓 (2026-11-26): 처음 뽑기 전까지 가끔 "들썩들썩" → "나 뽑을 수 있어!" -----
+    //   TMI 🤓 버튼(interaction.html의 nerd-hop)과 같은 박자: 3.2초마다 한 번, 7px → 4px 두 번 들썩
+    //   그림만 들썩이고(부딪힘 계산은 그대로), 코르크가 한 번이라도 빠지면 다시는 안 함
+    let corkOpenedOnce = false;
+    const CORK_HOP_KEYS = [   // [한 바퀴 중 몇 %, 위로 몇 px] — nerd-hop의 퍼센트와 같음
+      [0, 0], [0.70, 0], [0.76, 7], [0.82, 0], [0.88, 4], [0.94, 0], [1, 0],
+    ];
+    function corkHopPx() {
+      if (corkOpenedOnce || cork.pull > 0 || cork.grabbed) return 0;   // 이미 열어 봤거나, 지금 잡고 있으면 가만히
+      const phase = (performance.now() / 1000 / CORK_HOP_SECONDS) % 1;            // 지금이 한 바퀴 중 어디쯤인지 (0~1)
+      for (let i = 1; i < CORK_HOP_KEYS.length; i++) {
+        const [p0, h0] = CORK_HOP_KEYS[i - 1], [p1, h1] = CORK_HOP_KEYS[i];
+        if (phase <= p1) {
+          const t = (phase - p0) / (p1 - p0);
+          const smooth = (1 - Math.cos(t * Math.PI)) / 2;    // 부드럽게 시작·끝 (CSS ease-in-out 비슷하게)
+          return h0 + (h1 - h0) * smooth;
+        }
+      }
+      return 0;
+    }
     function drawCork() {
       if (!corkEls) return;
       const k = 1 / view.wpp, X = x => (x + view.W / 2) * k, Y = y => (view.H / 2 - y) * k;
       const inJar = cork.state === 'in';
       if (inJar) {
-        const t = `translate(${X(jar.cx).toFixed(1)} ${(Y(jar.neckTop) - cork.pull * k).toFixed(1)})`;
+        const t = `translate(${X(jar.cx).toFixed(1)} ${(Y(jar.neckTop) - cork.pull * k - corkHopPx()).toFixed(1)})`;
         corkEls.front.setAttribute('transform', t);
         corkEls.back.setAttribute('transform', t);
       } else {
@@ -820,7 +851,10 @@
         const w0 = toWorld(e);
         if (corkHit(w0)) {                                  // 코르크를 잡음 (꽃보다 먼저 봄)
           active = { ...base, cork: true, startY: w0.y, grab: null, lastW: w0.clone(), lastT: performance.now() };
-          if (cork.state === 'free') { cork.state = 'held'; active.grab = cork.p.clone().sub(w0); }
+          cork.grabbed = true;                              // 손짓 멈춤 (손 밑에서 들썩이지 않게)
+          // 빠진 코르크를 잡음. 'held'도 같이 봄: 손을 카드(화면) 밖에서 떼면 '놓음' 신호가 안 와서
+          //   코르크가 '들고 있음' 상태로 남을 수 있음 → 그때 다시 잡으면 잡은 자리(grab)가 없어 오류가 났음 (2026-11-26)
+          if (cork.state === 'free' || cork.state === 'held') { cork.state = 'held'; cork.armed = true; active.grab = cork.p.clone().sub(w0); }
           canvas.style.cursor = 'grabbing';
           return;
         }
@@ -873,6 +907,11 @@
         const w = toWorld(e);
         if (active.mode === 'drag' && active.blob) {
           active.blob.holdTarget.copy(w).add(active.grabOffset);      // 잡은 공이 손을 따라옴
+          // 손 빠르기 기록 (던졌는지 판단용): 이번 움직임의 px/초를 부드럽게 섞어 둠 (한 번 튀는 값에 안 흔들리게)
+          const nowT = performance.now(), gap = Math.max(1, nowT - (active.handT || active.lastT));
+          const handNow = Math.hypot(dx, dy) / gap * 1000;
+          active.handSpeed = (active.handSpeed || 0) * 0.5 + handNow * 0.5;
+          active.handT = nowT;
         } else if (active.mode === 'drag') {
           stir(w, dx * view.wpp, -dy * view.wpp);                      // 빈 곳 쓸기
         }
@@ -901,6 +940,9 @@
         if (cork.pull > CORK_POP_PX * view.wpp) {          // 뽕!
           corkInCenter(cork.p); cork.a = 0; cork.v.set(0, 0);
           cork.state = 'held'; cork.pull = 0;
+          corkOpenedOnce = true;                           // 이제 손짓 그만
+          cork.armed = false;                              // 막 뽑은 코르크: 입구에서 한 번 멀어지기 전엔 다시 안 꽂힘 (뽑자마자 도로 꽂히지 않게)
+          tell('corkOpen');
           active.grab = cork.p.clone().sub(w);
           sound('pop');
           wakeNearMouth();
@@ -911,32 +953,85 @@
         cork.p.copy(w).add(active.grab);
         cork.v.copy(cork.p).sub(corkPrev).divideScalar(dt).clampLength(0, 25);   // 놓을 때 던지는 속도
         cork.a *= 0.85;                                     // 들고 있으면 똑바로 서게
+        // 화면(카드) 벽 (2026-11-26 → 11-27 고침)
+        //   11-26: 벽에 닿기만 해도 손에서 놓침 → 꽃이 많아 벽에 붙은 코르크를 다시 옮길 때 너무 쉽게 떨어짐
+        //   11-27: 벽에 닿으면 벽을 따라 미끄러지고, 손이 벽 밖으로 멀리(CORK_ESCAPE) 나갔을 때만 놓침
+        if (corkHitsWall()) {
+          cork.state = 'free'; cork.grabbed = false;
+          active = null; canvas.style.cursor = 'default';
+          return;
+        }
         // 입구 가까이 가져오면 쏙 꽂힘
         corkOrigin(corkTmp); mouth.set(jar.cx, jar.neckTop);
-        if (corkTmp.distanceTo(mouth) < CORK_SNAP_PX * view.wpp && Math.abs(cork.a) < 0.6) plugCork();
+        const toMouth = corkTmp.distanceTo(mouth);
+        if (toMouth > CORK_SNAP_PX * 1.5 * view.wpp) cork.armed = true;   // 입구에서 충분히 멀어졌음 → 이제 다시 꽂을 수 있음
+        if (cork.armed && toMouth < CORK_SNAP_PX * view.wpp && Math.abs(cork.a) < 0.6) plugCork();
       }
       active.lastT = now;
+    }
+    // 들고 있는 코르크가 화면 벽(왼쪽·오른쪽·위·아래)을 넘었는지 봄
+    //   조금 넘음 → 벽 안으로 되돌림 (벽을 따라 미끄러짐, 계속 들고 있음) → false
+    //   많이 넘음(손이 벽 밖으로 코르크 지름의 CORK_ESCAPE배 넘게 나감) → 벽에서 살짝 튕기며 놓침 → true
+    function corkHitsWall() {
+      const r = cork.r;
+      const L = -view.W / 2 + r, R = view.W / 2 - r, Bot = -view.H / 2 + r, Top = view.H / 2 - r;
+      // 벽 밖으로 얼마나 나갔는지 (안쪽이면 0)
+      const outL = L - cork.p.x, outR = cork.p.x - R, outTop = cork.p.y - Top, outBot = Bot - cork.p.y;
+      const farOut = Math.max(outL, outR, outTop, outBot) > CORK_ESCAPE * 2 * r;
+      if (outL > 0) { cork.p.x = L; cork.v.x = farOut ? Math.abs(cork.v.x) * 0.3 : 0; }    // 왼쪽 벽 (놓칠 땐 오른쪽으로 살짝 튕김)
+      if (outR > 0) { cork.p.x = R; cork.v.x = farOut ? -Math.abs(cork.v.x) * 0.3 : 0; }   // 오른쪽 벽
+      if (outTop > 0) { cork.p.y = Top; cork.v.y = farOut ? -Math.abs(cork.v.y) * 0.3 : 0; } // 천장
+      if (outBot > 0) { cork.p.y = Bot; cork.v.y = 0; }                                      // 바닥
+      return farOut;
     }
     function plugCork() {
       cork.state = 'in'; cork.pull = 0; cork.a = 0; cork.v.set(0, 0);
       active.plugged = true;
       sound('plug');
+      tell('corkClose');
       // 병목 안에 있던 꽃은 병 안으로 밀려 내려가게 깨움 (다음 계산에서 병 몸통 안으로 들어감)
       blobs.forEach(b => { if (!b.out && b.p.y > jar.shoulderY - 2 * b.r) wake(b); });
     }
-    function wakeNearMouth() {                              // 코르크가 빠지면 입구 근처 꽃이 살짝 들썩
-      blobs.forEach(b => { if (!b.out && b.p.y > jar.shoulderY - 6 * b.r && Math.abs(b.p.x - jar.cx) < jar.neckHalf * 3) { wake(b); b.vel.y += 1.5; } });
+    // 코르크가 "뽕" 빠지면 입구에 가까운 꽃들이 깜짝 놀라 튀어 오름 (2026-11-26: 살짝 → 눈에 띄게)
+    //   전: 어깨 근처 좁은 범위 안의 꽃만 +1.5 → 꽃이 낮게 쌓여 있으면 거의 아무도 안 튐
+    //   후: 거리와 상관없이 입구에서 가까운 순서로 POP_JUMP_COUNT송이를 골라, 가까울수록 높이 튐
+    function wakeNearMouth() {
+      // ① 병 안 꽃들을 입구(병목 가운데 꼭대기)에서 가까운 순서로 줄 세우기
+      const mouthX = jar.cx, mouthY = jar.neckTop;
+      const inside = blobs.filter(b => !b.out);
+      inside.sort((a, c) => Math.hypot(a.p.x - mouthX, a.p.y - mouthY) - Math.hypot(c.p.x - mouthX, c.p.y - mouthY));
+      // ② 앞에서부터 몇 송이만 튀게 함
+      const count = Math.min(POP_JUMP_COUNT, inside.length);
+      for (let i = 0; i < count; i++) {
+        const b = inside[i];
+        // 튈 높이 = 꽃 반지름의 몇 배 (1등이 POP_JUMP_MAX배, 꼴찌가 POP_JUMP_MIN배). 반지름 기준이라 화면 크기가 달라도 똑같아 보임
+        const t = count > 1 ? i / (count - 1) : 0;
+        const jumpHeight = b.r * (POP_JUMP_MAX + (POP_JUMP_MIN - POP_JUMP_MAX) * t);
+        // 그 높이까지 올라가려면 필요한 속도: 물리 공식 v = √(2 × 중력 × 높이)
+        const upSpeed = Math.sqrt(2 * GRAVITY * jumpHeight);
+        wake(b);
+        b.vel.y = Math.max(b.vel.y, 0) + upSpeed;
+        b.vel.x += (Math.random() * 2 - 1) * POP_SIDE;       // 좌우로도 살짝 흩어짐 (매번 다르게)
+      }
     }
     function release(e) {
       if (!active) return;
       if (active.cork) {                                    // 코르크를 놓음: 들고 있었으면 떨어짐, 꽂혀 있으면 제자리로
         if (cork.state === 'held') cork.state = 'free';
+        cork.grabbed = false;
         active = null; canvas.style.cursor = 'default';
         return;
       }
       const b = active.blob;
       if (mode === 'list') {
         if (b) b.held = false;                          // 놓으면 그 순간 속도로 던져짐
+        if (b && active.mode === 'drag') {
+          tell('roll');                                 // 꽃을 끌었다 놓음 = 굴려 봄
+          // 놓기 직전 손이 1초에 THROW_SPEED px 넘게 움직이고 있었으면 '던짐'
+          //   (꽃 속도가 아니라 손 속도로 봄: 꽃 속도는 화면이 버벅일 때 들쭉날쭉해서)
+          const stillMoving = performance.now() - (active.handT || 0) < 100;   // 멈췄다가 놓으면 던진 게 아님
+          if (stillMoving && (active.handSpeed || 0) > THROW_SPEED) tell('throw');
+        }
         if (active.mode === 'tap' && b && e.type === 'pointerup') onOpen && onOpen(blobs.indexOf(b));
       } else if (active.mode === 'tap') {
         b.pressTarget = 0;
@@ -1025,7 +1120,7 @@
       const dx = b.p.x - jar.cx, half = jar.neckHalf - jar.wall - b.r;
       if (half <= 0 || Math.abs(dx) > jar.neckHalf - jar.wall || b.p.y < jar.shoulderY - 2 * b.r) return false;
       if (Math.abs(dx) > half) b.p.x = jar.cx + Math.sign(dx) * half;
-      if (b.p.y - b.r > jar.neckTop) b.out = true;                     // 병 밖으로 나감
+      if (b.p.y - b.r > jar.neckTop) { b.out = true; tell('flowerOut'); } // 병 밖으로 나감
       return true;
     }
     // 동그라미를 네모 밖으로 밀어냄 (병목 유리벽·코르크 머리). 밀었으면 밀어낸 방향을 out에
