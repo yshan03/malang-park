@@ -22,6 +22,10 @@
 //   spread  꽃잎이 벌어진 정도 (바깥 고리로 갈수록 더 벌어짐)
 //   flare   꽃잎 끝이 바깥으로 젖혀지는 정도   pointy  꽃잎 끝이 뾰족한 정도 (0 둥글게)
 //   outerPointy 바깥층 꽃잎 끝만 뾰족하게 (0 기본 … 1 뾰족). 안쪽층은 그대로 두고 바깥층 끝 모양으로만 장미를 구분할 때 씀
+//   secondSize  맨 바깥에서 두 번째 겹의 꽃잎 길이 배율 (1 기본, 0.85면 15% 짧게). 끝 뾰족한 맨 바깥 겹이 그 위 겹에 가려지지 않고 또렷이 보이게 할 때 씀 (2026-11-26 끝 뾰족 묶음)
+//   bottomCount 맨 아래(바깥) 겹의 꽃잎 장수 배율 (1 기본, 0.7이면 30% 적게) · bottomSize 맨 아래 겹 꽃잎 길이 배율 (1 기본). 적고 큰 꽃잎이 받치는 장미에 씀 (2026-11-26 로얄 보니카)
+//   innerLift   맨 아래 겹을 뺀 위쪽 겹들을 위로 올림 (0 기본 … 1 꽃잎 길이의 1/3쯤, 3까지). 큰 아래 겹 위로 안쪽 꽃잎이 솟아 보이게 (2026-11-26 데저트 피스)
+//   colors.bottom  맨 아래(바깥) 겹만 따로 칠할 바탕색 (없으면 다른 겹과 같음). edgeBottom과 함께 쓰면 맨 아래 겹만 '바탕 + 끝 색' (2026-11-26 데저트 피스)
 //               (2026-11-23: "안쪽층은 다 비슷하고 바깥층 꽃잎 끝에서 차이가 난다"는 분류 결과에서 추가)
 //   layerEven   안쪽 겹을 바깥 겹과 비슷하게 (0 기본: 안쪽 꽃잎은 짧고 조금 위에 붙음 … 1 바깥보다 조금만 짧고 같은 높이에 붙어 포개짐, 반겹)
 //   evenRatio   layerEven일 때 가장 안쪽 겹 꽃잎 길이 ÷ 바깥 겹 꽃잎 길이 (0.88 기본 … 1이면 같은 크기)
@@ -47,6 +51,9 @@
 //   stamenMix 가운데에 남는 수술 비율 (0 기본: 모두 퍼짐 … 0.4면 10가닥 중 4가닥쯤은 가운데에 모여 솟음)
 //   edgeStart   꽃잎 끝 색이 시작하는 곳 (꽃잎 밑동 0 … 끝 1, 0.55 기본). 0.8이면 끝 20%에만 (2026-11-24 카렌)
 //   edgeRandom  꽃잎 끝 색(colors.edge)을 띄엄띄엄 (0 기본: 모든 꽃잎 … 1 꽃잎 열 장 중 서너 장에만) (2026-11-24 카렌)
+//   edgeBottom  꽃잎 끝 색을 맨 아래(바깥) 겹에만 (0 기본: 모든 겹 … 1 맨 아래 겹만). 사진에서 맨 아래층 끝만 하얀 장미에 씀 (2026-11-26 골든플러쉬 등)
+//   edgeSharp   끝 색 경계를 또렷하게 (0 기본: edgeStart부터 끝까지 서서히 … 1 edgeStart 바로 뒤부터 끝 색이 꽉 참 → 바탕과 끝 색 두 층만) (2026-11-26 데저트 피스)
+//   edgeVary    꽃잎마다 끝 색 시작 자리를 다르게 (0 기본: 모두 같음 … 1 꽃잎마다 ±17%쯤) · bottomVary 맨 아래 겹 꽃잎마다 세워진 정도를 다르게 (0 기본 … 1) (2026-11-26 데저트 피스)
 //   stripeVary  줄 굵기 들쭉날쭉 (0 기본: 줄 굵기가 비슷 … 1 어떤 줄은 두껍고 어떤 줄은 얇게). stripeMode 0에서만 (2026-11-25 퍼플타이거)
 //   stripeVein  흰 부분 속 가는 바탕색 줄 (0 기본: 없음 … 1 줄무늬 색이 덮인 곳에 바탕색 줄이 꽃잎당 한두 개). stripeMode 0에서만 (2026-11-25 퍼플타이거)
 //   stripeBias  줄무늬를 한쪽으로 몰기 (0 기본: 고르게 … 1 stripeDir 쪽은 줄무늬가 훨씬 많고 반대쪽은 거의 바탕색)
@@ -77,6 +84,7 @@
 //   innerLight  겹마다 따로 그라데이션 (0 기본: 꺼짐 … 0.35 = 꽃잎마다 밑동 옅게 → 끝 진하게, 안쪽 겹은 끝 색을 35% 덜 진하게)
 //               (2026-11-24 워터멜론아이스: 안쪽 겹도 안쪽은 옅고 바깥쪽은 진함, 다만 바깥 겹보다는 연함)
 //   outline     꽃잎 테두리선 (0 기본: 없음 … 1 또렷이). 꽃잎 양옆·끝 둘레만 얇게 진하게 → 흰 꽃처럼 그늘이 안 보이는 꽃도 층이 나뉘어 보임
+//   innerOutline 안쪽(위층) 겹에만 테두리선 (0 기본 … 1 또렷이 … 2 또렷하고 굵게). 색은 colors.innerOutline (없으면 황갈색). 가운데 꽃잎 둘레만 색이 다른 장미에 씀 (2026-11-26 화이트 매직)
 //               선 색은 colors.outline (없으면 바깥 색을 조금 어둡게)
 //   crease      꽃잎 중간쯤이 가로로 살짝 접힌 자국 (0 기본: 없음 … 1 또렷이 꺾임). 접힌 곳에서 꽃잎이 한 번 꺾이고, 접힌 선은 어둡게·그 바로 위는 밝게
 //               접히는 위치는 꽃잎마다 조금씩 다름 (2026-11-24 마틸다: 날개형 꽃잎은 중간쯤 접힌 자국이 드러남)
@@ -110,7 +118,7 @@
 
 (function () {
   const DEFAULTS = {
-    petals: 9, rings: 4, ringsSkip: 0, open: 0.5, spread: 0.8, flare: 0.4, pointy: 0.3, height: 0, ruffle: 0, spiral: 0.6, core: 1, innerOpen: 0, petalWidth: 1, bud: 0, budReach: 1, dense: 0, threads: 0, seams: 0, reflex: 0, tip: 0, rimOpen: 0, outerPointy: 0, layerEven: 0, evenRatio: 0.88, ringShade: 0, quarter: 0, quarterN: 4, star: 0, contactShade: 0, contactPos: 0.7, eye: 0, messy: 0, seed: 0, stripes: 0, stripeScale: 0.5, stripeMode: 0, centerEdge: 0, stripeRandom: 0, stripeVary: 0, stripeVein: 0, stripeBias: 0, stripeDir: 0, edgeRandom: 0, edgeStart: 0.55, innerWidth: 1, crease: 0, creaseDir: 0, natPetal: 0.65, natEdge: 0.65, natAsym: 0.65, natColor: 0.65, natStamen: 0.65, natRound: 0.85, ball: 0, ballWalls: 3, ballOpen: 0.4, ballRim: 0.6, ballPeel: 0, ballRoll: 0.8, ballFill: 1, ballDome: 0.5, ballFold: 0.6, ringTint: 0, innerLight: 0, outline: 0, overlap: 0, centerBand: 0, bandWidth: 0.15, stamenSpread: 1, stamenCount: 1, stamenSize: 1, stamenMix: 0, stamenAge: 0, stamenThick: 1, calyxHide: 1, centerSpread: 0.7, layerShade: 0.7,   // 칠하기 (2026-11-18 비교 페이지에서 사용자 확정)
+    petals: 9, rings: 4, ringsSkip: 0, open: 0.5, spread: 0.8, flare: 0.4, pointy: 0.3, height: 0, ruffle: 0, spiral: 0.6, core: 1, innerOpen: 0, petalWidth: 1, bud: 0, budReach: 1, dense: 0, threads: 0, seams: 0, reflex: 0, tip: 0, rimOpen: 0, outerPointy: 0, secondSize: 1, bottomCount: 1, bottomSize: 1, innerLift: 0, layerEven: 0, evenRatio: 0.88, ringShade: 0, quarter: 0, quarterN: 4, star: 0, contactShade: 0, contactPos: 0.7, eye: 0, messy: 0, seed: 0, stripes: 0, stripeScale: 0.5, stripeMode: 0, centerEdge: 0, stripeRandom: 0, stripeVary: 0, stripeVein: 0, stripeBias: 0, stripeDir: 0, edgeRandom: 0, edgeStart: 0.55, edgeBottom: 0, edgeSharp: 0, edgeVary: 0, bottomVary: 0, innerWidth: 1, crease: 0, creaseDir: 0, natPetal: 0.65, natEdge: 0.65, natAsym: 0.65, natColor: 0.65, natStamen: 0.65, natRound: 0.85, ball: 0, ballWalls: 3, ballOpen: 0.4, ballRim: 0.6, ballPeel: 0, ballRoll: 0.8, ballFill: 1, ballDome: 0.5, ballFold: 0.6, ringTint: 0, innerLight: 0, outline: 0, innerOutline: 0, overlap: 0, centerBand: 0, bandWidth: 0.15, stamenSpread: 1, stamenCount: 1, stamenSize: 1, stamenMix: 0, stamenAge: 0, stamenThick: 1, calyxHide: 1, centerSpread: 0.7, layerShade: 0.7,   // 칠하기 (2026-11-18 비교 페이지에서 사용자 확정)
     colors: { center: '#E86B86', outer: '#F7A9B8', edge: null, stamen: null },
     stem: '#5F8F4A', leaf: '#6FAE5A'
   };
@@ -141,6 +149,8 @@
     const cBand = P.colors.band && P.centerBand > 0 ? lin(P.colors.band) : null;      // 경계 띠 색 (띠가 있는 장미만)
     const cEye = P.eye > 0 ? (P.colors.eye ? lin(P.colors.eye) : cCenter.clone().multiplyScalar(0.45)) : null;   // 가운데 눈 색
     const cLine = P.outline > 0 ? (P.colors.outline ? lin(P.colors.outline) : cOuter.clone().multiplyScalar(0.72)) : null;   // 테두리선 색
+    const cBottom = P.colors.bottom ? lin(P.colors.bottom) : null;   // 맨 아래 겹 바탕색 (없으면 다른 겹과 같게)
+    const cInLine = P.innerOutline > 0 ? lin(P.colors.innerOutline || '#A8804A') : null;   // 안쪽 겹 테두리선 색 (없으면 황갈색)
     const cGreen = lin(P.stem).lerp(lin(P.leaf), 0.4);
     // 바깥 색이 얼마나 하얀가 (0 보통 … 1 아주 하얌): 겹 경계 그늘(ringShade)을 하얀 꽃에 맞게 바꿀 때 씀
     const lightK = smooth(0.55, 0.8, (cOuter.r + cOuter.g + cOuter.b) / 3);
@@ -157,13 +167,17 @@
       const inner = 1 - outer;
       const budK = P.bud * Math.pow(inner, P.budReach);              // 이 고리가 봉오리처럼 말리는 정도 (안 → 바깥으로 서서히 줄어듦)
       const denseK = P.dense * inner;                                // 이 고리가 짧은 꽃잎으로 빽빽한 정도
-      const n = Math.max(3, Math.round(P.petals * (0.5 + 0.5 * outer) * (1 + denseK)));
+      const isBottom = (k === R - 1);                                  // 맨 아래(바깥) 겹인가
+      const n = Math.max(3, Math.round(P.petals * (0.5 + 0.5 * outer) * (1 + denseK) * (isBottom ? P.bottomCount : 1)));   // 맨 아래 겹만 bottomCount배 장수
       // 꽃잎 길이: 기본은 안쪽일수록 짧음 (0.62 … 1.12). layerEven만큼 '바깥보다 조금만 짧게'(안쪽 끝 0.88배) 쪽으로 당김
       const baseLen = (0.62 + 0.5 * outer) * (1 - P.layerEven) + 1.12 * (1 - (1 - P.evenRatio) * inner) * P.layerEven;
-      const L = baseLen * (1 + P.height * 0.55 * inner) * (1 - 0.25 * denseK); // 꽃잎 길이
+      const L0 = baseLen * (1 + P.height * 0.55 * inner) * (1 - 0.25 * denseK); // 꽃잎 길이
+      const LK = (k === R - 2 ? P.secondSize : 1) * (isBottom ? P.bottomSize : 1);   // 두 번째 겹 secondSize배 · 맨 아래 겹 bottomSize배 길이
+      const L = L0 * LK;
       const r0 = 0.04 + 0.16 * outer                                           // 꽃잎이 붙는 자리 (가운데에서 떨어진 거리)
                + P.eye * 0.05 * smooth(0.6, 1, inner);                         //   가운데 눈(eye): 가장 안쪽 겹을 바깥으로 물려 붙여 한가운데에 작은 구멍
-      const y0 = -0.32 + 0.06 * inner * (1 - P.layerEven) + 0.18 * denseK;     //   높이: 안쪽 겹은 조금 위 (layerEven이면 바깥과 같은 높이) · 빽빽한 안쪽은 위로 올려 컵을 채움
+      const y0 = -0.32 + 0.06 * inner * (1 - P.layerEven) + 0.18 * denseK     //   높이: 안쪽 겹은 조금 위 (layerEven이면 바깥과 같은 높이) · 빽빽한 안쪽은 위로 올려 컵을 채움
+               + (isBottom ? 0 : P.innerLift * 0.3 * (0.6 + 0.4 * inner));   //   innerLift: 맨 아래 겹을 뺀 위쪽 겹들을 통째로 위로 올림
       const tilt0 = Math.min(1.45, 0.06 + 0.9 * P.open * Math.pow(outer, 1.2) + 0.5 * P.spread * outer
                              + P.innerOpen * 0.9 * inner                        // 기울기 (안쪽 고리: innerOpen만큼 벌어짐, bud만큼 곧게 섬)
                              + P.eye * 0.3 * smooth(0.6, 1, inner)) * (1 - 0.85 * budK)   //   가운데 눈(eye): 가장 안쪽 겹만 살짝 벌려 구멍을 엶
@@ -192,7 +206,8 @@
         // 자연스러운 어긋남: 꽃잎 한 장마다 '가짜 무작위'로 조금씩 다르게 (rnd 11~20 = 이 용도)
         const a0 = P.seed * 2.39996 + 1.3;                             // 꽃 전체가 더 벌어지는 방향 (장미마다 다름)
         const asymF = Math.cos(az - a0);                               //   이 꽃잎이 그 방향에 가까울수록 1, 반대쪽 -1
-        const tiltN = tiltJ + (P.natPetal * 0.25 * rnd(11) * (0.3 + outer) + P.natAsym * 0.22 * asymF * (0.3 + outer)) * roundK;   // 기울기
+        const tiltN = tiltJ + (P.natPetal * 0.25 * rnd(11) * (0.3 + outer) + P.natAsym * 0.22 * asymF * (0.3 + outer)) * roundK   // 기울기
+                    + (isBottom ? P.bottomVary * 0.5 * rnd(24) : 0);         //   맨 아래 겹만 꽃잎마다 세워진 정도를 다르게 (bottomVary)
         const LN = LJ * (1 + (P.natPetal * 0.18 * rnd(12) + P.natAsym * 0.07 * asymF) * roundK);   // 길이
         const widthN = 1 + P.natPetal * 0.35 * rnd(13);               // 폭
         const curlN = curl + P.natPetal * 0.8 * rnd(14);               // 끝 젖힘
@@ -261,6 +276,9 @@
             else c.copy(cCenter).lerp(cOuter, smooth(0.3 * cs, 1, (0.35 - 0.2 * cs) * outer + 0.75 * ve));
             // 위층 물들이기 (ringTint): 층 기준으로 위층일수록 가운데 색 쪽으로
             if (P.ringTint > 0) c.lerp(cCenter, P.ringTint * smooth(0.15, 0.75, inner));
+            // 맨 아래 겹 바탕색 (colors.bottom): 있으면 맨 아래(바깥) 겹만 이 색으로 칠함 → 위 겹들과 색을 따로 (끝 색 edge는 이 뒤에 덧칠)
+            //   (2026-11-26 데저트 피스: 맨 아래 겹은 흰 바탕에 붉은 끝, 위 겹들은 연노랑)
+            if (cBottom && k === R - 1) c.copy(cBottom);
             // 경계 띠: centerEdge 언저리에 띠 색을 칠함. 띠의 안쪽 가장자리는 꽃잎 폭 방향(u)으로 들쭉날쭉 → 결을 따라 실처럼 번져 보임
             //   (2026-11-24 함부르크 휘닉스: 흰 안쪽과 빨강 바깥 사이 분홍 무늬)
             if (cBand && P.centerEdge > 0) {
@@ -353,7 +371,10 @@
             // 꽃잎 끝 색 (colors.edge). edgeRandom만큼 몇 장은 끝 색을 빼서 띄엄띄엄 (rnd(23) = 꽃잎마다 정해진 가짜 무작위)
             if (cEdge) {
               const edgeOn = 1 - P.edgeRandom * smooth(0.3, 0.45, rnd(23) + 0.5);   // edgeRandom 1이면 꽃잎 열 장 중 예닐곱 장은 끝 색 없음
-              c.lerp(cEdge, smooth(P.edgeStart, 1, ve) * (0.35 + 0.65 * outer) * edgeOn);   // edgeStart부터 끝까지 점점 끝 색
+              const edgeLayer = (k === R - 1) ? 1 : 1 - P.edgeBottom;           // edgeBottom 1이면 맨 아래(바깥) 겹에만 끝 색
+              const edgeS = P.edgeStart + P.edgeVary * 0.35 * rnd(25);          // 꽃잎마다 끝 색 시작 자리를 다르게 (edgeVary)
+              const edgeEnd = 1 - P.edgeSharp * (1 - Math.min(1, edgeS + 0.12));   // edgeSharp 1이면 edgeStart 바로 뒤에서 끝 색이 꽉 참 (연한 중간색 띠 없이)
+              c.lerp(cEdge, smooth(edgeS, edgeEnd, ve) * (0.35 + 0.65 * outer) * edgeOn * edgeLayer);   // edgeStart부터 끝까지 점점 끝 색
             }
             // 꽃잎 경계선: 꽃잎 양옆 가장자리(u가 0이나 1에 가까운 곳)를 살짝 어둡게 → 옆 꽃잎과 겹치는 곳에 자연스러운 선
             if (P.seams > 0) c.multiplyScalar(1 - P.seams * 0.22 * smooth(0.55, 1, w2) * smooth(0.1, 0.5, ve));
@@ -363,6 +384,14 @@
             if (cLine) {
               const edgeK = Math.max(smooth(0.85, 1, Math.abs(2 * u - 1)) * smooth(0.1, 0.4, ve), smooth(0.92, 1, v));
               c.lerp(cLine, P.outline * edgeK * (quality === 'full' ? 1 : 0.6));
+            }
+            // 안쪽 겹 테두리선 (innerOutline): 위층(안쪽) 겹에만, 테두리선보다 조금 굵게 → 위에서 봐도 가운데 꽃잎 둘레가 보임
+            //   (2026-11-26 화이트 매직: 사진에서 가운데 꽃잎 둘레만 황갈색)
+            if (cInLine) {
+              const inK = smooth(0.35, 0.75, inner);                         // 안쪽 겹일수록 1, 바깥 겹은 0
+              const wide = Math.max(0, P.innerOutline - 1);                 // 1을 넘으면 선을 굵게 (2면 가장 굵게)
+              const edgeK2 = Math.max(smooth(0.75 - 0.3 * wide, 1, Math.abs(2 * u - 1)) * smooth(0.1, 0.4, ve), smooth(0.85 - 0.25 * wide, 1, v));
+              c.lerp(cInLine, Math.min(1, P.innerOutline) * inK * edgeK2 * (quality === 'full' ? 1 : 0.6));
             }
             // 접힌 자국: 접힌 선은 어둡게, 바로 위(꺾여 빛을 받는 쪽)는 살짝 밝게. 꽃잎 가장자리로 갈수록 흐려짐
             if (creaseAcross) {
