@@ -1007,7 +1007,15 @@ function endDetached(reason) {
 }
 function onAnyRelease() { endDetached('손 뗌 (화면 어딘가)'); }
 micButton.addEventListener('pointerdown', event => {
-  if (event.button !== 0 || pointer !== null || heldKey !== null) return;
+  if (event.button !== 0 || heldKey !== null) return;
+  // 이전 누름의 "끝" 신호를 못 받은 채로 남아 있으면(pointer가 그대로) 새 누름을 막지 않고 정리하고 새로 시작 (2026-11-27)
+  //   전: pointer가 남아 있으면 새로 눌러도 무시 → 허락 창이 터치를 가져가고 아무 신호도 안 주는 앱(네이버 앱 등)에서
+  //       허락 뒤 "이제 마이크를 꾹 누르고,"에서 멈춤 (페이지를 나갔다 오면 초기화돼서 됨)
+  //   후: 새로 누르면 = 이전 손가락은 이미 떨어진 것 → 이어서 시작
+  if (pointer !== null) {
+    micLog('이전 누름 끝 신호 없음 → 정리하고 새로 시작');
+    pointer = null;
+  }
   event.preventDefault();
   if (detached) {                        // 빼앗긴 뒤 계속 듣던 중에 다시 누름 → 이어서 누르는 걸로 (손을 떼면 끝)
     detached = false;
