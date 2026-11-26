@@ -69,6 +69,8 @@
   .controls { bottom: max(26px, calc(env(safe-area-inset-bottom) + 16px)); padding: 0 20px; }
   .earphone-note { margin-top: 10px; font-size: 12px; }
   .earphone-note[data-seen] { visibility: hidden; }
+  /* ?micdebug 로 들어왔을 때만 보이는 마이크 기록 (2026-11-27, 네이버 앱 버그 확인용) */
+  .mic-debug { margin: 8px auto 0; max-width: 320px; font: 11px/1.45 ui-monospace, Menlo, monospace; text-align: left; white-space: pre-wrap; opacity: .75; }
   .prompt { font: 700 25px/1.1 Gaegu, system-ui, sans-serif; margin: 0 0 12px; }
   .mic {
     display: inline-flex; align-items: center; gap: 8px; min-height: 48px; width: 51px; justify-content: center; padding: 0; border: 0; cursor: pointer;
@@ -176,6 +178,7 @@
       <svg viewBox="0 0 18 20" aria-hidden="true"><rect x="6" y="2" width="6" height="10" rx="3"/><path d="M3 9v1a6 6 0 0 0 12 0V9M9 16v3"/></svg>
     </button>
     <p class="earphone-note" id="earphone-note">(이어폰을 끼면 잘 안돼요..ㅠ)</p>
+    <pre class="mic-debug" id="mic-debug" hidden></pre>
   </div>
   <dialog class="tree-notes" id="tree-notes" aria-labelledby="tree-notes-title">
     <form method="dialog">
@@ -851,6 +854,21 @@ function showWindStatus(text) {
   if (windStatus.textContent !== text) windStatus.textContent = text;
 }
 
+// ----- ?micdebug: 마이크가 왜 꺼졌는지 화면에 최근 기록을 보여 줌 (2026-11-27) -----
+//   네이버 앱에서만 생기는 버그라 이 맥에서는 재현할 수 없음 → 폰 화면에 남겨 스크린샷으로 확인
+const micDebugEl = document.getElementById('mic-debug');
+const micDebugOn = new URLSearchParams(location.search).has('micdebug');
+if (micDebugOn) micDebugEl.hidden = false;
+const micDebugLines = [];
+function micLog(text) {
+  if (!micDebugOn) return;
+  const now = new Date();
+  const time = [now.getHours(), now.getMinutes(), now.getSeconds()].map(n => String(n).padStart(2, '0')).join(':');
+  micDebugLines.push(time + '  ' + text);
+  while (micDebugLines.length > 8) micDebugLines.shift();   // 최근 8줄만
+  micDebugEl.textContent = micDebugLines.join('\n');
+}
+
 const instructions = {
   off: '마이크를 누르고',
   permission: '사용하게 해줘요..!!',
@@ -870,6 +888,7 @@ const input = createLonetreeMic({
   reuseStream: true,
   windSound: true,
   onState(state) {
+    micLog('상태: ' + state);
     const running = state === 'calibrating' || state === 'listening';
     micButton.setAttribute('aria-pressed', String(running));
     showWindStatus(instructions[state]);
@@ -968,17 +987,56 @@ function endHold(allowReply) {
   const remaining = input.release(shouldReply);
   if (shouldReply && remaining > 0) treeMotion.reply(remaining);
 }
+// ----- 마이크 꾹 누르기 -----
+// 손을 떼는 신호를 두 가지로 나눠서 봄 (2026-11-27, 네이버 앱 버그)
+//   pointerup     = 사용자가 진짜 손을 뗌 → 바로 끔
+//   pointercancel = 브라우저·앱이 터치를 가져가 버림 (사용자는 아직 누르고 있을 수 있음)
+//     전: 둘 다 "손 뗌"으로 보고 마이크를 끔 → 네이버 앱에서 카운트다운 중 가끔 처음 문구로 돌아감
+//     후: 빼앗겼을 땐 끄지 않고 계속 들음. 그 뒤 손 뗌 신호가 오거나, 마이크를 다시 누르거나, 8초가 지나면 끔
+//   (lostpointercapture는 손을 떼도 빼앗겨도 뒤따라 오므로, 앞에 pointerup이 없었을 때만 '빼앗김'으로 봄)
+const DETACHED_MAX_MS = 8000;
+let detached = false, detachedTimer = null;
+function endDetached(reason) {
+  if (!detached) return;
+  detached = false;
+  clearTimeout(detachedTimer);
+  removeEventListener('pointerup', onAnyRelease, true);
+  removeEventListener('touchend', onAnyRelease, true);
+  micLog(reason + ' → 꺼짐');
+  endHold(true);
+}
+function onAnyRelease() { endDetached('손 뗌 (화면 어딘가)'); }
 micButton.addEventListener('pointerdown', event => {
   if (event.button !== 0 || pointer !== null || heldKey !== null) return;
   event.preventDefault();
+  if (detached) {                        // 빼앗긴 뒤 계속 듣던 중에 다시 누름 → 이어서 누르는 걸로 (손을 떼면 끝)
+    detached = false;
+    clearTimeout(detachedTimer);
+    removeEventListener('pointerup', onAnyRelease, true);
+    removeEventListener('touchend', onAnyRelease, true);
+    micLog('다시 누름 (이어서 듣는 중)');
+  } else {
+    micLog('누름');
+  }
   pointer = event.pointerId;
-  micButton.setPointerCapture(pointer);
+  // 손가락을 이 버튼에 붙잡아 둠. 일부 앱 속 브라우저에서 실패해도 마이크는 켜지게 (실패하면 오류로 멈추던 것 방지)
+  try { micButton.setPointerCapture(pointer); } catch (error) { micLog('붙잡기 실패: ' + error.name); }
   beginHold();
 });
 function finishPointer(event) {
   if (event.pointerId !== pointer) return;
   pointer = null;
-  endHold(event.type === 'pointerup');
+  if (event.type === 'pointerup') {      // 진짜 손 뗌
+    micLog('손 뗌 (pointerup) → 꺼짐');
+    endHold(true);
+    return;
+  }
+  // 터치를 빼앗김: 끄지 않고 계속 들음
+  micLog('터치 빼앗김 (' + event.type + ') → 계속 듣는 중');
+  detached = true;
+  detachedTimer = setTimeout(() => endDetached('8초 지남'), DETACHED_MAX_MS);
+  addEventListener('pointerup', onAnyRelease, true);
+  addEventListener('touchend', onAnyRelease, true);
 }
 micButton.addEventListener('pointerup', finishPointer);
 micButton.addEventListener('pointercancel', finishPointer);
@@ -1004,6 +1062,8 @@ micButton.addEventListener('blur', () => {
 });
 document.addEventListener('visibilitychange', () => {
   if (!document.hidden) return;
+  micLog('화면 가려짐 (visibilitychange) → 꺼짐');
+  if (detached) { detached = false; clearTimeout(detachedTimer); removeEventListener('pointerup', onAnyRelease, true); removeEventListener('touchend', onAnyRelease, true); }
   if (treePointer !== null || treeKey !== null) treeMotion.releaseTouch(true);
   treePointer = null;
   treeKey = null;
